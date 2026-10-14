@@ -8,10 +8,14 @@
     "db": "make db",
     "dev": "make dev",
     "test": "make test",
-    "build": "make build"
+    "build": "make build",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
     "concurrently": "^10.0.6",
+    "husky": "^9.1.7",
     "wait-on": "^9.5.1"
   }
 }

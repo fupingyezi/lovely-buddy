@@ -22,9 +22,9 @@ dev: db ## 一键开发：Go(air 热重载) + Electron(electron-vite 热更)
 		"cd server && $(GOBIN)/air" \
 		"pnpm exec wait-on -t 30000 http-get://127.0.0.1:8740/healthz && cd apps/desktop && pnpm dev"
 
-test: ## Go vet/test + 前端类型检查
+test: ## Go vet/test + 前端类型检查与测试
 	cd server && go vet ./... && go test ./...
-	cd apps/desktop && pnpm typecheck
+	cd apps/desktop && pnpm typecheck && pnpm test
 
 build-server: ## 编译 Go 后端 → apps/desktop/resources/bin/（darwin-arm64）
 	cd server && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" \

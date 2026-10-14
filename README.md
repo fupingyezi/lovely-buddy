@@ -39,10 +39,18 @@ docs/           架构 / 配置 / 模型放置 / 开发打包文档
 ## 开发
 
 ```bash
-make test            # Go vet/test + 前端类型检查
+make test            # Go vet/test + 前端类型检查与测试
 make build-server    # 编译 Go 二进制
 make build           # 打包 macOS 应用（未签名，仅本地使用）
 ```
+
+### 测试与提交约定
+
+- **测试位置**：前端测试放在功能目录下的 `__test__/` 中；Go 测试文件与源码同目录
+  （`*_test.go`，注意 Go 工具链会忽略 `_` 开头的目录，故无法使用 `__test__/` 目录名）。
+- **Commit**：遵循 Conventional Commits（`feat:` / `fix:` / `chore:` / `test:` 等），
+  由 commitlint + husky 在本地强制，PR 侧由 CI 复核。
+- **CI**：GitHub Actions 跑 Go vet/test（pgvector 服务）、前端 typecheck/vitest/build、commitlint。
 
 详见 [docs/development.md](docs/development.md)。本项目只面向开发者从源码构建，不发布线上下载。
 

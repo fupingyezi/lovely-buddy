@@ -15,7 +15,7 @@ func AccessLog() gin.HandlerFunc {
 		c.Next()
 		path := c.Request.URL.Path
 		if raw := c.Request.URL.RawQuery; raw != "" {
-			path += "?" + redactQuery(raw)
+			path += "?" + RedactQuery(raw)
 		}
 		slog.Info("http",
 			"method", c.Request.Method,
@@ -26,7 +26,8 @@ func AccessLog() gin.HandlerFunc {
 	}
 }
 
-func redactQuery(raw string) string {
+// RedactQuery 将 query 中的 token 参数脱敏，防止泄露进日志。
+func RedactQuery(raw string) string {
 	parts := strings.Split(raw, "&")
 	for i, p := range parts {
 		if strings.HasPrefix(p, "token=") {
