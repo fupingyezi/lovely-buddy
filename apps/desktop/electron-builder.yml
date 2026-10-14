@@ -1,0 +1,15 @@
+appId: dev.skyi.buddy
+productName: skyi-buddy
+directories:
+  buildResources: resources
+  output: ../../dist
+files:
+  - out/**
+  - resources/**
+  - package.json
+mac:
+  identity: null
+  target:
+    - dir
+    - zip
+  category: public.app-category.entertainment

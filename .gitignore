@@ -1,0 +1,19 @@
+# 环境与密钥
+.env
+
+# Live2D 模型资产（版权归上海禾念，用户自备，绝不入库）
+model/
+
+# 构建产物
+dist/
+server/bin/
+server/tmp/
+apps/desktop/out/
+apps/desktop/resources/bin/
+
+# 依赖
+node_modules/
+
+# 系统
+.DS_Store
+*.log

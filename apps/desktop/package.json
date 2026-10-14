@@ -1,0 +1,32 @@
+{
+  "name": "skyi-desktop",
+  "version": "0.1.0",
+  "description": "洛天依 AI 桌宠桌面壳（Electron）",
+  "main": "./out/main/index.js",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc --noEmit",
+    "dist": "electron-vite build && electron-builder --mac dir --mac zip"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.2",
+    "pixi-live2d-display-lipsyncpatch": "0.5.0-ls-8",
+    "pixi.js": "7.4.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^5.1.0",
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7"
+  }
+}

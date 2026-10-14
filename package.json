@@ -1,0 +1,17 @@
+{
+  "name": "skyi-buddy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "洛天依 AI 桌宠（Electron + React + Live2D / Go + PostgreSQL + pgvector）",
+  "scripts": {
+    "setup": "make setup",
+    "db": "make db",
+    "dev": "make dev",
+    "test": "make test",
+    "build": "make build"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "wait-on": "^9.5.1"
+  }
+}
