@@ -2,9 +2,9 @@
 SHELL := /bin/bash
 GOBIN := $(shell go env GOPATH)/bin
 
-.PHONY: setup db dev test build-server build clean
+.PHONY: setup assets db dev test build-server build clean
 
-setup: ## 首次克隆后执行：安装依赖、生成图标、初始化 .env
+setup: assets ## 首次克隆后执行：安装依赖、生成图标、初始化 .env
 	pnpm install
 	cd server && go mod download
 	go install github.com/air-verse/air@latest
@@ -13,6 +13,9 @@ setup: ## 首次克隆后执行：安装依赖、生成图标、初始化 .env
 	@echo ""
 	@echo "✔ 初始化完成。请把 Live2D 模型放入 model/ 目录（见 docs/model-setup.md），"
 	@echo "  并在 .env 中填入 DEEPSEEK_API_KEY（对话）与 SILICONFLOW_API_KEY（记忆）"
+
+assets: ## 下载 Cubism core 与官方免费示例模型（shizuku/haru，仅供开发测试）
+	bash scripts/fetch-assets.sh
 
 db: ## 启动 PostgreSQL（pgvector），已启动则跳过
 	docker compose up -d --wait

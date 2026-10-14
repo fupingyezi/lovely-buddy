@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>天依桌宠</title>
     <!--
-      Cubism core 是 UMD 全局脚本，必须在应用 bundle 之前加载，且不要 import 进 Vite 打包。
-      M1 启用 Live2D 渲染时取消注释（scripts/fetch-cubism-cores.sh 会下载到 public/live2d/）。
+      Cubism core（UMD 全局脚本）由 live2d/loader.ts 在运行时动态注入：
+      new URL('live2d/...', document.baseURI) 同时兼容 dev(5173) 与打包后 file://，
+      避免 <script> 标签路径在两种模式下不一致。cores 不进 Vite 打包。
+      下载：scripts/fetch-assets.sh → public/live2d/
     -->
-    <!-- <script src="/live2d/live2d.min.js"></script> -->
-    <!-- <script src="/live2d/live2dcubismcore.min.js"></script> -->
   </head>
   <body>
     <div id="root"></div>

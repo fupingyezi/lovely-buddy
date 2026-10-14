@@ -1,0 +1,72 @@
+import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { loadPetModel, releasePetModel, type PetModel } from '../live2d/model'
+import { setupPetInteraction } from '../live2d/interact'
+import { usePassthrough } from './usePassthrough'
+import { usePetStore } from '../store/petStore'
+
+interface Props {
+  url: string | null
+  name: string
+}
+
+/**
+ * 画布常驻（PIXI stage 单例依赖它），模型切换/无模型时只换内容不卸载组件，
+ * 避免"卸载时模型仍在加载"的泄漏。url 为 null 时画布全透明且可穿透。
+ */
+export default function PetCanvas({ url, name }: Props): ReactElement {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const prevUrlRef = useRef<string | null>(null)
+  const [pet, setPet] = useState<PetModel | null>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const prevUrl = prevUrlRef.current
+    prevUrlRef.current = url
+    // 切换模型（含切到 null）：立即销毁已加载的旧实例，加载中的交给 releasePetModel
+    if (prevUrl !== null && prevUrl !== url) {
+      void releasePetModel(prevUrl)
+      setPet(null)
+    }
+
+    if (url === null) return
+
+    let alive = true
+    let instance: PetModel | null = null
+
+    void loadPetModel(canvas, url, name)
+      .then((p) => {
+        // StrictMode 重放：同一实例由存活的效果接管，不在这里销毁
+        if (!alive) return
+        instance = p
+        setPet(p)
+        usePetStore.getState().setModelError(null)
+        console.info('[skyi] Live2D 模型已加载:', name, url)
+      })
+      .catch((e: unknown) => {
+        if (alive) usePetStore.getState().setModelError(String(e))
+        console.error('[skyi] Live2D 模型加载失败:', e instanceof Error ? e.stack : e)
+      })
+
+    return () => {
+      alive = false
+      // 切换/卸载时实例已解析则就地销毁；StrictMode 重放时 instance 尚未解析，安全跳过
+      if (instance) instance.destroy()
+    }
+  }, [url, name])
+
+  // 拖拽移动 + 点击播 tap 动作
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!pet || !canvas) return
+    const interaction = setupPetInteraction(pet, canvas, () => {
+      void pet.playIntent('tap')
+    })
+    return () => interaction.dispose()
+  }, [pet])
+
+  usePassthrough(pet)
+
+  return <canvas ref={canvasRef} className="pet-canvas" />
+}

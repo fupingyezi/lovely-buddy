@@ -1,12 +1,27 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, screen, session, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session, Tray } from 'electron'
 import { join } from 'node:path'
+import { registerScheme, registerL2DProtocol } from './protocol'
+import { SettingsStore } from './store'
+import { listModels } from './models'
 
 // dev 模式固定值（make dev 时 Go 监听 8740）；打包模式由 goProcess 动态生成（M4 实现）
 const DEV_ADDR = process.env.SKYI_ADDR ?? '127.0.0.1:8740'
 const DEV_TOKEN = process.env.SKYI_DEV_TOKEN ?? 'dev'
 
+// 特权协议必须在 app.ready 之前注册
+registerScheme()
+
+const settings = new SettingsStore()
 let petWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+
+// 桌宠窗口只包住模型本身（不是全屏玻璃）：默认 420x480，模型加载后按模型尺寸调整
+const WIN_W = 420
+const WIN_H = 480
+
+function clamp(v: number, min: number, max: number): number {
+  return Math.min(Math.max(v, min), max)
+}
 
 // CSP 以响应头注入（不用 index.html meta）：dev 需要放行 Vite HMR 的内联脚本，打包后收紧。
 function setupCSP(): void {
@@ -25,6 +40,7 @@ function setupCSP(): void {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' l2d: data: blob:",
     `connect-src ${connectSrc}`,
+    "media-src 'self' l2d:", // 模型动作自带音效（v1 无 TTS，音效走 l2d://）
     "font-src 'self' data:"
   ].join('; ')
 
@@ -38,14 +54,33 @@ function setupCSP(): void {
   })
 }
 
+/** 已保存的窗口位置若在当前屏幕内可用则恢复，否则回默认（贴底部居中）。 */
+function initialWindowBounds(workArea: Electron.Rectangle): { x: number; y: number } {
+  const saved = settings.windowPos
+  const inScreen =
+    saved !== null &&
+    saved.x >= workArea.x - WIN_W / 2 &&
+    saved.x <= workArea.x + workArea.width - WIN_W / 2 &&
+    saved.y >= workArea.y - 64 &&
+    saved.y <= workArea.y + workArea.height - 64
+  return inScreen
+    ? { x: saved.x, y: saved.y }
+    : {
+        x: Math.round(workArea.x + (workArea.width - WIN_W) / 2),
+        y: Math.round(workArea.y + workArea.height - WIN_H)
+      }
+}
+
 function createPetWindow(): void {
-  // 覆盖整个 workArea 而非 fullscreen（macOS fullscreen 会进独立 Space 抢焦点）
+  // 小窗口只包住模型：不像全屏玻璃那样盖住桌面，点不到其他应用的问题从根上消失。
+  // 窗口内部仍保留穿透开关：默认穿透，指针在模型/面板上才恢复交互。
   const { workArea } = screen.getPrimaryDisplay()
+  const { x, y } = initialWindowBounds(workArea)
   petWindow = new BrowserWindow({
-    x: workArea.x,
-    y: workArea.y,
-    width: workArea.width,
-    height: workArea.height,
+    x,
+    y,
+    width: WIN_W,
+    height: WIN_H,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -65,6 +100,8 @@ function createPetWindow(): void {
   })
   petWindow.setAlwaysOnTop(true, 'screen-saver')
   petWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
+  // 创建即穿透：renderer 就绪前点击全部直达桌面，绝不吞鼠标
+  petWindow.setIgnoreMouseEvents(true, { forward: true })
   petWindow.once('ready-to-show', () => petWindow?.show())
 
   if (process.env['ELECTRON_RENDERER_URL']) {
@@ -101,12 +138,48 @@ function setupIPC(): void {
     // forward:true 保住 mousemove，否则窗口一旦穿透就再也收不到鼠标事件、无法关闭穿透
     petWindow?.setIgnoreMouseEvents(!!on, { forward: true })
   })
+  // 拖拽 = 移动窗口（增量），主进程按当前屏幕夹紧，防止拖出屏幕外找不回来
+  ipcMain.on('skyi:move-window', (_e, dx: number, dy: number) => {
+    if (!petWindow) return
+    const [wx, wy] = petWindow.getPosition()
+    const [w, h] = petWindow.getSize()
+    const wa = screen.getDisplayMatching(petWindow.getBounds()).workArea
+    petWindow.setPosition(clamp(wx + Math.round(dx), wa.x, wa.x + wa.width - w), clamp(wy + Math.round(dy), wa.y, wa.y + wa.height - h))
+  })
+  // 拖拽结束 → 持久化窗口位置
+  ipcMain.on('skyi:move-window-end', () => {
+    if (!petWindow) return
+    const [x, y] = petWindow.getPosition()
+    settings.saveWindowPos(x, y)
+  })
+  // 模型加载后按模型显示尺寸调整窗口（底部中点锚定，脚不跳）
+  ipcMain.on('skyi:resize-window', (_e, width: number, height: number) => {
+    if (!petWindow) return
+    const wa = screen.getDisplayMatching(petWindow.getBounds()).workArea
+    const w = clamp(Math.round(width), WIN_W, wa.width)
+    const h = clamp(Math.round(height), WIN_H, wa.height)
+    const [wx, wy] = petWindow.getPosition()
+    const [cw, ch] = petWindow.getSize()
+    petWindow.setBounds({ x: Math.round(wx + cw / 2 - w / 2), y: Math.round(wy + ch - h), width: w, height: h })
+  })
   ipcMain.on('skyi:quit', () => app.quit())
+  ipcMain.handle('skyi:list-models', () => listModels(settings.modelDir))
+  ipcMain.handle('skyi:pick-model-dir', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(petWindow!, {
+      title: '选择 Live2D 模型根目录',
+      properties: ['openDirectory']
+    })
+    if (canceled || filePaths.length === 0) return listModels(settings.modelDir)
+    settings.setModelDir(filePaths[0])
+    return listModels(settings.modelDir)
+  })
 }
 
 app.whenReady().then(() => {
+  settings.load()
   setupCSP()
   setupIPC()
+  registerL2DProtocol(() => settings.modelDir)
   createPetWindow()
   createTray()
   app.dock?.hide() // 桌宠常驻托盘，不占 Dock
