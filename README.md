@@ -33,6 +33,7 @@ make dev                # 一键启动：数据库 + Go 后端 + Electron
 ```
 
 首次渲染模型：把 Live2D 模型目录放入 `model/`（格式见 [docs/model-setup.md](docs/model-setup.md)）。
+形象也可在应用内导入：右上角「导入形象」支持粘贴 HTTPS zip 链接、选择本地 zip 或目录，导入成功后自动切换（无需重启）。
 `make setup` 会顺带下载 Cubism core 与官方免费示例模型 shizuku（Cubism 2）/haru（Cubism 4）用于开发测试（Live2D Free Material License，不随仓库分发）；之后可随时 `make assets` 单独重下。
 无 API Key 时桌宠可显示、但无法聊天与记忆。
 

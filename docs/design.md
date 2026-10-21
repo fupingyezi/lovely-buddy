@@ -86,6 +86,13 @@ models/<slug>/
 
 删除形象：API 删除整个形象目录（二次确认，仅限模型根目录内）。
 
+**API 契约（lovely-buddy-server，Bearer token，仅 127.0.0.1）**：
+- `GET /api/v1/assets` → `{avatars: Avatar[]}`（Avatar：slug/name/author/version/license/homepage/persona/source/kind/entry）
+- `POST /api/v1/assets/import` body `{source:{type:"url"|"path", value}}` → `{avatar}`（失败 422 `{error}`）
+- `DELETE /api/v1/assets/:slug` → `{ok:true}`（非法 slug 400）
+
+导入管线在 Go `internal/assets` 包：staging 解压（zip-slip 防护 + 1GB/2 万条目炸弹上限）→ 解包单层目录 → 入口探测（≤3 层）→ slug 冲突自动加后缀 → 原子 rename → 写 `.lovelybuddy.json` 来源侧车。模型根目录由 `--model-dir` / `LOVELYBUDDY_MODEL_DIR` 指定（默认 `../model`，与 dev 仓库 `model/` 一致）。
+
 ### 3.3 形象管理 UI
 
 - 形象切换器升级为**形象卡片列表**：名称、作者、许可、来源（本地/URL）、入口类型；操作：选中（热切换，复用 M1 的 release/load 机制）、删除。
