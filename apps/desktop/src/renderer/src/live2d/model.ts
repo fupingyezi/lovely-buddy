@@ -1,4 +1,6 @@
 import type { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
+import { Point, Rectangle } from 'pixi.js'
+import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
@@ -17,6 +19,11 @@ export interface PetModel {
 
 // 同一 url 的加载共享一个 Promise：StrictMode 双挂载不重复拉模型
 const cache = new Map<string, Promise<PetModel>>()
+
+// hitTest 复用临时对象（避免每指针移动分配）
+const hitPoint = new Point()
+const hitModelPoint = new Point()
+const hitBounds = new Rectangle()
 
 export function loadPetModel(canvas: HTMLCanvasElement, url: string, name: string): Promise<PetModel> {
   let p = cache.get(url)
@@ -70,6 +77,9 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   model.position.set(window.innerWidth / 2, window.innerHeight - 8)
   app.stage.addChild(model)
 
+  // 绘制部件总数（cubism4 没有基类的 drawDataCount，用 getDrawableIDs 通用获取）
+  const drawableCount = model.internalModel.getDrawableIDs().length
+
   const groups = motionGroups(model)
   const facade: PetModel = {
     name,
@@ -80,8 +90,12 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       return model.position.y
     },
     hitTest(sx, sy) {
-      // fork 的 hitTest 接受世界坐标（内部 toModelPosition），返回命中的 hit area 名
-      return model.hitTest(sx, sy).length > 0
+      // 1) 模型自带 HitAreas（如 shizuku）：fork 的 hitTest 接受世界坐标（内部 toModelPosition）
+      if (model.hitTest(sx, sy).length > 0) return true
+      // 2) 无 HitAreas 的模型（如官方 haru）：按实际绘制部件顶点做可视碰撞箱检测
+      const p = model.toModelPosition(hitPoint.set(sx, sy), hitModelPoint)
+      const im = model.internalModel
+      return hitAnyDrawable((i) => im.getDrawableBounds(i, hitBounds), drawableCount, p.x, p.y)
     },
     moveTo(x, y) {
       model.position.set(x, y)
