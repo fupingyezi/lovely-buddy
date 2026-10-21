@@ -7,14 +7,16 @@ export interface PetInteraction {
 }
 
 /**
- * 拖拽 = 移动窗口（主进程按屏幕夹紧并持久化）；位移小于阈值 = 点击（播 tap 动作）。
+ * 拖拽 = 移动窗口（主进程按屏幕夹紧并持久化）；位移小于阈值 = 点击（播 tap 动作）；
+ * 右键命中模型 = 弹菜单（onMenu 传窗口坐标点击处）。
  * 用 screenX/screenY 增量：窗口跟着指针走，跨窗口坐标系不漂移。
  * 拖拽全程用 window 级 pointermove/up（forward:true 保证穿透时 mousemove 仍可达）。
  */
 export function setupPetInteraction(
   pet: PetModel,
   canvas: HTMLCanvasElement,
-  onTap: () => void
+  onTap: () => void,
+  onMenu: (clientX: number, clientY: number) => void
 ): PetInteraction {
   let dragging = false
   let moved = 0
@@ -54,10 +56,18 @@ export function setupPetInteraction(
     if (dragging && e.buttons === 0) end()
   }
 
+  // 右键命中模型 → 弹菜单；命中与否都吞掉浏览器默认菜单
+  const onContextMenu = (e: MouseEvent): void => {
+    e.preventDefault()
+    if (dragging) return
+    if (pet.hitTest(e.clientX, e.clientY)) onMenu(e.clientX, e.clientY)
+  }
+
   canvas.addEventListener('pointerdown', onDown)
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', end)
   window.addEventListener('mousemove', onMouseMove)
+  canvas.addEventListener('contextmenu', onContextMenu)
 
   return {
     dispose(): void {
@@ -65,6 +75,7 @@ export function setupPetInteraction(
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', end)
       window.removeEventListener('mousemove', onMouseMove)
+      canvas.removeEventListener('contextmenu', onContextMenu)
     }
   }
 }

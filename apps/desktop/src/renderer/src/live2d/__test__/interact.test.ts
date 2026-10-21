@@ -38,7 +38,7 @@ describe('setupPetInteraction', () => {
 
   it('模型上小位移松开 = 点击（播 tap，不移动窗口）', () => {
     const onTap = vi.fn()
-    interaction = setupPetInteraction(fakePet(), canvas, onTap)
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, vi.fn())
 
     fireEvent.pointerDown(canvas, { button: 0, clientX: 50, clientY: 50, screenX: 500, screenY: 500 })
     fireEvent.pointerMove(window, { clientX: 52, clientY: 51, screenX: 502, screenY: 501 })
@@ -51,7 +51,7 @@ describe('setupPetInteraction', () => {
 
   it('模型上拖动 = 窗口按屏幕增量移动，松开不播 tap 并持久化', () => {
     const onTap = vi.fn()
-    interaction = setupPetInteraction(fakePet(), canvas, onTap)
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, vi.fn())
 
     fireEvent.pointerDown(canvas, { button: 0, clientX: 50, clientY: 50, screenX: 500, screenY: 500 })
     fireEvent.pointerMove(window, { clientX: 70, clientY: 60, screenX: 520, screenY: 510 })
@@ -66,7 +66,7 @@ describe('setupPetInteraction', () => {
 
   it('模型外按下不触发任何交互（点击直达桌面）', () => {
     const onTap = vi.fn()
-    interaction = setupPetInteraction(fakePet(), canvas, onTap)
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, vi.fn())
 
     fireEvent.pointerDown(canvas, { button: 0, clientX: 150, clientY: 150, screenX: 600, screenY: 600 })
     fireEvent.pointerMove(window, { clientX: 160, clientY: 160, screenX: 610, screenY: 610 })
@@ -77,9 +77,44 @@ describe('setupPetInteraction', () => {
     expect(moveWindowEnd).not.toHaveBeenCalled()
   })
 
+  it('右键命中模型 → onMenu 带点击坐标，且吞掉浏览器默认菜单', () => {
+    const onTap = vi.fn()
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, onMenu)
+
+    const e = new MouseEvent('contextmenu', { clientX: 40, clientY: 60, bubbles: true, cancelable: true })
+    canvas.dispatchEvent(e)
+
+    expect(e.defaultPrevented).toBe(true)
+    expect(onMenu).toHaveBeenCalledWith(40, 60)
+    expect(onTap).not.toHaveBeenCalled()
+  })
+
+  it('右键模型外 → 不弹菜单，但仍吞默认菜单', () => {
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, vi.fn(), onMenu)
+
+    const e = new MouseEvent('contextmenu', { clientX: 150, clientY: 150, bubbles: true, cancelable: true })
+    canvas.dispatchEvent(e)
+
+    expect(e.defaultPrevented).toBe(true)
+    expect(onMenu).not.toHaveBeenCalled()
+  })
+
+  it('拖拽过程中右键不弹菜单', () => {
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, vi.fn(), onMenu)
+
+    fireEvent.pointerDown(canvas, { button: 0, clientX: 50, clientY: 50, screenX: 500, screenY: 500 })
+    fireEvent.pointerMove(window, { clientX: 80, clientY: 80, screenX: 530, screenY: 530 })
+
+    fireEvent.contextMenu(canvas, { clientX: 80, clientY: 80 })
+    expect(onMenu).not.toHaveBeenCalled()
+  })
+
   it('dispose 后不再响应拖拽', () => {
     const onTap = vi.fn()
-    interaction = setupPetInteraction(fakePet(), canvas, onTap)
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, vi.fn())
     interaction.dispose()
 
     fireEvent.pointerDown(canvas, { button: 0, clientX: 50, clientY: 50, screenX: 500, screenY: 500 })

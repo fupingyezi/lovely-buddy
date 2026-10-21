@@ -19,6 +19,8 @@ function mockLovelybuddy(): void {
     moveWindow: vi.fn(),
     moveWindowEnd: vi.fn(),
     resizeWindow: vi.fn(),
+    expandWindow: vi.fn().mockResolvedValue({ width: 1024, height: 768 }),
+    collapseWindow: vi.fn(),
     pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null })
   })
 }
@@ -43,20 +45,13 @@ function mockFetchApi(
         if (avatar && !list.some((a) => a.slug === avatar.slug)) list = [...list, avatar]
         return json({ avatar })
       }
-      if (url.startsWith('http://127.0.0.1:8740/api/v1/assets/') && method === 'DELETE') {
-        const slug = decodeURIComponent(url.split('/').pop() ?? '')
-        list = list.filter((a) => a.slug !== slug)
-        return json({ ok: true })
-      }
       if (url === 'http://127.0.0.1:8740/healthz') return json({ status: 'ok', db: 'ok', version: '0.1.0-dev' })
       return json({}, 404)
     })
   )
 }
 
-const haruAvatar = { slug: 'haru', name: 'haru-cubism4', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
-const shizukuAvatar = { slug: 'shizuku', name: 'shizuku-cubism2', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
-const mikuAvatar = { slug: 'miku', name: 'miku-cubism4', kind: 'moc3', entry: 'miku/miku.model3.json' }
+const haruAvatar = { slug: 'haru', name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
 
 function renderApp(): void {
   render(
@@ -94,24 +89,12 @@ describe('App', () => {
     vi.restoreAllMocks()
   })
 
-  it('后端健康时显示“天依在线 v版本”', async () => {
-    renderApp()
-    await waitFor(() => {
-      expect(screen.getByText(/天依在线/).textContent).toContain('0.1.0-dev')
-    })
-  })
-
-  it('后端不可达时显示离线提示', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('ECONNREFUSED')))
-    renderApp()
-    await waitFor(() => {
-      expect(screen.getByText(/后端离线/)).toBeTruthy()
-    })
-  })
-
-  it('无模型时显示占位卡片，可重新扫描', async () => {
+  it('无模型时显示占位卡片（含内嵌导入面板），可重新扫描', async () => {
     renderApp()
     await screen.findByText('未找到 Live2D 模型')
+    // 导入面板直接内嵌在占位卡里，不再有常驻顶栏
+    expect(screen.getByPlaceholderText('粘贴 https://…zip 链接')).toBeTruthy()
+
     fireEvent.click(screen.getByText('重新扫描'))
     await waitFor(() => {
       const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
@@ -138,58 +121,52 @@ describe('App', () => {
     expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
   })
 
-  it('有多个模型时显示切换器，点击切换模型', async () => {
-    mockFetchApi([haruAvatar, shizukuAvatar])
-    renderApp()
-    await screen.findByText('haru-cubism4') // 默认选中第一个
-    expect(screen.getByText('haru-cubism4').className).toContain('active')
-
-    fireEvent.click(screen.getByText('shizuku-cubism2'))
-    await waitFor(() => {
-      expect(screen.getByText('shizuku-cubism2').className).toContain('active')
-      expect(document.querySelector('.pet-canvas')).toBeTruthy()
-    })
-  })
-
-  it('指针在 UI 面板上关闭穿透，模型外恢复穿透', async () => {
+  it('有模型时不渲染常驻设置面板（设置改由右键菜单承载）', async () => {
     mockFetchApi([haruAvatar])
     renderApp()
-    // 有模型才会渲染 PetCanvas（usePassthrough 挂在其中）
     await waitFor(() => {
       expect(document.querySelector('.pet-canvas')).toBeTruthy()
     })
-    const statusCard = (await screen.findByText(/天依在线|后端连接中|后端离线/)).closest('.status-card')!
+    // 等待一轮列表加载完成
+    await waitFor(() => {
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+      expect(
+        fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets') && !c[1]?.method)
+      ).toBe(true)
+    })
+    expect(document.querySelector('.pet-menu')).toBeNull()
+    expect(screen.queryByText('导入形象')).toBeNull()
+    expect(screen.queryByText(/天依在线|后端离线|后端连接中/)).toBeNull()
+  })
 
-    // 模型外（canvas 空白处，pet 尚未加载 → 无命中）→ 恢复穿透
-    fireEvent.pointerMove(document.querySelector('.pet-canvas')!, { clientX: 5, clientY: 5 })
-    expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(true)
+  it('指针在占位卡上关闭穿透，模型外恢复穿透', async () => {
+    renderApp()
+    const placeholder = (await screen.findByText('未找到 Live2D 模型')).closest('.placeholder')!
 
-    // UI 面板（data-interactive）→ 关闭穿透，保证可点
-    fireEvent.pointerMove(statusCard, { clientX: 400, clientY: 400 })
+    // 占位卡（data-interactive）→ 关闭穿透，保证可点
+    fireEvent.pointerMove(placeholder, { clientX: 400, clientY: 400 })
     expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(false)
 
-    // 离开面板 → 恢复穿透
-    fireEvent.pointerMove(document.body, { clientX: 10, clientY: 10 })
+    // 离开面板 → 模型外（pet 尚未加载 → 无命中）→ 恢复穿透
+    fireEvent.pointerMove(document.querySelector('.pet-canvas')!, { clientX: 5, clientY: 5 })
     expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(true)
   })
 
-  it('导入成功自动应用新形象', async () => {
-    mockFetchApi([haruAvatar], {
+  it('占位卡导入成功自动应用新形象', async () => {
+    mockFetchApi([], {
       ok: true,
       avatar: { slug: 'tianyi', name: '天依', kind: 'moc3', entry: 'tianyi/tianyi.model3.json', source: 'url' }
     })
     renderApp()
-    // 单模型不渲染切换器，等顶栏动作区出现即可
-    await screen.findByText('导入形象')
+    await screen.findByText('未找到 Live2D 模型')
 
-    fireEvent.click(screen.getByText('导入形象'))
     fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
       target: { value: ' https://example.com/tianyi.zip ' }
     })
     fireEvent.click(screen.getByText('从 URL 导入'))
 
     await waitFor(() => {
-      expect(screen.getByText('天依').className).toContain('active')
+      expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
     })
     // 自动应用：localStorage 记住新形象
     expect(localStorage.getItem('lovelybuddy:model-url')).toBe('l2d://model/tianyi/tianyi.model3.json')
@@ -206,8 +183,6 @@ describe('App', () => {
     renderApp()
     await screen.findByText('未找到 Live2D 模型')
 
-    // 占位卡与顶栏各有一个「导入形象」，点占位卡里的（DOM 中在前）
-    fireEvent.click(screen.getAllByText('导入形象')[0])
     fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
       target: { value: 'https://example.com/evil.zip' }
     })
@@ -218,26 +193,6 @@ describe('App', () => {
     })
     // 面板保持打开（未自动应用）
     expect(screen.getByText('从 URL 导入')).toBeTruthy()
-  })
-
-  it('删除当前形象后切换到剩余形象', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    mockFetchApi([haruAvatar, shizukuAvatar, mikuAvatar])
-    renderApp()
-    await screen.findByText('haru-cubism4')
-
-    fireEvent.click(screen.getByText('删除当前形象'))
-    await waitFor(() => {
-      expect(screen.queryByText('haru-cubism4')).toBeNull()
-    })
-    // 剩余形象里第一个自动选中
-    await waitFor(() => {
-      expect(screen.getByText('shizuku-cubism2').className).toContain('active')
-    })
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
-    expect(
-      fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets/haru') && c[1]?.method === 'DELETE')
-    ).toBe(true)
   })
 
   it('本地导入走文件选择对话框', async () => {
@@ -252,10 +207,9 @@ describe('App', () => {
     renderApp()
     await screen.findByText('未找到 Live2D 模型')
 
-    fireEvent.click(screen.getAllByText('导入形象')[0])
     fireEvent.click(screen.getByText('本地 zip'))
 
-    // 导入成功 → 占位卡消失（模型已应用，单模型无切换器）
+    // 导入成功 → 占位卡消失（模型已应用）
     await waitFor(() => {
       expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
     })

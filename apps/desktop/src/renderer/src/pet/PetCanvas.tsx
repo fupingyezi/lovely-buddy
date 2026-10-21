@@ -7,15 +7,21 @@ import { usePetStore } from '../store/petStore'
 interface Props {
   url: string | null
   name: string
+  /** 右键命中模型时回调（窗口坐标点击处），菜单打开/关闭由 App 决定 */
+  onMenu: (clientX: number, clientY: number) => void
+  /** 菜单是否打开（穿透状态机：打开时整窗强制不穿透） */
+  menuOpen: boolean
 }
 
 /**
  * 画布常驻（PIXI stage 单例依赖它），模型切换/无模型时只换内容不卸载组件，
  * 避免"卸载时模型仍在加载"的泄漏。url 为 null 时画布全透明且可穿透。
  */
-export default function PetCanvas({ url, name }: Props): ReactElement {
+export default function PetCanvas({ url, name, onMenu, menuOpen }: Props): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevUrlRef = useRef<string | null>(null)
+  const onMenuRef = useRef(onMenu)
+  onMenuRef.current = onMenu
   const [pet, setPet] = useState<PetModel | null>(null)
 
   useEffect(() => {
@@ -56,17 +62,22 @@ export default function PetCanvas({ url, name }: Props): ReactElement {
     }
   }, [url, name])
 
-  // 拖拽移动 + 点击播 tap 动作
+  // 拖拽移动 + 点击播 tap 动作 + 右键弹菜单
   useEffect(() => {
     const canvas = canvasRef.current
     if (!pet || !canvas) return
-    const interaction = setupPetInteraction(pet, canvas, () => {
-      void pet.playIntent('tap')
-    })
+    const interaction = setupPetInteraction(
+      pet,
+      canvas,
+      () => {
+        void pet.playIntent('tap')
+      },
+      (x, y) => onMenuRef.current(x, y)
+    )
     return () => interaction.dispose()
   }, [pet])
 
-  usePassthrough(pet)
+  usePassthrough(pet, menuOpen)
 
   return <canvas ref={canvasRef} className="pet-canvas" />
 }

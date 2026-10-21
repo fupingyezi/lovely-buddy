@@ -27,6 +27,10 @@ declare global {
     moveWindow: (dx: number, dy: number) => void
     moveWindowEnd: () => void
     resizeWindow: (width: number, height: number) => void
+    /** 菜单打开：向左上扩展窗口（右下角固定），返回扩展后的实际尺寸（屏幕边缘可能夹紧） */
+    expandWindow: (extraWidth: number, extraHeight: number) => Promise<{ width: number; height: number }>
+    /** 菜单关闭：缩回扩展前的尺寸（右下角固定） */
+    collapseWindow: () => void
     quit: () => void
   }
 

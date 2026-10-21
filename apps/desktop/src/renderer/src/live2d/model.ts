@@ -53,11 +53,12 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   // 关闭内置交互（autoHitTest/autoFocus），命中/拖拽由 interact.ts 接管
   const model = await Live2DModelCtor.from(url, { autoHitTest: false, autoFocus: false })
 
-  // 目标身高按屏幕高度约 22%（180-380px）；窗口只包住模型 + 动作边距，不盖桌面
+  // 目标身高按屏幕高度约 22%（180-380px）；窗口 = 模型视觉包围盒（碰撞箱）严格贴合，
+  // 高度补 8px 站台偏移（脚底距窗口下沿），无额外边距——动画挥出的部位可能被窗口裁边（已知取舍）
   const targetHeight = Math.min(Math.max(Math.round(window.screen.availHeight * 0.22), 180), 380)
   const scale = targetHeight / model.height
-  const winW = Math.min(Math.max(Math.ceil(model.width * scale * 1.5), 360), 1200)
-  const winH = Math.min(Math.max(Math.ceil(targetHeight * 1.35), 400), 900)
+  const winW = Math.ceil(model.width * scale)
+  const winH = Math.ceil(model.height * scale) + 8
   if (Math.abs(window.innerWidth - winW) > 2 || Math.abs(window.innerHeight - winH) > 2) {
     window.lovelybuddy.resizeWindow(winW, winH)
     await nextResize()

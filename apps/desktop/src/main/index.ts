@@ -13,10 +13,15 @@ registerScheme()
 const settings = new SettingsStore()
 let petWindow: BrowserWindow | null = null
 let tray: Tray | null = null
+// 菜单展开前的窗口基准 bounds（缩回时右下角固定，角色屏幕位置不动）
+let expandedBase: Electron.Rectangle | null = null
 
-// 桌宠窗口只包住模型本身（不是全屏玻璃）：默认 420x480，模型加载后按模型尺寸调整
+// 桌宠窗口只包住模型本身（不是全屏玻璃）：默认 420x480（无模型时的占位），模型加载后按模型尺寸调整
 const WIN_W = 420
 const WIN_H = 480
+// 模型窗口的最小地板（防退化模型算出 0 尺寸），正常模型远大于此
+const MIN_W = 60
+const MIN_H = 90
 
 function clamp(v: number, min: number, max: number): number {
   return Math.min(Math.max(v, min), max)
@@ -155,11 +160,38 @@ function setupIPC(): void {
   ipcMain.on('lovelybuddy:resize-window', (_e, width: number, height: number) => {
     if (!petWindow) return
     const wa = screen.getDisplayMatching(petWindow.getBounds()).workArea
-    const w = clamp(Math.round(width), WIN_W, wa.width)
-    const h = clamp(Math.round(height), WIN_H, wa.height)
+    const w = clamp(Math.round(width), MIN_W, wa.width)
+    const h = clamp(Math.round(height), MIN_H, wa.height)
     const [wx, wy] = petWindow.getPosition()
     const [cw, ch] = petWindow.getSize()
     petWindow.setBounds({ x: Math.round(wx + cw / 2 - w / 2), y: Math.round(wy + ch - h), width: w, height: h })
+    // 展开态下切模型会触发 resize：基准随新尺寸更新，缩回时不会跳回旧尺寸
+    if (expandedBase) expandedBase = petWindow.getBounds()
+  })
+  // 菜单打开：窗口向左上扩展容纳菜单（右下角固定，角色屏幕位置不动；屏幕边缘夹紧）
+  ipcMain.handle('lovelybuddy:expand-window', (_e, extraWidth: number, extraHeight: number) => {
+    if (!petWindow) return { width: 0, height: 0 }
+    if (!expandedBase) expandedBase = petWindow.getBounds()
+    const b = petWindow.getBounds()
+    const wa = screen.getDisplayMatching(b).workArea
+    const x = Math.max(wa.x, b.x - extraWidth)
+    const y = Math.max(wa.y, b.y - extraHeight)
+    const width = b.width + (b.x - x)
+    const height = b.height + (b.y - y)
+    petWindow.setBounds({ x, y, width, height })
+    return { width, height }
+  })
+  // 菜单关闭：缩回基准尺寸（右下角固定），角色位置不变
+  ipcMain.on('lovelybuddy:collapse-window', () => {
+    if (!petWindow || !expandedBase) return
+    const b = petWindow.getBounds()
+    petWindow.setBounds({
+      x: b.x + (b.width - expandedBase.width),
+      y: b.y + (b.height - expandedBase.height),
+      width: expandedBase.width,
+      height: expandedBase.height
+    })
+    expandedBase = null
   })
   ipcMain.on('lovelybuddy:quit', () => app.quit())
   // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
