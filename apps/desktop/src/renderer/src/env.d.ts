@@ -22,8 +22,8 @@ declare global {
   interface LovelybuddyApi {
     getRuntime: () => Promise<{ baseUrl: string; token: string; dev: boolean }>
     setPassthrough: (on: boolean) => void
-    listModels: () => Promise<ModelInfo[]>
-    pickModelDir: () => Promise<ModelInfo[]>
+    /** 弹出本地文件/目录选择框（zip 或目录），返回路径或 canceled */
+    pickImportPath: (mode: 'zip' | 'dir') => Promise<{ canceled: boolean; path: string | null }>
     moveWindow: (dx: number, dy: number) => void
     moveWindowEnd: () => void
     resizeWindow: (width: number, height: number) => void
