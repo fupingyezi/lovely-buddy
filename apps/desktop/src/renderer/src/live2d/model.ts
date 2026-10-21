@@ -4,6 +4,7 @@ import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
+import { shiftToKeepScreenPosition } from './windowAnchor'
 
 export interface PetModel {
   readonly name: string
@@ -77,6 +78,23 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   model.position.set(window.innerWidth / 2, window.innerHeight - 8)
   app.stage.addChild(model)
 
+  // 窗口 resize（菜单展开/收起）时保持模型屏幕位置：展开/收起只移动窗口左/上边
+  // （右/下边固定），窗口坐标增量 = 尺寸增量，把增量补回模型位置即可抵消。
+  // 初始/切换模型的 resize 发生在 addChild 之前，这里从当前尺寸起算，不受影响。
+  let lastWinW = window.innerWidth
+  let lastWinH = window.innerHeight
+  const onWinResize = (): void => {
+    const next = shiftToKeepScreenPosition(
+      { x: model.position.x, y: model.position.y },
+      { w: lastWinW, h: lastWinH },
+      { w: window.innerWidth, h: window.innerHeight }
+    )
+    lastWinW = window.innerWidth
+    lastWinH = window.innerHeight
+    model.position.set(next.x, next.y)
+  }
+  window.addEventListener('resize', onWinResize)
+
   // 绘制部件总数（cubism4 没有基类的 drawDataCount，用 getDrawableIDs 通用获取）
   const drawableCount = model.internalModel.getDrawableIDs().length
 
@@ -112,6 +130,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       if (disposed) return
       disposed = true
       window.clearTimeout(idleTimer)
+      window.removeEventListener('resize', onWinResize)
       try {
         model.parent?.removeChild(model)
         model.destroy()
