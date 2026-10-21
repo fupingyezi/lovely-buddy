@@ -1,8 +1,8 @@
 {
-  "name": "skyi-buddy",
+  "name": "lovely-buddy",
   "version": "0.1.0",
   "private": true,
-  "description": "洛天依 AI 桌宠（Electron + React + Live2D / Go + PostgreSQL + pgvector）",
+  "description": "lovely-buddy：可换形象的本地 AI 桌宠与 AI 桌面端表情接口（Electron + Live2D / Go + pgvector / MCP）",
   "scripts": {
     "setup": "make setup",
     "db": "make db",
