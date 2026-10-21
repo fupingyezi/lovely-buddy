@@ -47,9 +47,9 @@ export default function App(): ReactElement {
         url={modelUrl}
         name={modelName ?? ''}
         menuOpen={menu !== null}
-        onMenu={(x, y) => {
+        onMenu={() => {
           if (menu) closeMenu()
-          else void openMenu(x, y)
+          else openMenu()
         }}
       />
       {modelUrl === null && !placeholderDismissed && (
