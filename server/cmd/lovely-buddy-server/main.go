@@ -24,9 +24,10 @@ func envOr(key, fallback string) string {
 
 func main() {
 	var (
-		addr  = flag.String("addr", envOr("LOVELYBUDDY_ADDR", "127.0.0.1:8740"), "监听地址（只应绑本机）")
-		token = flag.String("token", envOr("LOVELYBUDDY_TOKEN", ""), "鉴权 token（空则回退 LOVELYBUDDY_DEV_TOKEN）")
-		dsn   = flag.String("dsn", envOr("LOVELYBUDDY_DB_DSN", "postgres://lovelybuddy:lovelybuddy@127.0.0.1:5433/lovelybuddy?sslmode=disable"), "PostgreSQL DSN")
+		addr     = flag.String("addr", envOr("LOVELYBUDDY_ADDR", "127.0.0.1:8740"), "监听地址（只应绑本机）")
+		token    = flag.String("token", envOr("LOVELYBUDDY_TOKEN", ""), "鉴权 token（空则回退 LOVELYBUDDY_DEV_TOKEN）")
+		dsn      = flag.String("dsn", envOr("LOVELYBUDDY_DB_DSN", "postgres://lovelybuddy:lovelybuddy@127.0.0.1:5433/lovelybuddy?sslmode=disable"), "PostgreSQL DSN")
+		modelDir = flag.String("model-dir", envOr("LOVELYBUDDY_MODEL_DIR", "../model"), "Live2D 模型根目录（dev 默认仓库 model/）")
 	)
 	flag.Parse()
 	if *token == "" {
@@ -50,7 +51,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := server.New(*addr, *token, pool)
+	srv := server.New(*addr, *token, pool, *modelDir)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", server.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
