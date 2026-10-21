@@ -109,7 +109,7 @@ models/<slug>/
 沿用已确认选型，摘要如下（细节见旧计划，不重复展开）：
 
 - **Provider 抽象**：`ChatProvider.StreamChat(ctx, req)` + `EmbeddingProvider.EmbedBatch(ctx, texts)`；唯一实现 `openaiCompat`（`sashabaranov/go-openai` 改 BaseURL），registry 从 config 实例化、热切换。
-- **默认厂商**：对话 DeepSeek（缓存友好 prompt 顺序：稳定前缀 = 人设+动作协议 → 历史 → 动态尾块 → 检索记忆 → 最新输入）；embedding SiliconFlow BGE-M3（1024 维，插入前断言）。
+- **默认厂商**：对话 DeepSeek（缓存友好 prompt 顺序：稳定前缀 = 人设+动作协议 → 历史 → 动态尾块 → 检索记忆 → 最新输入）；embedding 智谱 embedding-3（OpenAI 兼容，`dimensions=1024` 对齐 pgvector/HNSW，插入前断言）。
 - **记忆**：SSE 完成后异步抽取 → sha256 去重（cosine > 0.90 合并）→ 批量嵌入 → pgvector 检索注入（fact 且 importance ≥ 8 常驻）。
 - **每形象人格**：`avatar.json.persona` 覆盖全局人设（新增能力）。
 

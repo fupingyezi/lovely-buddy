@@ -12,7 +12,7 @@ setup: assets ## 首次克隆后执行：安装依赖、生成图标、初始化
 	@test -f .env || cp .env.example .env
 	@echo ""
 	@echo "✔ 初始化完成。请把 Live2D 模型放入 model/ 目录（见 docs/model-setup.md），"
-	@echo "  并在 .env 中填入 DEEPSEEK_API_KEY（对话）与 SILICONFLOW_API_KEY（记忆）"
+	@echo "  并在 .env 中填入 DEEPSEEK_API_KEY（对话）与 ZHIPU_API_KEY（记忆）"
 
 assets: ## 下载 Cubism core 与官方免费示例模型（shizuku/haru，仅供开发测试）
 	bash scripts/fetch-assets.sh

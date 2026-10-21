@@ -27,7 +27,7 @@
 
 ```bash
 git clone <本仓库> && cd lovely-buddy
-cp .env.example .env    # 填入 DEEPSEEK_API_KEY（对话）、SILICONFLOW_API_KEY（记忆，可选）
+cp .env.example .env    # 填入 DEEPSEEK_API_KEY（对话）、ZHIPU_API_KEY（记忆，可选）
 make setup              # 安装依赖、生成图标
 make dev                # 一键启动：数据库 + Go 后端 + Electron
 ```
