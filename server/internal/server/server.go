@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -37,6 +38,29 @@ func New(addr, token string, pool *pgxpool.Pool, modelDir string) *http.Server {
 		api.GET("/ping", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"pong": true}) })
 		api.GET("/assets", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"avatars": assets.Detect(modelDir)})
+		})
+		api.POST("/assets/import", func(c *gin.Context) {
+			var req struct {
+				Source assets.ImportSource `json:"source"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+				return
+			}
+			av, err := assets.Import(modelDir, req.Source)
+			if err != nil {
+				slog.Error("assets: 导入失败", "source", req.Source.Type, "err", err)
+				c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"avatar": av})
+		})
+		api.DELETE("/assets/:slug", func(c *gin.Context) {
+			if err := assets.Delete(modelDir, c.Param("slug")); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"ok": true})
 		})
 	}
 
