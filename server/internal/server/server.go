@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"skyi/server/internal/middleware"
+	"lovelybuddy/server/internal/middleware"
 )
 
 // Version 供 /healthz 与托盘状态展示。

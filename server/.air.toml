@@ -2,8 +2,8 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./bin/skyi-server ./cmd/skyi-server"
-  bin = "./bin/skyi-server"
+  cmd = "go build -o ./bin/lovely-buddy-server ./cmd/lovely-buddy-server"
+  bin = "./bin/lovely-buddy-server"
   include_ext = ["go", "sql"]
   exclude_dir = ["tmp", "bin", "gen", "queries"]
   delay = 500

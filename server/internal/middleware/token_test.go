@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"skyi/server/internal/middleware"
+	"lovelybuddy/server/internal/middleware"
 )
 
 func newTokenRouter(token string) *gin.Engine {

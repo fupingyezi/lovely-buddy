@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"skyi/server/internal/middleware"
+	"lovelybuddy/server/internal/middleware"
 )
 
 func TestRedactQuery(t *testing.T) {

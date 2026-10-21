@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"skyi/server/internal/db"
-	"skyi/server/internal/server"
+	"lovelybuddy/server/internal/db"
+	"lovelybuddy/server/internal/server"
 )
 
 func envOr(key, fallback string) string {
@@ -24,13 +24,13 @@ func envOr(key, fallback string) string {
 
 func main() {
 	var (
-		addr  = flag.String("addr", envOr("SKYI_ADDR", "127.0.0.1:8740"), "监听地址（只应绑本机）")
-		token = flag.String("token", envOr("SKYI_TOKEN", ""), "鉴权 token（空则回退 SKYI_DEV_TOKEN）")
-		dsn   = flag.String("dsn", envOr("SKYI_DB_DSN", "postgres://skyi:skyi@127.0.0.1:5433/skyi?sslmode=disable"), "PostgreSQL DSN")
+		addr  = flag.String("addr", envOr("LOVELYBUDDY_ADDR", "127.0.0.1:8740"), "监听地址（只应绑本机）")
+		token = flag.String("token", envOr("LOVELYBUDDY_TOKEN", ""), "鉴权 token（空则回退 LOVELYBUDDY_DEV_TOKEN）")
+		dsn   = flag.String("dsn", envOr("LOVELYBUDDY_DB_DSN", "postgres://lovelybuddy:lovelybuddy@127.0.0.1:5433/lovelybuddy?sslmode=disable"), "PostgreSQL DSN")
 	)
 	flag.Parse()
 	if *token == "" {
-		*token = os.Getenv("SKYI_DEV_TOKEN")
+		*token = os.Getenv("LOVELYBUDDY_DEV_TOKEN")
 	}
 
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo})))
@@ -52,7 +52,7 @@ func main() {
 
 	srv := server.New(*addr, *token, pool)
 	go func() {
-		slog.Info("skyi-server 已启动", "addr", *addr, "version", server.Version)
+		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", server.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "err", err)
 			stop()
