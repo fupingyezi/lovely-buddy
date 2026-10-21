@@ -13,13 +13,13 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: skyi
-          POSTGRES_PASSWORD: skyi
-          POSTGRES_DB: skyi
+          POSTGRES_USER: lovelybuddy
+          POSTGRES_PASSWORD: lovelybuddy
+          POSTGRES_DB: lovelybuddy
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U skyi"
+          --health-cmd "pg_isready -U lovelybuddy"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 12
@@ -32,7 +32,7 @@ jobs:
         working-directory: server
         run: go vet ./... && go test ./...
         env:
-          SKYI_TEST_DB_DSN: postgres://skyi:skyi@127.0.0.1:5432/skyi?sslmode=disable
+          LOVELYBUDDY_TEST_DB_DSN: postgres://lovelybuddy:lovelybuddy@127.0.0.1:5432/lovelybuddy?sslmode=disable
 
   frontend:
     name: 前端 typecheck + test + build

@@ -31,7 +31,7 @@ test: ## Go vet/test + 前端类型检查与测试
 
 build-server: ## 编译 Go 后端 → apps/desktop/resources/bin/（darwin-arm64）
 	cd server && CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" \
-		-o ../apps/desktop/resources/bin/skyi-server-darwin-arm64 ./cmd/skyi-server
+		-o ../apps/desktop/resources/bin/lovely-buddy-server-darwin-arm64 ./cmd/lovely-buddy-server
 
 build: build-server ## 打包 macOS 应用（未签名，仅本地使用）
 	cd apps/desktop && pnpm dist

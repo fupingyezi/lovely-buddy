@@ -1,21 +1,21 @@
 services:
   postgres:
-    image: ${SKYI_PG_IMAGE:-pgvector/pgvector:pg16}
-    container_name: skyi-postgres
+    image: ${LOVELYBUDDY_PG_IMAGE:-pgvector/pgvector:pg16}
+    container_name: lovelybuddy-postgres
     environment:
-      POSTGRES_USER: skyi
-      POSTGRES_PASSWORD: skyi
-      POSTGRES_DB: skyi
+      POSTGRES_USER: lovelybuddy
+      POSTGRES_PASSWORD: lovelybuddy
+      POSTGRES_DB: lovelybuddy
     ports:
       # 只绑本机，避开常见的 5432
       - "127.0.0.1:5433:5432"
     volumes:
-      - skyi_pgdata:/var/lib/postgresql/data
+      - lovelybuddy_pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U skyi -d skyi"]
+      test: ["CMD-SHELL", "pg_isready -U lovelybuddy -d lovelybuddy"]
       interval: 5s
       timeout: 3s
       retries: 12
 
 volumes:
-  skyi_pgdata:
+  lovelybuddy_pgdata:
