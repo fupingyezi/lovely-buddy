@@ -42,11 +42,11 @@ export default function PetCanvas({ url, name }: Props): ReactElement {
         instance = p
         setPet(p)
         usePetStore.getState().setModelError(null)
-        console.info('[skyi] Live2D 模型已加载:', name, url)
+        console.info('[lovely-buddy] Live2D 模型已加载:', name, url)
       })
       .catch((e: unknown) => {
         if (alive) usePetStore.getState().setModelError(String(e))
-        console.error('[skyi] Live2D 模型加载失败:', e instanceof Error ? e.stack : e)
+        console.error('[lovely-buddy] Live2D 模型加载失败:', e instanceof Error ? e.stack : e)
       })
 
     return () => {

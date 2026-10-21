@@ -7,8 +7,8 @@ import { usePetStore } from '../store/petStore'
 // 该库在 import 时就要求 window.Live2D 存在（jsdom 没有），App 测试不涉及真实渲染，整体 mock 掉
 vi.mock('pixi-live2d-display-lipsyncpatch', () => ({ Live2DModel: class {} }))
 
-function mockSkyi(models: ModelInfo[] = []): void {
-  vi.stubGlobal('skyi', {
+function mockLovelybuddy(models: ModelInfo[] = []): void {
+  vi.stubGlobal('lovelybuddy', {
     getRuntime: vi.fn().mockResolvedValue({
       baseUrl: 'http://127.0.0.1:8740',
       token: 'dev',
@@ -45,7 +45,7 @@ describe('App', () => {
       status: 'connecting',
       version: null
     })
-    mockSkyi([])
+    mockLovelybuddy([])
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -83,7 +83,7 @@ describe('App', () => {
     await screen.findByText('未找到 Live2D 模型')
     fireEvent.click(screen.getByText('重新扫描'))
     await waitFor(() => {
-      expect(window.skyi.listModels).toHaveBeenCalledTimes(2) // 挂载 1 次 + 手动 1 次
+      expect(window.lovelybuddy.listModels).toHaveBeenCalledTimes(2) // 挂载 1 次 + 手动 1 次
     })
   })
 
@@ -97,7 +97,7 @@ describe('App', () => {
     cleanup()
     renderApp()
     await waitFor(() => {
-      expect(window.skyi.listModels).toHaveBeenCalled()
+      expect(window.lovelybuddy.listModels).toHaveBeenCalled()
     })
     expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
   })
@@ -107,7 +107,7 @@ describe('App', () => {
       { name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3' },
       { name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc' }
     ]
-    mockSkyi(models)
+    mockLovelybuddy(models)
     renderApp()
     await screen.findByText('haru-cubism4') // 默认选中第一个
     expect(screen.getByText('haru-cubism4').className).toContain('active')
@@ -120,7 +120,7 @@ describe('App', () => {
   })
 
   it('指针在 UI 面板上关闭穿透，模型外恢复穿透', async () => {
-    mockSkyi([{ name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3' }])
+    mockLovelybuddy([{ name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3' }])
     renderApp()
     // 有模型才会渲染 PetCanvas（usePassthrough 挂在其中）
     await waitFor(() => {
@@ -130,14 +130,14 @@ describe('App', () => {
 
     // 模型外（canvas 空白处，pet 尚未加载 → 无命中）→ 恢复穿透
     fireEvent.pointerMove(document.querySelector('.pet-canvas')!, { clientX: 5, clientY: 5 })
-    expect(window.skyi.setPassthrough).toHaveBeenLastCalledWith(true)
+    expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(true)
 
     // UI 面板（data-interactive）→ 关闭穿透，保证可点
     fireEvent.pointerMove(statusCard, { clientX: 400, clientY: 400 })
-    expect(window.skyi.setPassthrough).toHaveBeenLastCalledWith(false)
+    expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(false)
 
     // 离开面板 → 恢复穿透
     fireEvent.pointerMove(document.body, { clientX: 10, clientY: 10 })
-    expect(window.skyi.setPassthrough).toHaveBeenLastCalledWith(true)
+    expect(window.lovelybuddy.setPassthrough).toHaveBeenLastCalledWith(true)
   })
 })

@@ -59,7 +59,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   const winW = Math.min(Math.max(Math.ceil(model.width * scale * 1.5), 360), 1200)
   const winH = Math.min(Math.max(Math.ceil(targetHeight * 1.35), 400), 900)
   if (Math.abs(window.innerWidth - winW) > 2 || Math.abs(window.innerHeight - winH) > 2) {
-    window.skyi.resizeWindow(winW, winH)
+    window.lovelybuddy.resizeWindow(winW, winH)
     await nextResize()
   }
 
@@ -102,7 +102,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
         model.destroy()
       } catch (e) {
         // fork 对刚加载完的模型 destroy 可能抛错，销毁失败不影响后续
-        console.warn('[skyi] 模型销毁异常（可忽略）:', e)
+        console.warn('[lovely-buddy] 模型销毁异常（可忽略）:', e)
       }
     }
   }

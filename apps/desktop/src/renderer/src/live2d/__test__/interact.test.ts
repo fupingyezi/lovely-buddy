@@ -24,7 +24,7 @@ describe('setupPetInteraction', () => {
   let interaction: PetInteraction | null = null
 
   beforeEach(() => {
-    vi.stubGlobal('skyi', { moveWindow, moveWindowEnd })
+    vi.stubGlobal('lovelybuddy', { moveWindow, moveWindowEnd })
     moveWindow.mockClear()
     moveWindowEnd.mockClear()
     canvas = document.createElement('canvas')

@@ -2,8 +2,8 @@ import { create } from 'zustand'
 
 export type BackendStatus = 'connecting' | 'online' | 'offline'
 
-const MODEL_URL_KEY = 'skyi:model-url'
-const PLACEHOLDER_DISMISSED_KEY = 'skyi:placeholder-dismissed'
+const MODEL_URL_KEY = 'lovelybuddy:model-url'
+const PLACEHOLDER_DISMISSED_KEY = 'lovelybuddy:placeholder-dismissed'
 
 function readDismissed(): boolean {
   try {
@@ -41,7 +41,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
 
   async loadModels() {
     try {
-      const models = await window.skyi.listModels()
+      const models = await window.lovelybuddy.listModels()
       const restored = localStorage.getItem(MODEL_URL_KEY)
       const next = models.find((m) => m.url === (get().modelUrl ?? restored)) ?? models[0] ?? null
       // 扫描到模型即复位占位卡关闭状态（用户下次放模型进来能立刻看到桌宠）
@@ -63,7 +63,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
   },
 
   async pickModelDir() {
-    const models = await window.skyi.pickModelDir()
+    const models = await window.lovelybuddy.pickModelDir()
     const next = models[0] ?? null
     set({
       models,

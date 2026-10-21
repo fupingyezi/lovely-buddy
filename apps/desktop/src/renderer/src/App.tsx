@@ -21,7 +21,7 @@ export default function App(): ReactElement {
     let timer: number | undefined
     const poll = async (): Promise<void> => {
       try {
-        const runtime = await window.skyi.getRuntime()
+        const runtime = await window.lovelybuddy.getRuntime()
         if (stopped) return
         const res = await fetch(`${runtime.baseUrl}/healthz`)
         const h = (await res.json()) as { status: string; db: string; version: string }

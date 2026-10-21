@@ -39,13 +39,13 @@ export function setupPetInteraction(
     moved += Math.abs(dx) + Math.abs(dy)
     // 阈值内的位移视为点击抖动，不动窗口；确认是拖拽后才开始跟手
     if (moved <= TAP_MAX_DRIFT) return
-    if (dx !== 0 || dy !== 0) window.skyi.moveWindow(dx, dy)
+    if (dx !== 0 || dy !== 0) window.lovelybuddy.moveWindow(dx, dy)
   }
 
   const end = (): void => {
     if (!dragging) return
     dragging = false
-    window.skyi.moveWindowEnd()
+    window.lovelybuddy.moveWindowEnd()
     if (moved <= TAP_MAX_DRIFT) onTap()
   }
 

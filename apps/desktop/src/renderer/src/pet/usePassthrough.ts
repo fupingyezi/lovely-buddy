@@ -25,7 +25,7 @@ export function usePassthrough(pet: PetModel | null): void {
       if (e.target instanceof Element && e.target.closest('[data-interactive]')) {
         if (passthroughOn) {
           passthroughOn = false
-          window.skyi.setPassthrough(false)
+          window.lovelybuddy.setPassthrough(false)
         }
         return
       }
@@ -33,7 +33,7 @@ export function usePassthrough(pet: PetModel | null): void {
       const want = !onModel
       if (want !== passthroughOn) {
         passthroughOn = want
-        window.skyi.setPassthrough(want)
+        window.lovelybuddy.setPassthrough(want)
       }
     }
 
@@ -41,7 +41,7 @@ export function usePassthrough(pet: PetModel | null): void {
     return () => {
       window.removeEventListener('pointermove', onMove)
       // 卸载兜底：恢复穿透（小窗口默认态），避免模型切换瞬间吞掉点击
-      window.skyi.setPassthrough(true)
+      window.lovelybuddy.setPassthrough(true)
     }
   }, [])
 }
