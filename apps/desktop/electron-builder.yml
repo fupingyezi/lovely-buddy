@@ -1,5 +1,5 @@
-appId: dev.skyi.buddy
-productName: skyi-buddy
+appId: dev.lovelybuddy.app
+productName: lovely-buddy
 directories:
   buildResources: resources
   output: ../../dist

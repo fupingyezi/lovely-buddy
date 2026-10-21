@@ -8,7 +8,7 @@ import { listModels } from '../models'
 const tempDirs: string[] = []
 
 function makeTempRoot(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'skyi-models-'))
+  const dir = mkdtempSync(join(tmpdir(), 'lovelybuddy-models-'))
   tempDirs.push(dir)
   return dir
 }
@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe('listModels', () => {
   it('目录不存在时返回空列表', () => {
-    expect(listModels(join(tmpdir(), 'skyi-no-such-dir'))).toEqual([])
+    expect(listModels(join(tmpdir(), 'lovelybuddy-no-such-dir'))).toEqual([])
   })
 
   it('递归发现 .model3.json 与 .model.json，名称为所在目录', () => {

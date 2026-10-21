@@ -12,7 +12,7 @@ export interface ModelInfo {
   kind: 'moc' | 'moc3'
 }
 
-export interface SkyiApi {
+export interface LovelybuddyApi {
   /** 获取后端地址与鉴权 token（打包模式由主进程随机生成） */
   getRuntime: () => Promise<Runtime>
   /** 点击穿透开关（forward:true） */
@@ -30,15 +30,15 @@ export interface SkyiApi {
   quit: () => void
 }
 
-const skyi: SkyiApi = {
-  getRuntime: () => ipcRenderer.invoke('skyi:get-runtime'),
-  setPassthrough: (on) => ipcRenderer.send('skyi:set-passthrough', on),
-  listModels: () => ipcRenderer.invoke('skyi:list-models'),
-  pickModelDir: () => ipcRenderer.invoke('skyi:pick-model-dir'),
-  moveWindow: (dx, dy) => ipcRenderer.send('skyi:move-window', dx, dy),
-  moveWindowEnd: () => ipcRenderer.send('skyi:move-window-end'),
-  resizeWindow: (width, height) => ipcRenderer.send('skyi:resize-window', width, height),
-  quit: () => ipcRenderer.send('skyi:quit')
+const lovelybuddy: LovelybuddyApi = {
+  getRuntime: () => ipcRenderer.invoke('lovelybuddy:get-runtime'),
+  setPassthrough: (on) => ipcRenderer.send('lovelybuddy:set-passthrough', on),
+  listModels: () => ipcRenderer.invoke('lovelybuddy:list-models'),
+  pickModelDir: () => ipcRenderer.invoke('lovelybuddy:pick-model-dir'),
+  moveWindow: (dx, dy) => ipcRenderer.send('lovelybuddy:move-window', dx, dy),
+  moveWindowEnd: () => ipcRenderer.send('lovelybuddy:move-window-end'),
+  resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),
+  quit: () => ipcRenderer.send('lovelybuddy:quit')
 }
 
-contextBridge.exposeInMainWorld('skyi', skyi)
+contextBridge.exposeInMainWorld('lovelybuddy', lovelybuddy)

@@ -1,5 +1,5 @@
 {
-  "name": "skyi-desktop",
+  "name": "lovely-buddy",
   "version": "0.1.0",
   "description": "洛天依 AI 桌宠桌面壳（Electron）",
   "main": "./out/main/index.js",

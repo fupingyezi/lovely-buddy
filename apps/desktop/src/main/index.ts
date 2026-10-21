@@ -5,8 +5,8 @@ import { SettingsStore } from './store'
 import { listModels } from './models'
 
 // dev 模式固定值（make dev 时 Go 监听 8740）；打包模式由 goProcess 动态生成（M4 实现）
-const DEV_ADDR = process.env.SKYI_ADDR ?? '127.0.0.1:8740'
-const DEV_TOKEN = process.env.SKYI_DEV_TOKEN ?? 'dev'
+const DEV_ADDR = process.env.LOVELYBUDDY_ADDR ?? '127.0.0.1:8740'
+const DEV_TOKEN = process.env.LOVELYBUDDY_DEV_TOKEN ?? 'dev'
 
 // 特权协议必须在 app.ready 之前注册
 registerScheme()
@@ -129,17 +129,17 @@ function createTray(): void {
 }
 
 function setupIPC(): void {
-  ipcMain.handle('skyi:get-runtime', () => ({
+  ipcMain.handle('lovelybuddy:get-runtime', () => ({
     baseUrl: `http://${DEV_ADDR}`,
     token: DEV_TOKEN,
     dev: !app.isPackaged
   }))
-  ipcMain.on('skyi:set-passthrough', (_e, on: boolean) => {
+  ipcMain.on('lovelybuddy:set-passthrough', (_e, on: boolean) => {
     // forward:true 保住 mousemove，否则窗口一旦穿透就再也收不到鼠标事件、无法关闭穿透
     petWindow?.setIgnoreMouseEvents(!!on, { forward: true })
   })
   // 拖拽 = 移动窗口（增量），主进程按当前屏幕夹紧，防止拖出屏幕外找不回来
-  ipcMain.on('skyi:move-window', (_e, dx: number, dy: number) => {
+  ipcMain.on('lovelybuddy:move-window', (_e, dx: number, dy: number) => {
     if (!petWindow) return
     const [wx, wy] = petWindow.getPosition()
     const [w, h] = petWindow.getSize()
@@ -147,13 +147,13 @@ function setupIPC(): void {
     petWindow.setPosition(clamp(wx + Math.round(dx), wa.x, wa.x + wa.width - w), clamp(wy + Math.round(dy), wa.y, wa.y + wa.height - h))
   })
   // 拖拽结束 → 持久化窗口位置
-  ipcMain.on('skyi:move-window-end', () => {
+  ipcMain.on('lovelybuddy:move-window-end', () => {
     if (!petWindow) return
     const [x, y] = petWindow.getPosition()
     settings.saveWindowPos(x, y)
   })
   // 模型加载后按模型显示尺寸调整窗口（底部中点锚定，脚不跳）
-  ipcMain.on('skyi:resize-window', (_e, width: number, height: number) => {
+  ipcMain.on('lovelybuddy:resize-window', (_e, width: number, height: number) => {
     if (!petWindow) return
     const wa = screen.getDisplayMatching(petWindow.getBounds()).workArea
     const w = clamp(Math.round(width), WIN_W, wa.width)
@@ -162,9 +162,9 @@ function setupIPC(): void {
     const [cw, ch] = petWindow.getSize()
     petWindow.setBounds({ x: Math.round(wx + cw / 2 - w / 2), y: Math.round(wy + ch - h), width: w, height: h })
   })
-  ipcMain.on('skyi:quit', () => app.quit())
-  ipcMain.handle('skyi:list-models', () => listModels(settings.modelDir))
-  ipcMain.handle('skyi:pick-model-dir', async () => {
+  ipcMain.on('lovelybuddy:quit', () => app.quit())
+  ipcMain.handle('lovelybuddy:list-models', () => listModels(settings.modelDir))
+  ipcMain.handle('lovelybuddy:pick-model-dir', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(petWindow!, {
       title: '选择 Live2D 模型根目录',
       properties: ['openDirectory']

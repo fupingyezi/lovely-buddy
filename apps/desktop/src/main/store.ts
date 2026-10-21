@@ -2,24 +2,24 @@ import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
-export interface SkyiSettings {
+export interface LovelybuddySettings {
   /** 用户选择的模型根目录；null = 使用默认值 */
   modelDir: string | null
   /** 上次桌宠窗口位置（拖拽后持久化） */
   windowPos: { x: number; y: number } | null
 }
 
-const defaults: SkyiSettings = { modelDir: null, windowPos: null }
+const defaults: LovelybuddySettings = { modelDir: null, windowPos: null }
 
 /** 主进程最小 JSON 设置存储（userData/settings.json）。 */
 export class SettingsStore {
   private readonly file = join(app.getPath('userData'), 'settings.json')
-  private data: SkyiSettings = { ...defaults }
+  private data: LovelybuddySettings = { ...defaults }
 
   load(): void {
     try {
       if (existsSync(this.file)) {
-        this.data = { ...defaults, ...(JSON.parse(readFileSync(this.file, 'utf8')) as SkyiSettings) }
+        this.data = { ...defaults, ...(JSON.parse(readFileSync(this.file, 'utf8')) as LovelybuddySettings) }
       }
     } catch {
       // 文件损坏时回退默认，不阻塞启动
