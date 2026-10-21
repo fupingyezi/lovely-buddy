@@ -78,6 +78,12 @@ describe('PetMenu', () => {
     vi.restoreAllMocks()
   })
 
+  it('✕ 按钮关闭菜单', () => {
+    const onClose = renderMenu()
+    fireEvent.click(screen.getByTitle('关闭菜单'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('状态行显示在线状态与版本', () => {
     usePetStore.setState({ status: 'online', version: '0.1.0-dev' })
     renderMenu()

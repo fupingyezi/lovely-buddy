@@ -40,6 +40,15 @@ export default function PetMenu({ x, y, onClose }: Props): ReactElement {
       style={{ left: x, top: y }}
       onContextMenu={(e) => e.preventDefault()}
     >
+      <button
+        type="button"
+        className="menu-close"
+        title="关闭菜单"
+        aria-label="关闭菜单"
+        onClick={onClose}
+      >
+        ×
+      </button>
       <div className="menu-status">
         <span className={`dot ${status === 'online' ? 'ok' : 'bad'}`} />
         <span>{statusText}</span>
