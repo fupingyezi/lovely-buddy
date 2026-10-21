@@ -112,6 +112,44 @@ describe('setupPetInteraction', () => {
     expect(onMenu).not.toHaveBeenCalled()
   })
 
+  it('Cmd+点击命中模型 → 弹菜单（等效右键），松开不播 tap 不拖拽', () => {
+    const onTap = vi.fn()
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, onMenu)
+
+    fireEvent.pointerDown(canvas, { button: 0, metaKey: true, clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
+    fireEvent.pointerUp(window, { clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
+
+    expect(onMenu).toHaveBeenCalledWith(40, 60)
+    expect(onTap).not.toHaveBeenCalled()
+    expect(moveWindow).not.toHaveBeenCalled()
+  })
+
+  it('Ctrl+点击命中模型 → 弹菜单；Chromium 补发的 contextmenu 不重复触发', () => {
+    const onTap = vi.fn()
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, onTap, onMenu)
+
+    fireEvent.pointerDown(canvas, { button: 0, ctrlKey: true, clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
+    const e = new MouseEvent('contextmenu', { clientX: 40, clientY: 60, ctrlKey: true, bubbles: true, cancelable: true })
+    canvas.dispatchEvent(e)
+    fireEvent.pointerUp(window, { clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
+
+    expect(e.defaultPrevented).toBe(true)
+    expect(onMenu).toHaveBeenCalledTimes(1)
+    expect(onMenu).toHaveBeenCalledWith(40, 60)
+    expect(onTap).not.toHaveBeenCalled()
+  })
+
+  it('Cmd+点击模型外 → 不弹菜单', () => {
+    const onMenu = vi.fn()
+    interaction = setupPetInteraction(fakePet(), canvas, vi.fn(), onMenu)
+
+    fireEvent.pointerDown(canvas, { button: 0, metaKey: true, clientX: 150, clientY: 150, screenX: 600, screenY: 600 })
+
+    expect(onMenu).not.toHaveBeenCalled()
+  })
+
   it('dispose 后不再响应拖拽', () => {
     const onTap = vi.fn()
     interaction = setupPetInteraction(fakePet(), canvas, onTap, vi.fn())

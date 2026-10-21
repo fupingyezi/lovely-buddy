@@ -8,7 +8,9 @@ export interface PetInteraction {
 
 /**
  * 拖拽 = 移动窗口（主进程按屏幕夹紧并持久化）；位移小于阈值 = 点击（播 tap 动作）；
- * 右键命中模型 = 弹菜单（onMenu 传窗口坐标点击处）。
+ * 右键命中模型 = 弹菜单（onMenu 传窗口坐标点击处）；
+ * macOS 无右键设备：Cmd/Ctrl+点击在 pointerdown 直接弹菜单（Chromium 对 Ctrl+点击补发的
+ * contextmenu 被跳过，避免重复触发）。
  * 用 screenX/screenY 增量：窗口跟着指针走，跨窗口坐标系不漂移。
  * 拖拽全程用 window 级 pointermove/up（forward:true 保证穿透时 mousemove 仍可达）。
  */
@@ -24,7 +26,13 @@ export function setupPetInteraction(
   let lastY = 0
 
   const onDown = (e: PointerEvent): void => {
-    if (e.button !== 0 || !pet.hitTest(e.clientX, e.clientY)) return
+    if (!pet.hitTest(e.clientX, e.clientY)) return
+    // macOS 无右键设备：Cmd/Ctrl+点击等效右键 → 直接弹菜单（不拖拽、不 tap）
+    if (e.metaKey || e.ctrlKey) {
+      onMenu(e.clientX, e.clientY)
+      return
+    }
+    if (e.button !== 0) return
     dragging = true
     moved = 0
     lastX = e.screenX
@@ -59,6 +67,8 @@ export function setupPetInteraction(
   // 右键命中模型 → 弹菜单；命中与否都吞掉浏览器默认菜单
   const onContextMenu = (e: MouseEvent): void => {
     e.preventDefault()
+    // Cmd/Ctrl+点击已在 pointerdown 弹过菜单；Chromium 会对 Ctrl+点击补发 contextmenu，跳过防重复
+    if (e.ctrlKey || e.metaKey) return
     if (dragging) return
     if (pet.hitTest(e.clientX, e.clientY)) onMenu(e.clientX, e.clientY)
   }
