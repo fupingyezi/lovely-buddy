@@ -3,13 +3,11 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 export interface LovelybuddySettings {
-  /** 用户选择的模型根目录；null = 使用默认值 */
-  modelDir: string | null
   /** 上次桌宠窗口位置（拖拽后持久化） */
   windowPos: { x: number; y: number } | null
 }
 
-const defaults: LovelybuddySettings = { modelDir: null, windowPos: null }
+const defaults: LovelybuddySettings = { windowPos: null }
 
 /** 主进程最小 JSON 设置存储（userData/settings.json）。 */
 export class SettingsStore {
@@ -32,15 +30,10 @@ export class SettingsStore {
     writeFileSync(this.file, JSON.stringify(this.data, null, 2))
   }
 
-  /** 模型根目录：用户选择 > dev=仓库 model/ > packaged=userData/models */
+  /** 模型根目录（l2d:// 服务根）：dev=仓库 model/，packaged=userData/models。
+   *  目录选择入口已移除，唯一根与 Go 后端（--model-dir 默认 ../model）同指一处。 */
   get modelDir(): string {
-    if (this.data.modelDir) return this.data.modelDir
     return app.isPackaged ? join(app.getPath('userData'), 'models') : join(app.getAppPath(), '..', '..', 'model')
-  }
-
-  setModelDir(dir: string | null): void {
-    this.data.modelDir = dir
-    this.save()
   }
 
   get windowPos(): { x: number; y: number } | null {

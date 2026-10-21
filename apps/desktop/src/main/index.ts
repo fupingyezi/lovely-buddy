@@ -2,7 +2,6 @@ import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session
 import { join } from 'node:path'
 import { registerScheme, registerL2DProtocol } from './protocol'
 import { SettingsStore } from './store'
-import { listModels } from './models'
 
 // dev 模式固定值（make dev 时 Go 监听 8740）；打包模式由 goProcess 动态生成（M4 实现）
 const DEV_ADDR = process.env.LOVELYBUDDY_ADDR ?? '127.0.0.1:8740'
@@ -163,15 +162,15 @@ function setupIPC(): void {
     petWindow.setBounds({ x: Math.round(wx + cw / 2 - w / 2), y: Math.round(wy + ch - h), width: w, height: h })
   })
   ipcMain.on('lovelybuddy:quit', () => app.quit())
-  ipcMain.handle('lovelybuddy:list-models', () => listModels(settings.modelDir))
-  ipcMain.handle('lovelybuddy:pick-model-dir', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog(petWindow!, {
-      title: '选择 Live2D 模型根目录',
-      properties: ['openDirectory']
-    })
-    if (canceled || filePaths.length === 0) return listModels(settings.modelDir)
-    settings.setModelDir(filePaths[0])
-    return listModels(settings.modelDir)
+  // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
+  ipcMain.handle('lovelybuddy:pick-import-path', async (_e, mode: 'zip' | 'dir') => {
+    const opts: Electron.OpenDialogOptions =
+      mode === 'dir'
+        ? { title: '选择形象目录', properties: ['openDirectory'] }
+        : { title: '选择形象 zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] }
+    const { canceled, filePaths } = await dialog.showOpenDialog(petWindow!, opts)
+    if (canceled || filePaths.length === 0) return { canceled: true, path: null }
+    return { canceled: false, path: filePaths[0] }
   })
 }
 

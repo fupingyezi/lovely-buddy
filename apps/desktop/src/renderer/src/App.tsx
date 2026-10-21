@@ -12,7 +12,6 @@ export default function App(): ReactElement {
   const version = usePetStore((s) => s.version)
   const loadModels = usePetStore((s) => s.loadModels)
   const selectModel = usePetStore((s) => s.selectModel)
-  const pickModelDir = usePetStore((s) => s.pickModelDir)
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
 
   // 后端健康轮询（5s）
@@ -60,7 +59,6 @@ export default function App(): ReactElement {
             洛天依模型需用户自行获取（版权归上海禾念）。
           </p>
           <div className="placeholder-actions">
-            <button onClick={() => void pickModelDir()}>选择模型目录</button>
             <button onClick={() => void loadModels()}>重新扫描</button>
           </div>
         </div>

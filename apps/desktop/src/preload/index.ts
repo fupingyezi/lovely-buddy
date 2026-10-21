@@ -6,21 +6,13 @@ export interface Runtime {
   dev: boolean
 }
 
-export interface ModelInfo {
-  name: string
-  url: string
-  kind: 'moc' | 'moc3'
-}
-
 export interface LovelybuddyApi {
   /** 获取后端地址与鉴权 token（打包模式由主进程随机生成） */
   getRuntime: () => Promise<Runtime>
   /** 点击穿透开关（forward:true） */
   setPassthrough: (on: boolean) => void
-  /** 扫描模型根目录，返回可加载的模型列表 */
-  listModels: () => Promise<ModelInfo[]>
-  /** 弹出目录选择框并持久化模型根目录，返回新列表 */
-  pickModelDir: () => Promise<ModelInfo[]>
+  /** 弹出本地文件/目录选择框（zip 或目录），返回路径或 canceled */
+  pickImportPath: (mode: 'zip' | 'dir') => Promise<{ canceled: boolean; path: string | null }>
   /** 拖拽：按屏幕坐标增量移动窗口（主进程夹紧在屏幕内） */
   moveWindow: (dx: number, dy: number) => void
   /** 拖拽结束：持久化窗口位置 */
@@ -33,8 +25,7 @@ export interface LovelybuddyApi {
 const lovelybuddy: LovelybuddyApi = {
   getRuntime: () => ipcRenderer.invoke('lovelybuddy:get-runtime'),
   setPassthrough: (on) => ipcRenderer.send('lovelybuddy:set-passthrough', on),
-  listModels: () => ipcRenderer.invoke('lovelybuddy:list-models'),
-  pickModelDir: () => ipcRenderer.invoke('lovelybuddy:pick-model-dir'),
+  pickImportPath: (mode) => ipcRenderer.invoke('lovelybuddy:pick-import-path', mode),
   moveWindow: (dx, dy) => ipcRenderer.send('lovelybuddy:move-window', dx, dy),
   moveWindowEnd: () => ipcRenderer.send('lovelybuddy:move-window-end'),
   resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),

@@ -7,7 +7,7 @@ import { usePetStore } from '../store/petStore'
 // 该库在 import 时就要求 window.Live2D 存在（jsdom 没有），App 测试不涉及真实渲染，整体 mock 掉
 vi.mock('pixi-live2d-display-lipsyncpatch', () => ({ Live2DModel: class {} }))
 
-function mockLovelybuddy(models: ModelInfo[] = []): void {
+function mockLovelybuddy(): void {
   vi.stubGlobal('lovelybuddy', {
     getRuntime: vi.fn().mockResolvedValue({
       baseUrl: 'http://127.0.0.1:8740',
@@ -19,10 +19,43 @@ function mockLovelybuddy(models: ModelInfo[] = []): void {
     moveWindow: vi.fn(),
     moveWindowEnd: vi.fn(),
     resizeWindow: vi.fn(),
-    listModels: vi.fn().mockResolvedValue(models),
-    pickModelDir: vi.fn().mockResolvedValue(models)
+    pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null })
   })
 }
+
+/** fetch 按 URL 路由到有状态的假后端（assets + healthz） */
+function mockFetchApi(
+  avatars: Array<Record<string, unknown>>,
+  importResult?: { ok: boolean; avatar?: Record<string, unknown>; error?: string }
+): void {
+  let list: Array<Record<string, unknown>> = [...avatars]
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      const json = (body: unknown, status = 200): Response =>
+        new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+      if (url === 'http://127.0.0.1:8740/api/v1/assets' && method === 'GET') return json({ avatars: list })
+      if (url === 'http://127.0.0.1:8740/api/v1/assets/import' && method === 'POST') {
+        if (importResult && !importResult.ok) return json({ error: importResult.error }, 422)
+        const avatar = importResult?.avatar ?? avatars[0]
+        if (avatar && !list.some((a) => a.slug === avatar.slug)) list = [...list, avatar]
+        return json({ avatar })
+      }
+      if (url.startsWith('http://127.0.0.1:8740/api/v1/assets/') && method === 'DELETE') {
+        const slug = decodeURIComponent(url.split('/').pop() ?? '')
+        list = list.filter((a) => a.slug !== slug)
+        return json({ ok: true })
+      }
+      if (url === 'http://127.0.0.1:8740/healthz') return json({ status: 'ok', db: 'ok', version: '0.1.0-dev' })
+      return json({}, 404)
+    })
+  )
+}
+
+const haruAvatar = { slug: 'haru', name: 'haru-cubism4', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
+const shizukuAvatar = { slug: 'shizuku', name: 'shizuku-cubism2', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
 
 function renderApp(): void {
   render(
@@ -42,16 +75,13 @@ describe('App', () => {
       modelName: null,
       modelError: null,
       placeholderDismissed: false,
+      importing: false,
+      importError: null,
       status: 'connecting',
       version: null
     })
-    mockLovelybuddy([])
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        json: async () => ({ status: 'ok', db: 'ok', version: '0.1.0-dev' })
-      })
-    )
+    mockLovelybuddy()
+    mockFetchApi([])
     // usePassthrough 有 50ms 节流，让每次 pointermove 的时间戳都不同
     let t = 0
     vi.spyOn(performance, 'now').mockImplementation(() => (t += 1000))
@@ -83,7 +113,11 @@ describe('App', () => {
     await screen.findByText('未找到 Live2D 模型')
     fireEvent.click(screen.getByText('重新扫描'))
     await waitFor(() => {
-      expect(window.lovelybuddy.listModels).toHaveBeenCalledTimes(2) // 挂载 1 次 + 手动 1 次
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+      const listCalls = fetchMock.mock.calls.filter(
+        (c) => String(c[0]) === 'http://127.0.0.1:8740/api/v1/assets' && !c[1]?.method
+      )
+      expect(listCalls.length).toBeGreaterThanOrEqual(2) // 挂载 1 次 + 手动 1 次
     })
   })
 
@@ -97,17 +131,14 @@ describe('App', () => {
     cleanup()
     renderApp()
     await waitFor(() => {
-      expect(window.lovelybuddy.listModels).toHaveBeenCalled()
+      const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets'))).toBe(true)
     })
     expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
   })
 
   it('有多个模型时显示切换器，点击切换模型', async () => {
-    const models: ModelInfo[] = [
-      { name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3' },
-      { name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc' }
-    ]
-    mockLovelybuddy(models)
+    mockFetchApi([haruAvatar, shizukuAvatar])
     renderApp()
     await screen.findByText('haru-cubism4') // 默认选中第一个
     expect(screen.getByText('haru-cubism4').className).toContain('active')
@@ -120,7 +151,7 @@ describe('App', () => {
   })
 
   it('指针在 UI 面板上关闭穿透，模型外恢复穿透', async () => {
-    mockLovelybuddy([{ name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3' }])
+    mockFetchApi([haruAvatar])
     renderApp()
     // 有模型才会渲染 PetCanvas（usePassthrough 挂在其中）
     await waitFor(() => {

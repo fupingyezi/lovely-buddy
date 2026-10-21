@@ -6,6 +6,19 @@ declare global {
     kind: 'moc' | 'moc3'
   }
 
+  interface AvatarInfo extends ModelInfo {
+    /** 形象目录名（服务端唯一标识） */
+    slug: string
+    /** 相对模型根目录的入口文件 */
+    entry: string
+    author?: string
+    version?: string
+    license?: string
+    homepage?: string
+    /** 来源：导入写入（local/url），手工放入为空 */
+    source?: 'local' | 'url'
+  }
+
   interface LovelybuddyApi {
     getRuntime: () => Promise<{ baseUrl: string; token: string; dev: boolean }>
     setPassthrough: (on: boolean) => void
