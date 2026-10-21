@@ -57,8 +57,11 @@ export default function PetCanvas({ url, name, onMenu, menuOpen }: Props): React
 
     return () => {
       alive = false
-      // 切换/卸载时实例已解析则就地销毁；StrictMode 重放时 instance 尚未解析，安全跳过
-      if (instance) instance.destroy()
+      // 切换/卸载时实例已解析则走 releasePetModel：销毁并同步清 cache。
+      // 若只 instance.destroy()，模块级 cache 仍持有已销毁 facade 的 Promise，
+      // 重挂载（HMR）后 loadPetModel 命中缓存返回死实例 → 人物永久消失。
+      // StrictMode 重放时 instance 尚未解析，安全跳过（加载中的由下个存活效果接管）。
+      if (instance) void releasePetModel(url)
     }
   }, [url, name])
 
