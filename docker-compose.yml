@@ -1,3 +1,6 @@
+# 固定 compose 项目名：不随仓库目录改名漂移（卷名稳定，改名不丢数据）
+name: lovelybuddy
+
 services:
   postgres:
     image: ${LOVELYBUDDY_PG_IMAGE:-pgvector/pgvector:pg16}
