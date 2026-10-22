@@ -654,3 +654,16 @@ make dev
 **类型一致性**：`shiftToKeepScreenPosition` 的 `Pos`/`Size` 在 Task 1 内部自洽；`planMenuPlacement`/`MenuLayout`/`MENU_W`/`MENU_H` 在 Task 2 定义、Task 3 消费，签名一致；`usePetMenu.openMenu` 改零参后，App.tsx 与测试同步改（Task 3 覆盖两个调用点）。
 
 **风险点**：主进程 `lovelybuddy:expand-window` 已有按屏幕工作区夹紧并返回实际尺寸，Task 3 不再消费返回尺寸（菜单坐标固定 (4,4)）——贴屏幕左上角时菜单可能被窗口右缘裁掉，属已知取舍，与旧行为同级，不新增回归。
+
+---
+
+## 实施偏差记录（联调验收后）
+
+验收发现两个计划外问题，已修复并回归（2026-10-22）：
+
+1. **穿透状态卡死（根因，计划未预见）**：菜单打开触发 usePassthrough effect 重跑——cleanup 无条件把主进程穿透置回 `true`，新 effect 本地 `passthroughOn` 初值 `false`，立即同步 `setPassthrough(false)` 被去重（`false !== false`）跳过，纠正 IPC 从未发出。窗口从此卡在穿透态：mousemove 仍被 forward 转发，但点击全部穿给桌面，菜单无法关闭。**修复**：菜单状态切换的立即同步不再走去重，无条件发 IPC 并同步本地状态（`usePassthrough.ts`），补状态机单测 `usePassthrough.test.ts`（4 例）。
+2. **菜单离角色太远（计划偏差）**：原设计 MENU_H=520 使菜单落在角色上方约 500px 处，用户感知为「菜单出现在之前瞬移的位置」。**改为**：CSS 固定 `height: 320px`，MENU_H 精确对齐 320，窗口只向上扩 332px，菜单底边距角色头顶 8px。`menuLayout.test.ts` 数字同步更新。
+
+验收结果（用户确认）：菜单紧贴人物头顶上方、按钮/✕/点菜单外全部可点、人物原地不动。
+
+排查用的临时诊断（Go debug-log 端点、lib/dbg.ts、usePassthrough/usePetMenu 插桩）已全部移除。
