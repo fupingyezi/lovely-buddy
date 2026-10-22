@@ -43,8 +43,12 @@ export function usePassthrough(pet: PetModel | null, menuOpen: boolean): void {
       setPassthrough(!onModel)
     }
 
-    // 菜单状态切换时立即同步一次（不依赖指针移动），关闭后恢复穿透兜底
-    setPassthrough(menuOpenRef.current ? false : true)
+    // 菜单状态切换时立即同步一次（不依赖指针移动），关闭后恢复穿透兜底。
+    // 必须无条件发 IPC：cleanup 刚把主进程穿透置回 true，而新 effect 的本地
+    // passthroughOn 初值是 false，走 setPassthrough 去重会被跳过，窗口从此
+    // 卡在穿透态（移动照常到达、点击全部穿给桌面，菜单无法关闭）。
+    passthroughOn = menuOpenRef.current ? false : true
+    window.lovelybuddy.setPassthrough(passthroughOn)
 
     window.addEventListener('pointermove', onMove)
     return () => {
