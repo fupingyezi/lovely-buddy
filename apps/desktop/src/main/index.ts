@@ -119,7 +119,7 @@ function createTray(): void {
   const icon = nativeImage.createFromPath(join(__dirname, '../../resources/trayTemplate.png'))
   if (process.platform === 'darwin') icon.setTemplateImage(true)
   tray = new Tray(icon)
-  tray.setToolTip('天依桌宠')
+  tray.setToolTip('AI桌宠')
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {

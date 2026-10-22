@@ -38,20 +38,20 @@ func makeZip(t *testing.T, files map[string]string) string {
 func TestImportFromZip(t *testing.T) {
 	root := t.TempDir()
 	zipPath := makeZip(t, map[string]string{
-		"tianyi/avatar.json":        `{"name":"洛天依","author":"me","license":"unknown"}`,
-		"tianyi/tianyi.model3.json": `{"Version":3}`,
-		"tianyi/textures/tex.png":   "png",
+		"haru/avatar.json":        `{"name":"haru","author":"me","license":"unknown"}`,
+		"haru/haru.model3.json": `{"Version":3}`,
+		"haru/textures/tex.png": "png",
 	})
 	av, err := Import(root, ImportSource{Type: "path", Value: zipPath})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if av.Slug != "test-zip" || av.Name != "洛天依" || av.Author != "me" || av.Kind != "moc3" ||
-		av.Entry != "test-zip/tianyi.model3.json" || av.Source != "local" {
+	if av.Slug != "test-zip" || av.Name != "haru" || av.Author != "me" || av.Kind != "moc3" ||
+		av.Entry != "test-zip/haru.model3.json" || av.Source != "local" {
 		t.Fatalf("导入结果不符: %+v", av)
 	}
 	// 目录已就位、侧车已写入、无 staging 残留
-	if _, err := os.Stat(filepath.Join(root, "test-zip", "tianyi.model3.json")); err != nil {
+	if _, err := os.Stat(filepath.Join(root, "test-zip", "haru.model3.json")); err != nil {
 		t.Fatal("入口文件未入库", err)
 	}
 	if b, err := os.ReadFile(filepath.Join(root, "test-zip", ".lovelybuddy.json")); err != nil || !strings.Contains(string(b), `"source":"local"`) {

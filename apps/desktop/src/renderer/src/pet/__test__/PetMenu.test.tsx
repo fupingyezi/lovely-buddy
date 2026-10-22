@@ -87,7 +87,7 @@ describe('PetMenu', () => {
   it('状态行显示在线状态与版本', () => {
     usePetStore.setState({ status: 'online', version: '0.1.0-dev' })
     renderMenu()
-    expect(screen.getByText(/天依在线/).textContent).toContain('0.1.0-dev')
+    expect(screen.getByText(/AI桌宠在线/).textContent).toContain('0.1.0-dev')
   })
 
   it('多形象时列出切换列表，点击切换并关闭菜单', async () => {
@@ -106,19 +106,19 @@ describe('PetMenu', () => {
   it('导入形象展开面板，URL 导入成功后关闭菜单', async () => {
     mockFetchApi([haruAvatar], {
       ok: true,
-      avatar: { slug: 'tianyi', name: '天依', kind: 'moc3', entry: 'tianyi/tianyi.model3.json', source: 'url' }
+      avatar: { slug: 'haru', name: 'haru', kind: 'moc3', entry: 'haru/haru.model3.json', source: 'url' }
     })
     usePetStore.setState({ models: [haruAvatar], modelUrl: haruAvatar.url, modelName: haruAvatar.name })
     const onClose = renderMenu()
 
     fireEvent.click(screen.getByText('导入形象'))
     fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
-      target: { value: ' https://example.com/tianyi.zip ' }
+      target: { value: ' https://example.com/haru.zip ' }
     })
     fireEvent.click(screen.getByText('从 URL 导入'))
 
     await waitFor(() => {
-      expect(usePetStore.getState().modelUrl).toBe('l2d://model/tianyi/tianyi.model3.json')
+      expect(usePetStore.getState().modelUrl).toBe('l2d://model/haru/haru.model3.json')
     })
     expect(onClose).toHaveBeenCalledTimes(1)
   })

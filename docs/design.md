@@ -9,11 +9,11 @@
 
 三个核心能力：
 
-1. **形象系统**：多形象库，用户可导入/下载新的 Live2D 形象并即时热切换（默认形象：洛天依，用户自备，仓库零资产）。
+1. **形象系统**：多形象库，用户可导入/下载新的 Live2D 形象并即时热切换（默认形象由用户自备，仓库零资产）。
 2. **模型对接**：多厂商 OpenAI 兼容模型（DeepSeek/GLM/Qwen/Kimi），对话 + 长期记忆，厂商可热切换。
 3. **宿主接入**：内置 MCP server，接入 Codex / DeepSeek Harness / Claude Desktop 等 AI 桌面端——宿主 agent 调用工具让桌宠说话、做动作、弹通知。
 
-项目形态不变：**开源本地项目，不发布线上下载，用户从源码构建**；仓库不内置任何受版权保护的模型资产（洛天依版权归上海禾念/Vsinger，红线不变）。
+项目形态不变：**开源本地项目，不发布线上下载，用户从源码构建**；仓库不内置任何受版权保护的模型资产（形象版权归其权利人，红线不变）。
 
 ## 2. 形态总览
 
@@ -61,12 +61,12 @@ models/<slug>/
 
 ```json
 {
-  "name": "洛天依",
+  "name": "haru",
   "author": "user",
   "version": "1.0.0",
   "license": "unknown",
   "homepage": "",
-  "persona": "persona/luotianyi.txt"
+  "persona": "persona/haru.txt"
 }
 ```
 
@@ -101,7 +101,7 @@ models/<slug>/
 
 ### 3.4 版权红线（不变，写入 README）
 
-- 仓库、安装包、默认下载源**零洛天依模型/语音资产**；开发测试用 Live2D 官方免费素材（shizuku/haru，Free Material License，由 `make assets` 拉取，不入库）。
+- 仓库、安装包、默认下载源**零第三方模型/语音资产**；开发测试用 Live2D 官方免费素材（shizuku/haru，Free Material License，由 `make assets` 拉取，不入库）。
 - 下载功能不预置任何模型下载源；用户自担来源合法性。
 
 ## 4. 模型对接（多厂商）

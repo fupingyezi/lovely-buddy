@@ -136,7 +136,7 @@ describe('App', () => {
     })
     expect(document.querySelector('.pet-menu')).toBeNull()
     expect(screen.queryByText('导入形象')).toBeNull()
-    expect(screen.queryByText(/天依在线|后端离线|后端连接中/)).toBeNull()
+    expect(screen.queryByText(/AI桌宠在线|后端离线|后端连接中/)).toBeNull()
   })
 
   it('指针在占位卡上关闭穿透，模型外恢复穿透', async () => {
@@ -155,13 +155,13 @@ describe('App', () => {
   it('占位卡导入成功自动应用新形象', async () => {
     mockFetchApi([], {
       ok: true,
-      avatar: { slug: 'tianyi', name: '天依', kind: 'moc3', entry: 'tianyi/tianyi.model3.json', source: 'url' }
+      avatar: { slug: 'haru', name: 'haru', kind: 'moc3', entry: 'haru/haru.model3.json', source: 'url' }
     })
     renderApp()
     await screen.findByText('未找到 Live2D 模型')
 
     fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
-      target: { value: ' https://example.com/tianyi.zip ' }
+      target: { value: ' https://example.com/haru.zip ' }
     })
     fireEvent.click(screen.getByText('从 URL 导入'))
 
@@ -169,12 +169,12 @@ describe('App', () => {
       expect(screen.queryByText('未找到 Live2D 模型')).toBeNull()
     })
     // 自动应用：localStorage 记住新形象
-    expect(localStorage.getItem('lovelybuddy:model-url')).toBe('l2d://model/tianyi/tianyi.model3.json')
+    expect(localStorage.getItem('lovelybuddy:model-url')).toBe('l2d://model/haru/haru.model3.json')
     // POST body 正确（trim 后）
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
     const importCall = fetchMock.mock.calls.find((c) => String(c[0]).endsWith('/api/v1/assets/import'))
     expect(JSON.parse(String(importCall?.[1]?.body))).toEqual({
-      source: { type: 'url', value: 'https://example.com/tianyi.zip' }
+      source: { type: 'url', value: 'https://example.com/haru.zip' }
     })
   })
 

@@ -58,9 +58,7 @@ export default function App(): ReactElement {
             ×
           </button>
           <p className="placeholder-title">未找到 Live2D 模型</p>
-          <p className="hint">
-            支持粘贴 HTTPS zip 链接、选择本地 zip 或目录导入。洛天依模型需用户自行获取（版权归上海禾念）。
-          </p>
+          <p className="hint">支持粘贴 HTTPS zip 链接、选择本地 zip 或目录导入。</p>
           <ImportPanel />
           <div className="placeholder-actions">
             <button onClick={() => void loadModels()}>重新扫描</button>

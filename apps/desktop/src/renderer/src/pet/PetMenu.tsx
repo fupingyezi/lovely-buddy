@@ -24,7 +24,7 @@ export default function PetMenu({ x, y, onClose }: Props): ReactElement {
   const [importOpen, setImportOpen] = useState(false)
 
   const statusText =
-    status === 'online' ? `天依在线 v${version ?? ''}` : status === 'offline' ? '后端离线' : '后端连接中…'
+    status === 'online' ? `AI桌宠在线 v${version ?? ''}` : status === 'offline' ? '后端离线' : '后端连接中…'
 
   const confirmDelete = (): void => {
     if (window.confirm(`删除形象「${modelName ?? '当前形象'}」？此操作不可恢复。`)) {
