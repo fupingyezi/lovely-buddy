@@ -1,6 +1,7 @@
-// 菜单尺寸上限估算（CSS 实为 260×480，按上限留余量，扩展量宁大勿小）
+// 菜单尺寸：CSS 固定 260×320（高为固定值，与 .pet-menu 精确对齐；
+// 宽按上限留余量）。菜单太高会飘到离角色很远的地方，固定高度让它紧贴头顶。
 export const MENU_W = 280
-export const MENU_H = 520
+export const MENU_H = 320
 
 // 菜单贴窗口左上角的内边距
 const MENU_INSET = 4
