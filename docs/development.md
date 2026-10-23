@@ -75,3 +75,17 @@ docker-compose.yml           lovelybuddy-postgres（pgvector），仅绑 127.0.0
 
 - 产品显示名 **AI桌宠**（窗口标题、托盘、状态文案、productName）；用户可见文案不出现具体角色名，测试夹具用中性素材名（haru/shizuku）。
 - 内部标识不变：repo/包名 `lovely-buddy`、Go module `lovelybuddy/server`、IPC 前缀 `lovelybuddy:*`、preload 全局 `window.lovelybuddy`、env `LOVELYBUDDY_*`、容器 `lovelybuddy-postgres`、协议 `l2d://`。
+
+## 聊天联调（M2）
+
+1. `.env` 填 `DEEPSEEK_API_KEY=...`（或 `LOVELYBUDDY_CHAT_PROVIDER=dashscope` + `DASHSCOPE_API_KEY`），`make dev` 重启。
+2. 右键桌宠 → 「聊天」→ 输入消息，回车发送；回复以打字机气泡出现在角色上方。
+3. 冒烟 SSE（不经 UI）：
+
+   ```bash
+   curl -sN -H "Authorization: Bearer dev" -H "Content-Type: application/json" \
+     -d '{"message":"打个招呼"}' http://127.0.0.1:8740/api/v1/chat
+   curl -s -H "Authorization: Bearer dev" 'http://127.0.0.1:8740/api/v1/history?limit=5'
+   ```
+
+4. 未配 key 时发送会收到「未配置 API key」错误提示，属预期。

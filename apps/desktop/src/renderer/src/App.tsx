@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement } from 'react'
+import { useEffect, useRef, type ReactElement } from 'react'
 import PetCanvas from './pet/PetCanvas'
 import PetMenu from './pet/PetMenu'
 import ImportPanel from './pet/ImportPanel'
@@ -7,6 +7,7 @@ import SpeechBubble from './pet/chat/SpeechBubble'
 import { useChatPanel } from './pet/chat/useChatPanel'
 import { usePetMenu } from './pet/usePetMenu'
 import { usePetStore } from './store/petStore'
+import { useChatStore } from './store/chatStore'
 
 export default function App(): ReactElement {
   const modelUrl = usePetStore((s) => s.modelUrl)
@@ -44,6 +45,21 @@ export default function App(): ReactElement {
   useEffect(() => {
     void loadModels()
   }, [loadModels])
+
+  // 启动即拉一次历史（后端未起也不报错，等恢复后过渡刷新兜底）
+  useEffect(() => {
+    void useChatStore.getState().refresh()
+  }, [])
+
+  // 断线恢复：offline → online 时对齐历史（服务端可能落了半截/新消息）
+  const status = usePetStore((s) => s.status)
+  const prevStatusRef = useRef(status)
+  useEffect(() => {
+    if (prevStatusRef.current === 'offline' && status === 'online') {
+      void useChatStore.getState().refresh()
+    }
+    prevStatusRef.current = status
+  }, [status])
 
   return (
     <>
