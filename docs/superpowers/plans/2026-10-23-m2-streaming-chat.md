@@ -2589,7 +2589,10 @@ describe('chatStore.send', () => {
     streamChatMock.mockImplementation(
       (_rt: unknown, _body: unknown, _onEvent: unknown, signal: AbortSignal) =>
         new Promise<void>((_resolve, reject) => {
-          signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+          const abortIt = (): void => reject(new DOMException('aborted', 'AbortError'))
+          // stop() 可能先于 streamChat 调用（send 先 await getRuntime）：已 abort 的信号不补发事件
+          if (signal.aborted) abortIt()
+          else signal.addEventListener('abort', abortIt)
         })
     )
     const p = useChatStore.getState().send('长问题')
