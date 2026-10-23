@@ -3,6 +3,7 @@ import PetCanvas from './pet/PetCanvas'
 import PetMenu from './pet/PetMenu'
 import ImportPanel from './pet/ImportPanel'
 import ChatPanel from './pet/chat/ChatPanel'
+import SpeechBubble from './pet/chat/SpeechBubble'
 import { useChatPanel } from './pet/chat/useChatPanel'
 import { usePetMenu } from './pet/usePetMenu'
 import { usePetStore } from './store/petStore'
@@ -57,6 +58,7 @@ export default function App(): ReactElement {
         }}
       />
       {chatOpen && <ChatPanel onClose={closePanel} />}
+      <SpeechBubble panelOpen={chatOpen} />
       {modelUrl === null && !placeholderDismissed && (
         <div className="placeholder" data-interactive>
           <button className="placeholder-close" title="暂不显示" onClick={dismissPlaceholder}>

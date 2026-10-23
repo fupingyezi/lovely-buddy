@@ -3487,8 +3487,10 @@ describe('SpeechBubble', () => {
     })
     expect(container.querySelector('.speech-bubble')!.textContent).toContain('你')
     act(() => {
-      useChatStore.setState({ sending: false }) // 流式结束，起 8s 计时
-      vi.advanceTimersByTime(8100)
+      useChatStore.setState({ sending: false }) // 流式结束，effect 在 act 末才注册 8s 计时
+    })
+    act(() => {
+      vi.advanceTimersByTime(8100) // 与 setState 拆开：同一 act 里时钟先推进完、effect 还没注册计时器
     })
     expect(container.querySelector('.speech-bubble')).toBeNull()
   })

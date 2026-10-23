@@ -363,3 +363,37 @@ body,
 .chat-input-row .chat-stop {
   background: rgba(255, 255, 255, 0.12);
 }
+
+/* ===== 打字机气泡（chat 扩展区顶部，纯展示不吞鼠标）===== */
+.speech-bubble {
+  position: fixed;
+  z-index: 80;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 85%;
+  max-height: 150px;
+  overflow-y: auto;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(30, 30, 46, 0.92);
+  color: #eee;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(30, 30, 46, 0.92);
+  border-bottom: none;
+}
