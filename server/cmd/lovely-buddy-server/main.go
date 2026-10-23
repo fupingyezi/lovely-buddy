@@ -11,9 +11,13 @@ import (
 	"syscall"
 	"time"
 
+	"lovelybuddy/server/internal/config"
 	"lovelybuddy/server/internal/controller"
+	"lovelybuddy/server/internal/dao"
 	"lovelybuddy/server/internal/db"
+	"lovelybuddy/server/internal/llm"
 	"lovelybuddy/server/internal/server"
+	"lovelybuddy/server/internal/service"
 )
 
 func envOr(key, fallback string) string {
@@ -52,7 +56,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	srv := server.New(*addr, *token, pool, *modelDir)
+	cfg := config.Load()
+	provider, err := llm.Resolve(cfg.Chat.Provider, cfg.Chat.Model, cfg.Chat.BaseURL)
+	if err != nil {
+		slog.Error("对话厂商配置无效", "err", err)
+		os.Exit(1)
+	}
+	chats := service.NewChatService(dao.NewChat(pool), provider, *modelDir)
+	srv := server.New(*addr, *token, pool, *modelDir, chats)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

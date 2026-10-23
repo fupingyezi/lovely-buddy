@@ -10,10 +10,12 @@ import (
 
 	"lovelybuddy/server/internal/controller"
 	"lovelybuddy/server/internal/middleware"
+	"lovelybuddy/server/internal/service"
 )
 
 // Register 注册全部路由（在 engine 挂完全局中间件之后调用）。
-func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string) {
+// chats 由 main 组装传入（nil 时 chat 接口返回 503）。
+func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string, chats *service.ChatService) {
 	r.GET("/healthz", controller.NewHealthz(pool))
 
 	api := r.Group("/api/v1", middleware.Token(token))
@@ -22,4 +24,7 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string) {
 	api.GET("/assets", assetsCtl.List)
 	api.POST("/assets/import", assetsCtl.Import)
 	api.DELETE("/assets/:slug", assetsCtl.Delete)
+	chatCtl := controller.NewChat(chats)
+	api.POST("/chat", chatCtl.Send)
+	api.GET("/history", chatCtl.History)
 }

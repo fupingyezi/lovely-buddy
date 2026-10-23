@@ -3,21 +3,43 @@ package server
 import (
 	"archive/zip"
 	"bytes"
+	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/service"
 )
 
 const testToken = "test-token"
 
-// newTestServer 组装引擎（无 DB，仅 assets 路由），返回测试客户端与模型根目录。
+// scriptedLLM 与 service 包测试的假 provider 同构（server 包本地一份，避免导出测试工具）。
+type scriptedLLM struct{}
+
+func (scriptedLLM) StreamChat(_ context.Context, _ []llm.Message) <-chan llm.StreamEvent {
+	ch := make(chan llm.StreamEvent)
+	go func() {
+		defer close(ch)
+		ch <- llm.StreamEvent{Delta: "你好"}
+		ch <- llm.StreamEvent{Delta: "[motion:happy]呀"}
+	}()
+	return ch
+}
+func (scriptedLLM) Configured() bool { return true }
+func (scriptedLLM) KeyEnv() string   { return "DEEPSEEK_API_KEY" }
+
+// newTestServer 组装引擎（无 DB），返回测试客户端与模型根目录。
 func newTestServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 	root := t.TempDir()
-	srv := New("127.0.0.1:0", testToken, nil, root)
+	chats := service.NewChatService(service.NewMemStore(), scriptedLLM{}, root)
+	srv := New("127.0.0.1:0", testToken, nil, root, chats)
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 	return ts, root
@@ -136,5 +158,74 @@ func TestPing(t *testing.T) {
 	resp, m := doJSON(t, http.MethodGet, ts.URL+"/api/v1/ping", testToken, nil)
 	if resp.StatusCode != http.StatusOK || m["pong"] != true {
 		t.Fatalf("ping 应 200 pong: %d %v", resp.StatusCode, m)
+	}
+}
+
+func TestChatAuthAndValidation(t *testing.T) {
+	ts, _ := newTestServer(t)
+	// 无 token → 401
+	resp, _ := doJSON(t, http.MethodPost, ts.URL+"/api/v1/chat", "", map[string]any{"message": "hi"})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("无 token 应 401, got %d", resp.StatusCode)
+	}
+	// 空消息 → 400
+	resp, m := doJSON(t, http.MethodPost, ts.URL+"/api/v1/chat", testToken, map[string]any{"message": "  "})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("空消息应 400, got %d %v", resp.StatusCode, m)
+	}
+}
+
+func TestChatSSEStream(t *testing.T) {
+	ts, _ := newTestServer(t)
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/api/v1/chat",
+		strings.NewReader(`{"message":"嗨"}`))
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if ct := resp.Header.Get("Content-Type"); ct != "text/event-stream" {
+		t.Fatalf("Content-Type=%s", ct)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	s := string(body)
+	for _, want := range []string{
+		"event: meta", `"type":"meta"`,
+		"event: delta", `"text":"你好"`,
+		"event: motion", `"intent":"happy"`,
+		"event: done", `"text":"你好呀"`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Fatalf("SSE 缺 %q:\n%s", want, s)
+		}
+	}
+}
+
+func TestHistoryAfterChat(t *testing.T) {
+	ts, _ := newTestServer(t)
+	// 先聊一句（SSE 全量读完即完成）
+	req, _ := http.NewRequest(http.MethodPost, ts.URL+"/api/v1/chat",
+		strings.NewReader(`{"message":"嗨"}`))
+	req.Header.Set("Authorization", "Bearer "+testToken)
+	resp, _ := http.DefaultClient.Do(req)
+	_, _ = io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	resp2, m := doJSON(t, http.MethodGet, ts.URL+"/api/v1/history", testToken, nil)
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("history 应 200, got %d %v", resp2.StatusCode, m)
+	}
+	msgs, _ := m["messages"].([]any)
+	if len(msgs) != 2 {
+		t.Fatalf("应有 user+assistant 两条: %v", m)
+	}
+	last := msgs[1].(map[string]any)
+	if last["content"] != "你好呀" || last["motion"] != "happy" {
+		t.Fatalf("assistant 落库不符: %v", last)
+	}
+	if _, ok := m["session_id"].(string); !ok {
+		t.Fatalf("应含 session_id: %v", m)
 	}
 }
