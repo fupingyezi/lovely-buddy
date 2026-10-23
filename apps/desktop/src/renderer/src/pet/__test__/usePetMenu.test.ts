@@ -34,7 +34,7 @@ describe('usePetMenu', () => {
     const { result } = renderHook(() => usePetMenu())
     act(() => result.current.openMenu())
 
-    expect(expandWindow).toHaveBeenCalledWith(MENU_W + 4 - 164, MENU_H + 12)
+    expect(expandWindow).toHaveBeenCalledWith('menu', MENU_W + 4 - 164, MENU_H + 12)
     await waitFor(() => expect(result.current.menu).toEqual({ x: 4, y: 4 }))
   })
 
@@ -44,7 +44,7 @@ describe('usePetMenu', () => {
     const { result } = renderHook(() => usePetMenu())
 
     act(() => result.current.openMenu())
-    expect(expandWindow).toHaveBeenCalledWith(0, MENU_H + 12)
+    expect(expandWindow).toHaveBeenCalledWith('menu', 0, MENU_H + 12)
     await waitFor(() => expect(result.current.menu).toEqual({ x: 4, y: 4 }))
   })
 

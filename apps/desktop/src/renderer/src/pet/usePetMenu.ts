@@ -26,7 +26,7 @@ export function usePetMenu(): {
   const openMenu = (): void => {
     const token = ++tokenRef.current
     const { x, y, extraW, extraH } = planMenuPlacement(window.innerWidth)
-    void window.lovelybuddy.expandWindow(extraW, extraH).then(() => {
+    void window.lovelybuddy.expandWindow('menu', extraW, extraH).then(() => {
       if (token !== tokenRef.current) return // 期间已关闭/重开
       setMenu({ x, y })
     })
@@ -35,7 +35,7 @@ export function usePetMenu(): {
   const closeMenu = (): void => {
     tokenRef.current++ // 使未完成的 openMenu 失效
     setMenu(null)
-    window.lovelybuddy.collapseWindow()
+    window.lovelybuddy.collapseWindow('menu')
     window.lovelybuddy.setPassthrough(true) // 立即恢复穿透，交给 usePassthrough 状态机接管
   }
 

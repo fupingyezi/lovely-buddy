@@ -19,10 +19,10 @@ export interface LovelybuddyApi {
   moveWindowEnd: () => void
   /** 模型加载后按显示尺寸调整窗口（底部中点锚定） */
   resizeWindow: (width: number, height: number) => void
-  /** 菜单打开：向左上扩展窗口（右下角固定），返回扩展后的实际尺寸（屏幕边缘可能夹紧） */
-  expandWindow: (extraWidth: number, extraHeight: number) => Promise<{ width: number; height: number }>
-  /** 菜单关闭：缩回扩展前的尺寸（右下角固定） */
-  collapseWindow: () => void
+  /** 面板打开：向左上扩展窗口（右下角固定，key 记账可多面板共存），返回扩展后实际尺寸 */
+  expandWindow: (key: string, extraWidth: number, extraHeight: number) => Promise<{ width: number; height: number }>
+  /** 面板关闭：去掉该 key 的扩展量，全部关闭后缩回基准（右下角固定） */
+  collapseWindow: (key: string) => void
   quit: () => void
 }
 
@@ -33,9 +33,9 @@ const lovelybuddy: LovelybuddyApi = {
   moveWindow: (dx, dy) => ipcRenderer.send('lovelybuddy:move-window', dx, dy),
   moveWindowEnd: () => ipcRenderer.send('lovelybuddy:move-window-end'),
   resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),
-  expandWindow: (extraWidth, extraHeight) =>
-    ipcRenderer.invoke('lovelybuddy:expand-window', extraWidth, extraHeight),
-  collapseWindow: () => ipcRenderer.send('lovelybuddy:collapse-window'),
+  expandWindow: (key, extraWidth, extraHeight) =>
+    ipcRenderer.invoke('lovelybuddy:expand-window', key, extraWidth, extraHeight),
+  collapseWindow: (key) => ipcRenderer.send('lovelybuddy:collapse-window', key),
   quit: () => ipcRenderer.send('lovelybuddy:quit')
 }
 

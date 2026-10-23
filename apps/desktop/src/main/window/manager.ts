@@ -10,8 +10,10 @@ import type { SettingsStore } from '../store'
  */
 export class PetWindowManager {
   private win: BrowserWindow | null = null
-  // 菜单展开前的窗口基准 bounds（缩回时右下角固定，角色屏幕位置不动）
+  // 面板展开前的窗口基准 bounds（全部面板缩回时右下角固定，角色屏幕位置不动）
   private expandedBase: Rect | null = null
+  // 各面板（菜单/聊天）的扩展量记账；bounds 从基准 + 全部活跃扩展量重算
+  private extras = new Map<string, { width: number; height: number }>()
 
   constructor(private readonly settings: SettingsStore) {}
 
@@ -91,22 +93,44 @@ export class PetWindowManager {
     if (this.expandedBase) this.expandedBase = w.getBounds()
   }
 
-  /** 菜单打开：窗口向左上扩展容纳菜单（右下角固定），屏幕边缘夹紧 */
-  expand(extraWidth: number, extraHeight: number): { width: number; height: number } {
+  /** 面板打开：按 key 记账扩展量（右下角固定、向左上扩，从展开基准重算）。 */
+  expandFor(key: string, extraWidth: number, extraHeight: number): { width: number; height: number } {
     const w = this.win
     if (!w) return { width: 0, height: 0 }
     if (!this.expandedBase) this.expandedBase = w.getBounds()
-    const wa = screen.getDisplayMatching(w.getBounds()).workArea
-    const next = expandBounds(w.getBounds(), extraWidth, extraHeight, wa)
-    w.setBounds(next)
-    return { width: next.width, height: next.height }
+    this.extras.set(key, { width: extraWidth, height: extraHeight })
+    return this.applyExtras()
   }
 
-  /** 菜单关闭：缩回基准尺寸（右下角固定），角色位置不变 */
-  collapse(): void {
+  /** 面板关闭：去掉该 key；全部关闭后缩回基准（右下角固定）。 */
+  collapseFor(key: string): void {
     const w = this.win
-    if (!w || !this.expandedBase) return
-    w.setBounds(collapseBounds(w.getBounds(), this.expandedBase))
-    this.expandedBase = null
+    if (!w) return
+    this.extras.delete(key)
+    if (this.extras.size === 0) {
+      if (this.expandedBase) {
+        w.setBounds(collapseBounds(w.getBounds(), this.expandedBase))
+        this.expandedBase = null
+      }
+      return
+    }
+    this.applyExtras()
+  }
+
+  // 从基准叠加全部活跃扩展量一次性重算（避免逐面板叠加漂移/夹紧误差累积）
+  private applyExtras(): { width: number; height: number } {
+    const w = this.win
+    if (!w || !this.expandedBase) return { width: 0, height: 0 }
+    let extraW = 0
+    let extraH = 0
+    for (const e of this.extras.values()) {
+      extraW += e.width
+      extraH += e.height
+    }
+    const base = this.expandedBase
+    const wa = screen.getDisplayMatching(base).workArea
+    const next = expandBounds(base, extraW, extraH, wa)
+    w.setBounds(next)
+    return { width: next.width, height: next.height }
   }
 }
