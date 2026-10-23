@@ -991,24 +991,23 @@ func TestMotionFilterUnterminatedTagFlowsBack(t *testing.T) {
 }
 
 func TestMotionFilterIncrementalVisible(t *testing.T) {
-	// Push 每次只应返回「确认安全」的增量（pending 部分不吐）
+	// Push 每次只应返回「确认安全」的增量（pending 部分不吐）；
+	// 意图在标签完成的那次 Push 即返回（流式动作要尽早触发）
 	f := NewMotionFilter()
-	v1, _ := f.Push("abc[mot")
-	if v1 != "abc" {
-		t.Fatalf("v1=%q（半截标签前缀应扣住）", v1)
+	v1, m1 := f.Push("abc[mot")
+	if v1 != "abc" || m1 != "" {
+		t.Fatalf("v1=%q m1=%q（半截标签前缀应扣住，意图未定）", v1, m1)
 	}
-	v2, _ := f.Push("ion:tap]")
-	if v2 != "" {
-		t.Fatalf("v2=%q（整段被标签吃掉）", v2)
+	v2, m2 := f.Push("ion:tap]")
+	if v2 != "" || m2 != "tap" {
+		t.Fatalf("v2=%q m2=%q（整段被标签吃掉，意图在完成时返回）", v2, m2)
 	}
-	v3, m := f.Push("尾巴")
-	if v3 != "尾巴" || m != "tap" {
-		t.Fatalf("v3=%q motion=%q", v3, m)
+	v3, _ := f.Push("尾巴")
+	if v3 != "尾巴" {
+		t.Fatalf("v3=%q", v3)
 	}
 }
 ```
-
-注意 `TestMotionFilterIncrementalVisible` 里 `m` 只在第三个断言检查：前两次 Push 返回的 motion 应为空串（标签未识别完）——若第一/二个断言想更严，可在前两行也断言 motion 为空。
 
 - [ ] **Step 2: 跑测试确认失败**
 
@@ -1076,7 +1075,8 @@ func (f *MotionFilter) drain(final bool) (visible, motion string) {
 			f.pending = f.pending[loc[1]:]
 			continue
 		}
-		hold := 0
+		// 默认全部安全吐出；仅当尾巴是半截标签时扣住
+		hold := len(f.pending)
 		if !final {
 			// 最后一个 '[' 起的尾巴若仍可能长成标签，扣住等下一段 chunk
 			if idx := strings.LastIndexByte(f.pending, '['); idx >= 0 {
