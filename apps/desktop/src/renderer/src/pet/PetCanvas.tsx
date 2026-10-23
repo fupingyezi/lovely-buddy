@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { loadPetModel, releasePetModel, type PetModel } from '../live2d/model'
 import { setupPetInteraction } from '../live2d/interact'
+import { getActiveModel, setActiveModel } from '../live2d/modelBus'
 import { usePassthrough } from './usePassthrough'
 import { usePetStore } from '../store/petStore'
 
@@ -11,13 +12,15 @@ interface Props {
   onMenu: (clientX: number, clientY: number) => void
   /** 菜单是否打开（穿透状态机：打开时整窗强制不穿透） */
   menuOpen: boolean
+  /** 聊天面板是否打开（同 menuOpen：打开时整窗强制不穿透） */
+  chatOpen: boolean
 }
 
 /**
  * 画布常驻（PIXI stage 单例依赖它），模型切换/无模型时只换内容不卸载组件，
  * 避免"卸载时模型仍在加载"的泄漏。url 为 null 时画布全透明且可穿透。
  */
-export default function PetCanvas({ url, name, onMenu, menuOpen }: Props): ReactElement {
+export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Props): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevUrlRef = useRef<string | null>(null)
   const onMenuRef = useRef(onMenu)
@@ -65,6 +68,14 @@ export default function PetCanvas({ url, name, onMenu, menuOpen }: Props): React
     }
   }, [url, name])
 
+  // 模型实例登记到总线（气泡播放动作用）；卸载/切换时清空
+  useEffect(() => {
+    setActiveModel(pet)
+    return () => {
+      if (getActiveModel() === pet) setActiveModel(null)
+    }
+  }, [pet])
+
   // 拖拽移动 + 点击播 tap 动作 + 右键弹菜单
   useEffect(() => {
     const canvas = canvasRef.current
@@ -80,7 +91,7 @@ export default function PetCanvas({ url, name, onMenu, menuOpen }: Props): React
     return () => interaction.dispose()
   }, [pet])
 
-  usePassthrough(pet, menuOpen)
+  usePassthrough(pet, menuOpen || chatOpen)
 
   return <canvas ref={canvasRef} className="pet-canvas" />
 }

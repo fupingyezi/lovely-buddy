@@ -2,6 +2,8 @@ import { useEffect, type ReactElement } from 'react'
 import PetCanvas from './pet/PetCanvas'
 import PetMenu from './pet/PetMenu'
 import ImportPanel from './pet/ImportPanel'
+import ChatPanel from './pet/chat/ChatPanel'
+import { useChatPanel } from './pet/chat/useChatPanel'
 import { usePetMenu } from './pet/usePetMenu'
 import { usePetStore } from './store/petStore'
 
@@ -12,6 +14,7 @@ export default function App(): ReactElement {
   const loadModels = usePetStore((s) => s.loadModels)
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
   const { menu, openMenu, closeMenu } = usePetMenu()
+  const { open: chatOpen, openPanel, closePanel } = useChatPanel()
 
   // 后端健康轮询（5s）
   useEffect(() => {
@@ -47,11 +50,13 @@ export default function App(): ReactElement {
         url={modelUrl}
         name={modelName ?? ''}
         menuOpen={menu !== null}
+        chatOpen={chatOpen}
         onMenu={() => {
           if (menu) closeMenu()
           else openMenu()
         }}
       />
+      {chatOpen && <ChatPanel onClose={closePanel} />}
       {modelUrl === null && !placeholderDismissed && (
         <div className="placeholder" data-interactive>
           <button className="placeholder-close" title="暂不显示" onClick={dismissPlaceholder}>
@@ -65,7 +70,17 @@ export default function App(): ReactElement {
           </div>
         </div>
       )}
-      {menu !== null && <PetMenu x={menu.x} y={menu.y} onClose={closeMenu} />}
+      {menu !== null && (
+        <PetMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          onChat={() => {
+            closeMenu()
+            openPanel()
+          }}
+        />
+      )}
     </>
   )
 }

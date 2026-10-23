@@ -2955,7 +2955,7 @@ export function useChatPanel(): { open: boolean; openPanel: () => void; closePan
 Create `apps/desktop/src/renderer/src/pet/chat/__test__/ChatPanel.test.tsx`：
 
 ```tsx
-import { fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import ChatPanel from '../ChatPanel'
 import { useChatStore } from '../../../store/chatStore'
@@ -2970,12 +2970,17 @@ describe('ChatPanel', () => {
     stopMock.mockReset()
     useChatStore.setState({ items: [], sending: false, error: null, send: sendMock, stop: stopMock })
     usePetStore.setState({
-      models: [{ slug: 'haru', name: 'haru', url: 'l2d://model/haru/x.model3.json', kind: 'moc3' }],
+      models: [
+        { slug: 'haru', name: 'haru', url: 'l2d://model/haru/x.model3.json', kind: 'moc3', entry: 'haru/x.model3.json' } // AvatarInfo 要求 entry
+      ],
       modelUrl: 'l2d://model/haru/x.model3.json',
       modelName: 'haru'
     })
   })
-  afterEach(() => vi.restoreAllMocks())
+  afterEach(() => {
+    cleanup() // vitest 不开 globals 时 testing-library 不会自动 cleanup，不清理会导致「多个元素」误报
+    vi.restoreAllMocks()
+  })
 
   it('渲染历史与空态提示', () => {
     useChatStore.setState({

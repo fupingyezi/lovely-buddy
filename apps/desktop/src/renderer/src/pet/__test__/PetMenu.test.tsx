@@ -51,7 +51,7 @@ const haruAvatar: AvatarInfo = { slug: 'haru', name: 'haru-cubism4', url: 'l2d:/
 const shizukuAvatar: AvatarInfo = { slug: 'shizuku', name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
 
 function renderMenu(onClose = vi.fn()): ReturnType<typeof vi.fn> {
-  render(<PetMenu x={10} y={10} onClose={onClose} />)
+  render(<PetMenu x={10} y={10} onClose={onClose} onChat={() => {}} />)
   return onClose
 }
 
@@ -82,6 +82,13 @@ describe('PetMenu', () => {
     const onClose = renderMenu()
     fireEvent.click(screen.getByTitle('关闭菜单'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('聊天按钮触发 onChat', () => {
+    const onChat = vi.fn()
+    render(<PetMenu x={4} y={4} onClose={() => {}} onChat={onChat} />)
+    fireEvent.click(screen.getByRole('button', { name: '聊天' }))
+    expect(onChat).toHaveBeenCalled()
   })
 
   it('状态行显示在线状态与版本', () => {

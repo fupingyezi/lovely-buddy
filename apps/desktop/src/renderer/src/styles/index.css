@@ -252,3 +252,114 @@ body,
   color: #fca5a5;
   word-break: break-all;
 }
+
+/* ===== 聊天面板（chat 扩展区，靠窗口顶部）===== */
+.chat-panel {
+  position: fixed;
+  z-index: 90;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 224px; /* CHAT_H 240 - 上下留白 */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(30, 30, 46, 0.92);
+  color: #eee;
+  font-size: 12px;
+  user-select: none;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #999;
+}
+
+.chat-close {
+  border: none;
+  background: transparent;
+  color: #999;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chat-messages {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  user-select: text;
+}
+
+.chat-empty {
+  color: #777;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.chat-msg {
+  max-width: 85%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  line-height: 1.5;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.chat-msg.user {
+  align-self: flex-end;
+  background: #4a6cf7;
+  color: #fff;
+}
+
+.chat-msg.assistant {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-error {
+  color: #ff8080;
+  font-size: 11px;
+}
+
+.chat-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.chat-input-row input {
+  flex: 1;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  font-size: 12px;
+  outline: none;
+}
+
+.chat-input-row input:focus {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.chat-input-row button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #4a6cf7;
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.chat-input-row .chat-stop {
+  background: rgba(255, 255, 255, 0.12);
+}

@@ -6,13 +6,15 @@ interface Props {
   x: number
   y: number
   onClose: () => void
+  /** 「聊天」入口（关闭菜单并打开聊天面板，由 App 决定） */
+  onChat: () => void
 }
 
 /**
- * 右键点击角色弹出来的小菜单（非常驻）：状态行 + 形象切换 + 导入/删除。
+ * 右键点击角色弹出来的小菜单（非常驻）：状态行 + 形象切换 + 导入/删除 + 聊天入口。
  * 位置由 App 在窗口扩展后夹紧算出。关闭 = 点菜单外 / 再右键 / Esc，由 App 统一处理。
  */
-export default function PetMenu({ x, y, onClose }: Props): ReactElement {
+export default function PetMenu({ x, y, onClose, onChat }: Props): ReactElement {
   const models = usePetStore((s) => s.models)
   const modelUrl = usePetStore((s) => s.modelUrl)
   const modelName = usePetStore((s) => s.modelName)
@@ -71,6 +73,7 @@ export default function PetMenu({ x, y, onClose }: Props): ReactElement {
         </div>
       )}
       <div className="menu-actions">
+        <button onClick={onChat}>聊天</button>
         <button onClick={() => setImportOpen(!importOpen)}>{importOpen ? '收起' : '导入形象'}</button>
         {modelUrl !== null && (
           <button className="danger" onClick={confirmDelete}>
