@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"lovelybuddy/server/internal/controller"
 	"lovelybuddy/server/internal/db"
 	"lovelybuddy/server/internal/server"
 )
@@ -53,7 +54,7 @@ func main() {
 
 	srv := server.New(*addr, *token, pool, *modelDir)
 	go func() {
-		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", server.Version)
+		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("server error", "err", err)
 			stop()

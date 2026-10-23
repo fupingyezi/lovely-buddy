@@ -130,3 +130,11 @@ func TestAssetsImportListDelete(t *testing.T) {
 		t.Fatal("形象目录应已删除")
 	}
 }
+
+func TestPing(t *testing.T) {
+	ts, _ := newTestServer(t)
+	resp, m := doJSON(t, http.MethodGet, ts.URL+"/api/v1/ping", testToken, nil)
+	if resp.StatusCode != http.StatusOK || m["pong"] != true {
+		t.Fatalf("ping 应 200 pong: %d %v", resp.StatusCode, m)
+	}
+}
