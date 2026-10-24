@@ -4,11 +4,7 @@ import { getActiveModel } from '../../live2d/modelBus'
 import { INTENT_MOTIONS, type MotionIntent } from '../../live2d/motionMap'
 import { useTypewriter } from './useTypewriter'
 import { bubbleOffsets, type BubbleOffsets } from './bubbleLayout'
-
-/** 流式结束（sending=false）后静默多久淡出（图 01） */
-const HIDE_AFTER_MS = 8000
-/** 淡出动画时长（CSS .speech-bubble--out transition 同步） */
-const FADE_MS = 200
+import { HIDE_AFTER_MS, FADE_MS } from './bubbleTiming'
 
 interface Props {
   /** 聊天面板打开时让位（回复显示在面板历史里），气泡隐藏——互斥规则保留 */
