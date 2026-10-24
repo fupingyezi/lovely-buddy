@@ -32,8 +32,10 @@ type ProviderSpec struct {
 	APIKeyEnv    string
 }
 
-// Providers 内置厂商（spec §4：默认对话 deepseek）。
+// Providers 内置厂商（spec §4：DeepSeek/GLM/Qwen/Kimi，全部 OpenAI 兼容端点）。
 var Providers = map[string]ProviderSpec{
 	"deepseek":  {BaseURL: "https://api.deepseek.com", DefaultModel: "deepseek-chat", APIKeyEnv: "DEEPSEEK_API_KEY"},
 	"dashscope": {BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", DefaultModel: "qwen-plus", APIKeyEnv: "DASHSCOPE_API_KEY"},
+	"zhipu":     {BaseURL: "https://open.bigmodel.cn/api/paas/v4", DefaultModel: "glm-4-flash", APIKeyEnv: "ZHIPU_API_KEY"},
+	"moonshot":  {BaseURL: "https://api.moonshot.cn/v1", DefaultModel: "moonshot-v1-8k", APIKeyEnv: "MOONSHOT_API_KEY"},
 }
