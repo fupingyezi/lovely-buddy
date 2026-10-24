@@ -1,0 +1,42 @@
+/* 设计 token（design-v1/README.md + 04-specs）：全部界面样式只引用这里，不写裸值。
+   图 04 规范：色板/圆角/投影/交互状态/字号间距，值即线上规范，改这里=改全产品。 */
+:root {
+  /* 色板 */
+  --color-primary: #5bc8a6; /* 薄荷主色（渐变起点、选中态） */
+  --color-primary-deep: #35a483; /* 薄荷深（图标、强调文字） */
+  --color-primary-press: #54b899; /* 主色加深 8%（按下态） */
+  --color-accent: #ffb9c7; /* 蜜桃辅色（停止/危险操作） */
+  --color-accent-ink: #e36f8c; /* 蜜桃深（停止/危险文字） */
+  --color-bg: #fbf7f0; /* 奶油底（卡片/侧栏/桌宠消息气泡） */
+  --color-surface: #ffffff; /* 白（输入条/气泡） */
+  --color-ink: #33403b; /* 墨绿正文 */
+  --color-ink-2: #7c8c86; /* 一级辅助灰绿 */
+  --color-ink-3: #a6b3ad; /* 二级辅助灰绿（占位符/计数） */
+  --color-border: #efe8de; /* 描边 1px */
+  --color-selected-bg: #e8f2ee; /* 选中条目底（会话卡） */
+  --color-hover-bg: #fdfaf5; /* 悬停条目奶油白 */
+  --color-stop-bg: #fef0f0; /* 停止键底 */
+  /* 圆角 */
+  --radius-card: 28px;
+  --radius-panel: 24px;
+  --radius-bubble: 26px;
+  --radius-input: 20px;
+  --radius-msg: 16px; /* 设置内消息气泡（图 03 实测 14–24，取 4 的倍数） */
+  --radius-pill: 999px;
+  /* 投影（薄荷 12%，offset 0 12，blur 32，spread -6） */
+  --shadow-mint: 0 12px 32px -6px rgba(91, 200, 166, 0.12);
+  --shadow-mint-deep: 0 14px 36px -6px rgba(91, 200, 166, 0.2); /* 悬停：投影加深 */
+  /* 字号（标题 19 Semi Bold / 正文 12-15 / 辅助 10-11） */
+  --fs-title: 19px;
+  --fs-body: 13px;
+  --fs-aux: 11px;
+  /* 间距（4 的倍数：8/12/14/18/24） */
+  --sp-1: 8px;
+  --sp-2: 12px;
+  --sp-3: 14px;
+  --sp-4: 18px;
+  --sp-5: 24px;
+  /* 字体：中文 Sarasa Gothic SC（未安装回退 PingFang SC），数字/拉丁 Inter */
+  --font-cjk: 'Sarasa Gothic SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-latin: 'Inter', var(--font-cjk);
+}
