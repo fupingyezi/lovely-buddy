@@ -51,6 +51,8 @@ func inspect(dir string) (Avatar, bool) {
 		Kind:     kind,
 		Entry:    filepath.ToSlash(filepath.Join(slug, rel)),
 	}
+	av.SizeBytes = dirSize(dir)
+	av.Expressions = expressionCount(filepath.Join(dir, filepath.FromSlash(rel)))
 	if av.Name == "" {
 		av.Name = slug
 	}
@@ -105,4 +107,41 @@ func probeEntry(dir string) (rel string, kind string) {
 		return firstMoc, "moc"
 	}
 	return "", ""
+}
+
+// dirSize 递归统计形象目录总字节数（WalkDir 求和，读不到的跳过）。
+func dirSize(dir string) int64 {
+	var n int64
+	_ = filepath.WalkDir(dir, func(_ string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !d.IsDir() {
+			if info, err := d.Info(); err == nil {
+				n += info.Size()
+			}
+		}
+		return nil
+	})
+	return n
+}
+
+// expressionCount 读取入口 json 的 Expressions 数组长度（Cubism 4 大写 / Cubism 2 小写通用）。
+// 读不到/解析失败/无该字段 → 0（前端省略「N 组表情」段）。
+func expressionCount(entry string) int {
+	b, err := os.ReadFile(entry)
+	if err != nil {
+		return 0
+	}
+	var doc struct {
+		Expressions []json.RawMessage `json:"Expressions"`
+		expressions []json.RawMessage `json:"expressions"`
+	}
+	if json.Unmarshal(b, &doc) != nil {
+		return 0
+	}
+	if len(doc.Expressions) > 0 {
+		return len(doc.Expressions)
+	}
+	return len(doc.expressions)
 }

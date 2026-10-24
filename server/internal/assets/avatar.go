@@ -15,6 +15,9 @@ type Avatar struct {
 	Source   string `json:"source,omitempty"`  // local | url（来自导入侧车，手工放入的为空）
 	Kind     string `json:"kind"`              // moc | moc3
 	Entry    string `json:"entry"`             // 相对模型根目录的入口，如 "haru/haru.model3.json"
+	// 体积与表情数（探测时统计，形象管理页元信息展示用）
+	SizeBytes   int64 `json:"size_bytes,omitempty"`
+	Expressions int   `json:"expressions,omitempty"`
 }
 
 // avatar.json 的字段全部可选，损坏时按缺省处理。

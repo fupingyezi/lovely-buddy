@@ -23,10 +23,10 @@ func writeDir(t *testing.T, root string, files map[string]string) {
 func TestDetect(t *testing.T) {
 	root := t.TempDir()
 	writeDir(t, root, map[string]string{
-		"haru/haru.model3.json":            `{"Version":3}`,
+		"haru/haru.model3.json":            `{"Version":3,"Expressions":[{"Name":"Angry"},{"Name":"Happy"}]}`,
 		"haru/avatar.json":                 `{"name":"Haru","author":"Live2D","version":"1.0","license":"free","homepage":"https://example.com","persona":"persona/haru.txt"}`,
 		"haru/persona/haru.txt":            "你是一只猫",
-		"shizuku/a/b/c/shizuku.model.json": `{"type":"Live2DModelSetting"}`,
+		"shizuku/a/b/c/shizuku.model.json": `{"type":"Live2DModelSetting","expressions":[{"name":"smile"}]}`,
 		"broken/avatar.json":               `{not json`,
 		"broken/deep.model3.json":          `{"Version":3}`,
 		"noentry/avatar.json":              `{"name":"空"}`,
@@ -50,10 +50,19 @@ func TestDetect(t *testing.T) {
 		got[0].Kind != "moc3" || got[0].Entry != "haru/haru.model3.json" {
 		t.Fatalf("haru 字段不符: %+v", got[0])
 	}
+	if got[0].SizeBytes <= 0 {
+		t.Fatalf("haru SizeBytes 应为正数: %+v", got[0])
+	}
+	if got[0].Expressions != 2 {
+		t.Fatalf("haru Expressions 应为 2: %+v", got[0])
+	}
 	// shizuku：无 avatar.json → Name 回退 slug；3 层嵌套入口仍可探测（排序在 metanull 后）
 	if got[2].Slug != "shizuku" || got[2].Name != "shizuku" || got[2].Kind != "moc" ||
 		got[2].Entry != "shizuku/a/b/c/shizuku.model.json" {
 		t.Fatalf("shizuku 字段不符: %+v", got[2])
+	}
+	if got[2].Expressions != 1 {
+		t.Fatalf("shizuku Expressions 应为 1（cubism2 小写 expressions 字段）: %+v", got[2])
 	}
 	// metanull：persona 文件缺失 → Persona 置空
 	for _, a := range got {
