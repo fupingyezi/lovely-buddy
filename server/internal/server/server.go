@@ -15,12 +15,13 @@ import (
 	"lovelybuddy/server/internal/service"
 )
 
-// New 组装 HTTP 服务。pool 可为 nil（healthz 将报 db error）；chats 为聊天服务。
-func New(addr, token string, pool *pgxpool.Pool, modelDir string, chats *service.ChatService) *http.Server {
+// New 组装 HTTP 服务。pool 可为 nil（healthz 将报 db error）；chats 为聊天服务；
+// cfgSvc 为模型与连接配置服务（main 恒传非 nil）。
+func New(addr, token string, pool *pgxpool.Pool, modelDir string, chats *service.ChatService, cfgSvc *service.ConfigService) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(middleware.AccessLog(), gin.Recovery(), middleware.CORS())
-	router.Register(r, pool, token, modelDir, chats)
+	router.Register(r, pool, token, modelDir, chats, cfgSvc)
 	return &http.Server{
 		Addr:              addr,
 		Handler:           r,

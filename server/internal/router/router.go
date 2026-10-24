@@ -14,8 +14,8 @@ import (
 )
 
 // Register 注册全部路由（在 engine 挂完全局中间件之后调用）。
-// chats 由 main 组装传入（nil 时 chat 接口返回 503）。
-func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string, chats *service.ChatService) {
+// chats 由 main 组装传入（nil 时 chat 接口返回 503）；cfgSvc 由 main 组装，恒非 nil。
+func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string, chats *service.ChatService, cfgSvc *service.ConfigService) {
 	r.GET("/healthz", controller.NewHealthz(pool))
 
 	api := r.Group("/api/v1", middleware.Token(token))
@@ -28,4 +28,11 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string, chats *
 	api.POST("/chat", chatCtl.Send)
 	api.GET("/history", chatCtl.History)
 	api.DELETE("/history", chatCtl.Clear)
+	cfgCtl := controller.NewConfig(cfgSvc)
+	api.GET("/config", cfgCtl.State)
+	api.POST("/config/connections", cfgCtl.Add)
+	api.PUT("/config/connections/:id", cfgCtl.Update)
+	api.DELETE("/config/connections/:id", cfgCtl.Remove)
+	api.PUT("/config/active", cfgCtl.SetActive)
+	api.POST("/config/test", cfgCtl.Test)
 }

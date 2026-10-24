@@ -53,7 +53,7 @@ func types(evs []Event) string {
 
 func TestStreamNoKey(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, &scriptedProvider{}, t.TempDir())
+	s := NewChatService(store, llm.NewRegistry(&scriptedProvider{}), t.TempDir())
 	evs := collect(s.Stream(context.Background(), "", "你好"))
 	if len(evs) != 1 || evs[0].Type != "error" || !strings.Contains(evs[0].Error, "DEEPSEEK_API_KEY") {
 		t.Fatalf("evs=%+v", evs)
@@ -77,7 +77,7 @@ func TestStreamHappyPath(t *testing.T) {
 	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- llm.StreamEvent) {
 		send(out, "你好", "[motion:hap", "py]呀")
 	}}
-	s := NewChatService(store, p, t.TempDir())
+	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
 
 	evs := collect(s.Stream(context.Background(), "", "嗨"))
 	if got := types(evs); got != "meta,delta,motion,delta,done," {
@@ -118,7 +118,7 @@ func TestStreamPersonaFromAvatar(t *testing.T) {
 	}
 	store := NewMemStore()
 	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- llm.StreamEvent) {}}
-	s := NewChatService(store, p, dir)
+	s := NewChatService(store, llm.NewRegistry(p), dir)
 	collect(s.Stream(context.Background(), "haru", "喵"))
 	if !strings.HasPrefix(p.calls[0][0].Content, "你是猫。") {
 		t.Fatalf("avatar persona 应注入 system 开头: %q", p.calls[0][0].Content)
@@ -131,7 +131,7 @@ func TestStreamStopPersistsPartial(t *testing.T) {
 		send(out, "已经说到一半")
 		<-ctx.Done() // 用户停止后上游才断
 	}}
-	s := NewChatService(store, p, t.TempDir())
+	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -159,7 +159,7 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 		send(out, "半截")
 		out <- llm.StreamEvent{Err: context.DeadlineExceeded}
 	}}
-	s := NewChatService(store, p, t.TempDir())
+	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
 
 	evs := collect(s.Stream(context.Background(), "", "hi"))
 	if types(evs) != "meta,delta,error," {
@@ -173,7 +173,7 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 
 func TestClearHistory(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, &scriptedProvider{}, t.TempDir())
+	s := NewChatService(store, llm.NewRegistry(&scriptedProvider{}), t.TempDir())
 	id := mustSession(t, store)
 	if err := store.Append(context.Background(), id, "user", "嗨", ""); err != nil {
 		t.Fatal(err)

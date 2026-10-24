@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/llm"
 	"lovelybuddy/server/internal/service"
 )
@@ -38,8 +39,10 @@ func (scriptedLLM) KeyEnv() string   { return "DEEPSEEK_API_KEY" }
 func newTestServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 	root := t.TempDir()
-	chats := service.NewChatService(service.NewMemStore(), scriptedLLM{}, root)
-	srv := New("127.0.0.1:0", testToken, nil, root, chats)
+	reg := llm.NewRegistry(scriptedLLM{})
+	chats := service.NewChatService(service.NewMemStore(), reg, root)
+	cfgSvc := service.NewConfigService(reg, &configstore.File{}, scriptedLLM{})
+	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc)
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 	return ts, root

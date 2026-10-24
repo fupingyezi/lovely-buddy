@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"lovelybuddy/server/internal/config"
+	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/controller"
 	"lovelybuddy/server/internal/dao"
 	"lovelybuddy/server/internal/db"
@@ -57,13 +58,30 @@ func main() {
 	}
 
 	cfg := config.Load()
-	provider, err := llm.Resolve(cfg.Chat.Provider, cfg.Chat.Model, cfg.Chat.BaseURL)
+	fallback, err := llm.Resolve(cfg.Chat.Provider, cfg.Chat.Model, cfg.Chat.BaseURL)
 	if err != nil {
 		slog.Error("对话厂商配置无效", "err", err)
 		os.Exit(1)
 	}
-	chats := service.NewChatService(dao.NewChat(pool), provider, *modelDir)
-	srv := server.New(*addr, *token, pool, *modelDir, chats)
+	reg := llm.NewRegistry(fallback)
+
+	// M3 模型与连接：界面注入优先（有已保存连接时 env/.env 不参与）
+	file, err := configstore.Load()
+	if err != nil {
+		slog.Warn("模型与连接配置读取失败，忽略", "err", err)
+		file = &configstore.File{}
+	}
+	if active := file.Active(); active != nil {
+		if p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens); err != nil {
+			slog.Warn("已保存的连接无效，回退环境默认", "err", err)
+		} else {
+			reg.Swap(p)
+		}
+	}
+	cfgSvc := service.NewConfigService(reg, file, fallback)
+
+	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir)
+	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

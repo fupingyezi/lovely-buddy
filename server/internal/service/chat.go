@@ -24,12 +24,13 @@ const historyLimit = 20
 
 type ChatService struct {
 	store    ChatStore
-	provider llm.ChatProvider
+	reg      *llm.Registry
 	modelDir string
 }
 
-func NewChatService(store ChatStore, provider llm.ChatProvider, modelDir string) *ChatService {
-	return &ChatService{store: store, provider: provider, modelDir: modelDir}
+// NewChatService 以厂商注册表组装：每次对话从 reg 取当前厂商（M3 设置界面热切换）。
+func NewChatService(store ChatStore, reg *llm.Registry, modelDir string) *ChatService {
+	return &ChatService{store: store, reg: reg, modelDir: modelDir}
 }
 
 // History 供 /api/v1/history：默认会话最近 limit 条（升序）。
@@ -64,8 +65,9 @@ func (s *ChatService) Stream(ctx context.Context, avatarSlug, userText string) <
 	ch := make(chan Event)
 	go func() {
 		defer close(ch)
-		if !s.provider.Configured() {
-			ch <- Event{Type: "error", Error: "未配置 API key：请在 .env 填写 " + s.provider.KeyEnv() + " 后重启"}
+		provider := s.reg.Current() // 对话发起时捕获：切换连接不影响本次回复
+		if !provider.Configured() {
+			ch <- Event{Type: "error", Error: "未配置 API key：请在设置·模型与连接中添加连接，或在 .env 填写 " + provider.KeyEnv()}
 			return
 		}
 		sessionID, err := s.store.DefaultSession(ctx)
@@ -89,7 +91,7 @@ func (s *ChatService) Stream(ctx context.Context, avatarSlug, userText string) <
 		filter := NewMotionFilter()
 		var full strings.Builder
 		lastMotion := ""
-		for ev := range s.provider.StreamChat(ctx, BuildMessages(persona, history, userText, historyLimit)) {
+		for ev := range provider.StreamChat(ctx, BuildMessages(persona, history, userText, historyLimit)) {
 			if ev.Err != nil {
 				s.persistPartial(sessionID, full.String(), lastMotion)
 				ch <- Event{Type: "error", Error: "模型调用失败: " + ev.Err.Error()}
