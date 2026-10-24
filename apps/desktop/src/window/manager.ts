@@ -1,6 +1,16 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import { WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, menuExpandExtras, modelResizeBounds, moveBounds, type Rect } from './bounds'
+import {
+  WIN_H,
+  WIN_W,
+  collapseBounds,
+  expandBounds,
+  initialBounds,
+  menuExpandExtras,
+  modelResizeBounds,
+  moveBounds,
+  type Rect
+} from './bounds'
 import type { SettingsStore } from '../main/store'
 
 /**

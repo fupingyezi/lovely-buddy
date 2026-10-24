@@ -48,8 +48,22 @@ function mockFetchApi(
   )
 }
 
-const haruAvatar: AvatarInfo = { slug: 'haru', name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
-const shizukuAvatar: AvatarInfo = { slug: 'shizuku', name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
+const haruAvatar: AvatarInfo = {
+  slug: 'haru',
+  name: 'haru-cubism4',
+  url: 'l2d://model/haru/haru.model3.json',
+  kind: 'moc3',
+  entry: 'haru/haru.model3.json',
+  license: 'free',
+  source: 'local'
+}
+const shizukuAvatar: AvatarInfo = {
+  slug: 'shizuku',
+  name: 'shizuku-cubism2',
+  url: 'l2d://model/shizuku/shizuku.model.json',
+  kind: 'moc',
+  entry: 'shizuku/shizuku.model.json'
+}
 
 function renderMenu(onClose = vi.fn(), onSettings = vi.fn()): ReturnType<typeof vi.fn> {
   render(<PetMenu onClose={onClose} onChat={() => {}} onSettings={onSettings} />)

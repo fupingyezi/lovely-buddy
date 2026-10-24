@@ -53,7 +53,15 @@ function mockFetchApi(
   )
 }
 
-const haruAvatar = { slug: 'haru', name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
+const haruAvatar = {
+  slug: 'haru',
+  name: 'haru-cubism4',
+  url: 'l2d://model/haru/haru.model3.json',
+  kind: 'moc3',
+  entry: 'haru/haru.model3.json',
+  license: 'free',
+  source: 'local'
+}
 
 function renderApp(): void {
   render(
@@ -132,9 +140,7 @@ describe('App', () => {
     // 等待一轮列表加载完成
     await waitFor(() => {
       const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
-      expect(
-        fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets') && !c[1]?.method)
-      ).toBe(true)
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets') && !c[1]?.method)).toBe(true)
     })
     expect(document.querySelector('.pet-menu')).toBeNull()
     expect(document.querySelector('.settings-panel')).toBeNull()

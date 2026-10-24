@@ -37,9 +37,7 @@ export function usePassthrough(pet: PetModel | null, menuOpen: boolean): void {
         return
       }
       // 菜单打开：整窗可交互（菜单外的点击用于关闭菜单，不能穿给桌面）
-      const onModel = menuOpenRef.current
-        ? true
-        : (petRef.current?.hitTest(e.clientX, e.clientY) ?? false)
+      const onModel = menuOpenRef.current ? true : (petRef.current?.hitTest(e.clientX, e.clientY) ?? false)
       setPassthrough(!onModel)
     }
 

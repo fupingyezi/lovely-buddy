@@ -96,7 +96,10 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
         {shown}
       </div>
       {/* right 与 bubbleLayout.TAIL_INSET 对齐 */}
-      <span className="speech-bubble-tail absolute right-[24px] -bottom-1.5 size-3 bg-surface rounded-bl rotate-45" aria-hidden="true" />
+      <span
+        className="speech-bubble-tail absolute right-[24px] -bottom-1.5 size-3 bg-surface rounded-bl rotate-45"
+        aria-hidden="true"
+      />
     </div>
   )
 }

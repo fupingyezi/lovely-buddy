@@ -76,13 +76,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
           else if (ev.type === 'delta') {
             updateLast((it) => ({ ...it, content: it.content + ev.text }))
             if (ev.text !== '') set((s) => ({ replySeq: s.replySeq + 1 }))
-          }
-          else if (ev.type === 'motion') set({ lastMotion: { intent: ev.intent, seq: ++motionSeq } })
+          } else if (ev.type === 'motion') set({ lastMotion: { intent: ev.intent, seq: ++motionSeq } })
           else if (ev.type === 'done') {
             updateLast((it) => ({ ...it, content: ev.text, motion: ev.motion || undefined }))
             if (ev.text !== '') set((s) => ({ replySeq: s.replySeq + 1 }))
-          }
-          else if (ev.type === 'error') set({ error: ev.error })
+          } else if (ev.type === 'error') set({ error: ev.error })
         },
         abort.signal
       )

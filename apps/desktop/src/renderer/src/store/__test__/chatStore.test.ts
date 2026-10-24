@@ -12,12 +12,10 @@ vi.mock('../../lib/chatApi', () => ({
 }))
 
 function driveSend(events: object[]): Promise<void> {
-  streamChatMock.mockImplementation(
-    (_rt: unknown, _body: unknown, onEvent: (ev: object) => void) => {
-      for (const e of events) onEvent(e)
-      return Promise.resolve()
-    }
-  )
+  streamChatMock.mockImplementation((_rt: unknown, _body: unknown, onEvent: (ev: object) => void) => {
+    for (const e of events) onEvent(e)
+    return Promise.resolve()
+  })
   return useChatStore.getState().send('嗨', 'haru')
 }
 
@@ -59,7 +57,10 @@ describe('chatStore.send', () => {
   })
 
   it('error 事件置错误并移除空占位', async () => {
-    await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: '未配置 API key' }])
+    await driveSend([
+      { type: 'meta', session_id: 's1' },
+      { type: 'error', error: '未配置 API key' }
+    ])
     const s = useChatStore.getState()
     expect(s.error).toBe('未配置 API key')
     expect(s.items).toEqual([{ role: 'user', content: '嗨', created_at: expect.any(String) }])
@@ -118,7 +119,10 @@ describe('chatStore.refresh', () => {
 
 describe('chatStore.retry', () => {
   it('去掉末尾失败残留的用户消息，用同一形象重发', async () => {
-    await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: '后端离线' }])
+    await driveSend([
+      { type: 'meta', session_id: 's1' },
+      { type: 'error', error: '后端离线' }
+    ])
     expect(useChatStore.getState().items).toEqual([{ role: 'user', content: '嗨', created_at: expect.any(String) }])
     streamChatMock.mockImplementation(() => Promise.resolve()) // 重发不重放旧事件
     useChatStore.getState().retry()
@@ -196,7 +200,10 @@ describe('chatStore.replySeq', () => {
   })
 
   it('error 事件不递增', async () => {
-    await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: 'x' }])
+    await driveSend([
+      { type: 'meta', session_id: 's1' },
+      { type: 'error', error: 'x' }
+    ])
     expect(useChatStore.getState().replySeq).toBe(0)
   })
 })

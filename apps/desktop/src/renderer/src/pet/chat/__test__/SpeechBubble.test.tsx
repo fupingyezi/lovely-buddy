@@ -10,7 +10,12 @@ const playIntent = vi.fn()
 // anchor 用 getter 持有可变对象：PetModel.anchor 本身是 readonly getter，测试靠改内部对象模拟位移
 // 语义 = 头部左上角（实际艺术边界）：300 宽模型头部左缘 x=90，y=120 为头顶窗口坐标
 const fakeAnchor = { x: 90, y: 120 }
-const fakePet = { playIntent, get anchor() { return fakeAnchor } } as unknown as PetModel
+const fakePet = {
+  playIntent,
+  get anchor() {
+    return fakeAnchor
+  }
+} as unknown as PetModel
 
 describe('SpeechBubble', () => {
   beforeEach(() => {

@@ -218,9 +218,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   /** idle 循环：随机挑一个 idle 类动作，播完歇 6-14s 再续 */
   function startIdle(): void {
     if (disposed) return
-    const idleGroups = groups.filter((g) =>
-      INTENT_MOTIONS.idle.some((c) => c.toLowerCase() === g.toLowerCase())
-    )
+    const idleGroups = groups.filter((g) => INTENT_MOTIONS.idle.some((c) => c.toLowerCase() === g.toLowerCase()))
     if (idleGroups.length > 0) {
       const g = idleGroups[Math.floor(Math.random() * idleGroups.length)]
       void model

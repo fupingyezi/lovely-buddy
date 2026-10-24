@@ -107,7 +107,9 @@ export default function SettingsPanel(): ReactElement {
                   <div
                     key={i}
                     className={`flow-msg max-w-[78%] px-(--sp-3) py-2.5 rounded-msg text-(--fs-body) leading-[1.6] whitespace-pre-wrap break-words ${
-                      it.role === 'assistant' ? 'assistant self-start bg-bg text-ink' : 'user self-end bg-primary text-white'
+                      it.role === 'assistant'
+                        ? 'assistant self-start bg-bg text-ink'
+                        : 'user self-end bg-primary text-white'
                     }`}
                   >
                     {it.content}

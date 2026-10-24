@@ -41,7 +41,13 @@ export function initialBounds(saved: Point | null, workArea: Rect): Point {
 }
 
 /** 增量拖动后按工作区夹紧，窗口始终完整可见。 */
-export function moveBounds(pos: Point, size: { width: number; height: number }, dx: number, dy: number, workArea: Rect): Point {
+export function moveBounds(
+  pos: Point,
+  size: { width: number; height: number },
+  dx: number,
+  dy: number,
+  workArea: Rect
+): Point {
   return {
     x: clamp(pos.x + Math.round(dx), workArea.x, workArea.x + workArea.width - size.width),
     y: clamp(pos.y + Math.round(dy), workArea.y, workArea.y + workArea.height - size.height)
@@ -72,7 +78,11 @@ export function expandBounds(current: Rect, extraWidth: number, extraHeight: num
  *  - 宽：按当前窗口真实宽度补足 requiredW（菜单右贴窗口，宽度不足向左扩）。
  *  - 高：绝对 requiredH——菜单打开期间头顶空间恒定（≥requiredH），其他面板
  *    中途收起（如气泡保持期结束）菜单仍贴头顶不压角色。 */
-export function menuExpandExtras(current: Rect, requiredW: number, requiredH: number): { width: number; height: number } {
+export function menuExpandExtras(
+  current: Rect,
+  requiredW: number,
+  requiredH: number
+): { width: number; height: number } {
   return {
     width: Math.max(0, requiredW - current.width),
     height: requiredH

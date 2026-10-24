@@ -62,7 +62,9 @@ export function exportFileName(d: Date): string {
 export function historyToMarkdown(items: ChatItem[]): string {
   const lines = ['# AI桌宠对话记录', '']
   const d = new Date()
-  lines.push(`> 导出时间：${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`)
+  lines.push(
+    `> 导出时间：${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  )
   for (const g of groupByDay(items)) {
     lines.push('', `## ${g.label}`)
     for (const it of g.items) {

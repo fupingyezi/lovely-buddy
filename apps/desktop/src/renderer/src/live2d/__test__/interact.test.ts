@@ -132,7 +132,13 @@ describe('setupPetInteraction', () => {
     interaction = setupPetInteraction(fakePet(), canvas, onTap, onMenu)
 
     fireEvent.pointerDown(canvas, { button: 0, ctrlKey: true, clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
-    const e = new MouseEvent('contextmenu', { clientX: 40, clientY: 60, ctrlKey: true, bubbles: true, cancelable: true })
+    const e = new MouseEvent('contextmenu', {
+      clientX: 40,
+      clientY: 60,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true
+    })
     canvas.dispatchEvent(e)
     fireEvent.pointerUp(window, { clientX: 40, clientY: 60, screenX: 500, screenY: 500 })
 

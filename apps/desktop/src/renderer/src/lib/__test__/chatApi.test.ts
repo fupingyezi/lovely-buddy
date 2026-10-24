@@ -33,13 +33,15 @@ describe('streamChat', () => {
   afterEach(() => vi.restoreAllMocks())
 
   it('按块解析事件并回调（跨 chunk 的 SSE 块）', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
-      sseResponse([
-        'event: meta\ndata: {"type":"meta","session_id":"s1"}\n\n',
-        'event: delta\ndata: {"type":"delta","text":"你"}\n\nevent: mot',
-        'ion\ndata: {"type":"motion","intent":"happy"}\n\nevent: done\ndata: {"type":"done","text":"你","motion":"happy"}\n\n'
-      ])
-    )
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        sseResponse([
+          'event: meta\ndata: {"type":"meta","session_id":"s1"}\n\n',
+          'event: delta\ndata: {"type":"delta","text":"你"}\n\nevent: mot',
+          'ion\ndata: {"type":"motion","intent":"happy"}\n\nevent: done\ndata: {"type":"done","text":"你","motion":"happy"}\n\n'
+        ])
+      )
     vi.stubGlobal('fetch', fetchMock)
 
     const events: unknown[] = []
@@ -52,10 +54,7 @@ describe('streamChat', () => {
   })
 
   it('HTTP 400 抛服务端错误信息', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue(new Response('{"error":"message 必填"}', { status: 400 }))
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"error":"message 必填"}', { status: 400 })))
     await expect(streamChat(rt, { message: '' }, () => {})).rejects.toThrow('message 必填')
   })
 })
@@ -66,12 +65,14 @@ describe('getHistory', () => {
   it('映射历史消息', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue(
-        new Response(
-          '{"session_id":"s1","messages":[{"role":"user","content":"嗨","created_at":"2026-10-23T00:00:00Z"},{"role":"assistant","content":"你好呀","motion":"happy","created_at":"2026-10-23T00:00:01Z"}]}',
-          { status: 200 }
+      vi
+        .fn()
+        .mockResolvedValue(
+          new Response(
+            '{"session_id":"s1","messages":[{"role":"user","content":"嗨","created_at":"2026-10-23T00:00:00Z"},{"role":"assistant","content":"你好呀","motion":"happy","created_at":"2026-10-23T00:00:01Z"}]}',
+            { status: 200 }
+          )
         )
-      )
     )
     const h = await getHistory(rt)
     expect(h.session_id).toBe('s1')

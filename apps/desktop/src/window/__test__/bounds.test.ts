@@ -1,6 +1,17 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { MIN_H, MIN_W, WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, menuExpandExtras, modelResizeBounds, moveBounds } from '../bounds'
+import {
+  MIN_H,
+  MIN_W,
+  WIN_H,
+  WIN_W,
+  collapseBounds,
+  expandBounds,
+  initialBounds,
+  menuExpandExtras,
+  modelResizeBounds,
+  moveBounds
+} from '../bounds'
 
 // 常见工作区：1920x1080、原点 (0,0)
 const WA = { x: 0, y: 0, width: 1920, height: 1080 }

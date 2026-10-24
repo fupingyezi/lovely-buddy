@@ -1,16 +1,6 @@
 // 意图 → 动作组候选（模型间命名不统一，按优先级依次尝试，忽略大小写）。
 export type MotionIntent =
-  | 'idle'
-  | 'tap'
-  | 'greet'
-  | 'thinking'
-  | 'speak'
-  | 'happy'
-  | 'sad'
-  | 'angry'
-  | 'surprised'
-  | 'bye'
-  | 'sleep'
+  'idle' | 'tap' | 'greet' | 'thinking' | 'speak' | 'happy' | 'sad' | 'angry' | 'surprised' | 'bye' | 'sleep'
 
 export const INTENT_MOTIONS: Record<MotionIntent, string[]> = {
   idle: ['idle', 'Idle_1', 'idle_1', 'standby', 'breath', 'taunt'],
