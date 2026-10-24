@@ -5,9 +5,9 @@ import { exportFileName, filterChatItems, groupByDay, historyToMarkdown, session
 const NAV = ['形象管理', '模型与连接', '对话记录', '外观与动作', '关于'] as const
 
 /**
- * 设置面板（覆盖整窗，图 03）：侧栏五入口（本期只有「对话记录」可用，其余 M3 实现）
- * + 对话记录页（搜索/会话卡/消息流/导出/清空）。data-interactive 保证穿透状态机可点。
- * 无关闭钮（图 03），关闭走 Esc / 点面板外（useSettingsPanel）。
+ * 设置面板内容（独立无边框窗口内的主区，图 03）：侧栏五入口（本期只有「对话记录」可用，
+ * 其余 M3 实现）+ 对话记录页（搜索/会话卡/消息流/导出/清空）。
+ * 窗口关闭走标题条关闭按钮 / Esc（SettingsApp），面板本身不含关闭钮（图 03）。
  */
 export default function SettingsPanel(): ReactElement {
   const items = useChatStore((s) => s.items)
@@ -24,8 +24,11 @@ export default function SettingsPanel(): ReactElement {
 
   const groups = groupByDay(filterChatItems(items, query))
 
-  const doClear = (): void => {
-    if (window.confirm('清空全部对话记录？此操作不可恢复。')) void clear()
+  const doClear = async (): Promise<void> => {
+    if (!window.confirm('清空全部对话记录？此操作不可恢复。')) return
+    await clear()
+    // clear 失败写 error 字段；仅成功后通知主进程广播，桌宠窗口同步刷新
+    if (useChatStore.getState().error === null) window.lovelybuddy.notifyChatCleared()
   }
 
   const doExport = async (): Promise<void> => {

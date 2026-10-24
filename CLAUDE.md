@@ -16,9 +16,9 @@
 
 ## 架构速览
 
-- `apps/desktop`（Electron）：`src/main` 主进程（窗口/托盘/穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display
+- `apps/desktop`（Electron）：`src/main` 主进程（窗口/托盘/穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口/独立设置窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display
   - `live2d/`：interact（screenX/screenY 拖拽/tap）、windowAnchor（窗口 resize 时模型位稳平移）
-  - `pet/`：usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）、chat/（输入条三态+错误重试、气泡锚定头部左上角+弹出动画）、settings/（设置面板：对话记录搜索/导出/清空）
+  - `pet/`：usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）、chat/（输入条三态+错误重试、气泡锚定头部左上角+弹出动画）、settings/（独立无边框设置窗口：对话记录搜索/导出/清空，清空后跨窗同步）
   - `styles/tokens.css` 设计 token（design-v1，色板/圆角/投影/字号单一来源）；`store/petStore.ts` 全局状态；`lib/assetsApi.ts` HTTP 客户端
 - `server`（Go + gin）：`/healthz` 公开，`/api/v1/*` token 中间件；`internal/assets` 形象探测/导入/删除；`internal/db` pgvector
 - `docker-compose.yml`：lovelybuddy-postgres（pgvector），仅绑 127.0.0.1
@@ -29,4 +29,5 @@
 - **测试**：前端测试放功能目录下 `__test__/`；Go 测试与源码同目录（Go 忽略 `_` 开头目录，不能用 `__test__/`）
 - **穿透状态机**：穿透时 mousemove 仍到达渲染进程、**点击穿到桌面**。usePassthrough 的 effect cleanup 无条件置穿透 true，新 effect 的立即同步必须**无条件发 IPC**（走本地去重会被跳过 → 窗口卡死穿透：移动有反应、点击全穿透）。回归用例 `pet/__test__/usePassthrough.test.ts`
 - **窗口扩展**：expand-window 向左上扩（右下锚定），渲染进程在 resize 时按尺寸增量平移模型（windowAnchor）保持屏幕位置——两处必须同步改，否则角色瞬移
+- **设置窗口**：独立无边框 BrowserWindow（960×600，`?settings=1` 复用同一 renderer，不加载 PIXI）；拖拽靠标题条 `-webkit-app-region: drag`；清空对话走 `notify-chat-cleared` → 主进程广播 `chat-cleared` → 桌宠窗口刷新
 - **临时诊断用完即删**：给渲染进程加日志曾用 Go 端点 `/api/v1/debug-log` + `lib/dbg.ts`，定位后必须整体移除

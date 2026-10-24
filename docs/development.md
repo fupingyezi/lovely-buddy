@@ -31,13 +31,13 @@ cd server && go test ./...                                                      
 
 ```
 apps/desktop/                Electron
-├── src/main/                主进程：透明置顶小窗、托盘、点击穿透、窗口扩展/缩回/缩放、子进程管理
+├── src/main/                主进程：透明置顶小窗、托盘、点击穿透、窗口扩展/缩回/缩放、独立无边框设置窗口、子进程管理
 ├── src/preload/             contextBridge 暴露 window.lovelybuddy（IPC 前缀 lovelybuddy:*）
 └── src/renderer/            React 18 + zustand + pixi.js v7 + pixi-live2d-display
     ├── live2d/              模型加载；interact（screenX/screenY 拖拽/tap，屏幕坐标防漂移）；
     │                        windowAnchor（窗口 resize 时模型位稳平移）
     ├── pet/                 usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单）、
-    │                        chat/（输入条、气泡）、settings/（设置面板·对话记录）
+    │                        chat/（输入条、气泡）、settings/（独立无边框设置窗口·对话记录）
     ├── styles/tokens.css    设计 token（design-v1 规范单一来源）
     ├── store/petStore.ts    全局状态（模型列表/当前形象/后端状态）
     └── lib/assetsApi.ts     HTTP API 客户端（token 由主进程通过 IPC 提供）
@@ -61,6 +61,7 @@ docker-compose.yml           lovelybuddy-postgres（pgvector），仅绑 127.0.0
 2. **窗口扩展与模型位稳**：`expand-window` 向左上扩展（右下角锚定，按屏幕工作区夹紧）。渲染进程在 window resize 时按窗口尺寸增量平移模型（`live2d/windowAnchor.ts` 的 `shiftToKeepScreenPosition`）保持屏幕位置不动——改窗口尺寸逻辑时这两处必须同步改，否则角色会「瞬移」。
 3. **重启 make dev 前先查内存**：系统内存吃紧会 SIGTERM 整个 make dev（`memory_pressure -Q` 看 free percentage，低于 ~30% 慎启）。
 4. **临时诊断用完即删**：曾用 Go 端点 `/api/v1/debug-log` + 渲染进程 `lib/dbg.ts` 排查穿透问题，定位后必须整体移除，不留残余。
+5. **设置窗口**：独立无边框 BrowserWindow（960×600，`?settings=1` 复用同一 renderer 分支 `SettingsApp`，不加载 PIXI/健康轮询）；无边框拖拽靠标题条 `-webkit-app-region: drag`；清空对话经 `lovelybuddy:notify-chat-cleared` → 主进程广播 `lovelybuddy:chat-cleared` → 桌宠窗口 `chatStore.refresh()` 跨窗同步。
 
 ## 测试约定
 

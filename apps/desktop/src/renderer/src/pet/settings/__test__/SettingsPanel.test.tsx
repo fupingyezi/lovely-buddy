@@ -1,18 +1,20 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingsPanel from '../SettingsPanel'
 import { useChatStore } from '../../../store/chatStore'
 
 const clearMock = vi.fn()
 const exportFileMock = vi.fn()
+const notifyChatClearedMock = vi.fn()
 
 function mockLovelybuddy(): void {
-  vi.stubGlobal('lovelybuddy', { exportFile: exportFileMock })
+  vi.stubGlobal('lovelybuddy', { exportFile: exportFileMock, notifyChatCleared: notifyChatClearedMock })
 }
 
 beforeEach(() => {
-  clearMock.mockReset()
+  clearMock.mockReset().mockResolvedValue(undefined)
   exportFileMock.mockReset().mockResolvedValue({ saved: true, path: '/tmp/x.md' })
+  notifyChatClearedMock.mockReset()
   useChatStore.setState({
     items: [
       { role: 'user', content: '嗨', created_at: new Date().toISOString() },
@@ -63,12 +65,13 @@ describe('SettingsPanel', () => {
     expect(screen.getByText('暂无对话记录')).toBeTruthy()
   })
 
-  it('清空：确认后调 chatStore.clear', () => {
+  it('清空：确认后调 chatStore.clear，成功后通知主进程广播（跨窗同步）', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<SettingsPanel />)
     fireEvent.click(screen.getByRole('button', { name: '清空' }))
     expect(confirmSpy).toHaveBeenCalledWith('清空全部对话记录？此操作不可恢复。')
     expect(clearMock).toHaveBeenCalled()
+    await waitFor(() => expect(notifyChatClearedMock).toHaveBeenCalled())
   })
 
   it('清空：取消不调 clear', () => {
@@ -76,6 +79,18 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel />)
     fireEvent.click(screen.getByRole('button', { name: '清空' }))
     expect(clearMock).not.toHaveBeenCalled()
+  })
+
+  it('清空失败（error 非空）不广播跨窗通知', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    clearMock.mockImplementation(async () => {
+      useChatStore.setState({ error: '后端离线' })
+    })
+    render(<SettingsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: '清空' }))
+    await waitFor(() => expect(useChatStore.getState().error).toBe('后端离线'))
+    await act(async () => {}) // 冲掉 doClear 里 await clear() 的续体微任务
+    expect(notifyChatClearedMock).not.toHaveBeenCalled()
   })
 
   it('导出：生成 Markdown 走 exportFile IPC，成功后按钮短暂变「已导出」', async () => {

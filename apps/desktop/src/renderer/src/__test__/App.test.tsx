@@ -21,7 +21,9 @@ function mockLovelybuddy(): void {
     resizeWindow: vi.fn(),
     expandWindow: vi.fn().mockResolvedValue({ width: 1024, height: 768 }),
     collapseWindow: vi.fn(),
-    pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null })
+    pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null }),
+    openSettings: vi.fn().mockResolvedValue(undefined),
+    onChatCleared: vi.fn(() => () => {})
   })
 }
 

@@ -14,15 +14,13 @@ interface Props {
   menuOpen: boolean
   /** 聊天面板是否打开（同 menuOpen：打开时整窗强制不穿透） */
   chatOpen: boolean
-  /** 设置面板是否打开（同 menuOpen：打开时整窗强制不穿透） */
-  settingsOpen: boolean
 }
 
 /**
  * 画布常驻（PIXI stage 单例依赖它），模型切换/无模型时只换内容不卸载组件，
  * 避免"卸载时模型仍在加载"的泄漏。url 为 null 时画布全透明且可穿透。
  */
-export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen, settingsOpen }: Props): ReactElement {
+export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Props): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevUrlRef = useRef<string | null>(null)
   const onMenuRef = useRef(onMenu)
@@ -93,7 +91,7 @@ export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen, setti
     return () => interaction.dispose()
   }, [pet])
 
-  usePassthrough(pet, menuOpen || chatOpen || settingsOpen)
+  usePassthrough(pet, menuOpen || chatOpen)
 
   return <canvas ref={canvasRef} className="pet-canvas" />
 }

@@ -33,6 +33,14 @@ declare global {
     expandWindow: (key: string, extraWidth: number, extraHeight: number) => Promise<{ width: number; height: number }>
     /** 面板关闭：去掉该 key 的扩展量，全部关闭后缩回基准（右下角固定） */
     collapseWindow: (key: string) => void
+    /** 打开独立无边框设置窗口（已开则聚焦） */
+    openSettings: () => Promise<void>
+    /** 关闭当前设置窗口（Esc / 标题条关闭按钮） */
+    closeSettings: () => void
+    /** 设置窗口清空对话后通知主进程（主进程广播给桌宠窗口刷新历史） */
+    notifyChatCleared: () => void
+    /** 订阅「设置窗口清空对话」广播，返回退订函数 */
+    onChatCleared: (cb: () => void) => () => void
     quit: () => void
   }
 

@@ -5,17 +5,19 @@ import { setupCSP } from './csp'
 import { setupIPC } from './ipc'
 import { createTray } from './tray'
 import { PetWindowManager } from './window/manager'
+import { createSettingsWindow } from './settingsWindow'
 
 // 组装根：特权协议必须在 app.ready 之前注册
 registerScheme()
 
 const settings = new SettingsStore()
 const windows = new PetWindowManager(settings)
+const settingsWin = createSettingsWindow(() => windows.window)
 
 app.whenReady().then(() => {
   settings.load()
   setupCSP()
-  setupIPC(windows)
+  setupIPC(windows, settingsWin)
   registerL2DProtocol(() => settings.modelDir)
   windows.create()
   createTray(() => windows.window)
