@@ -8,14 +8,15 @@ import type { PetModel } from '../../../live2d/model'
 
 const playIntent = vi.fn()
 // anchor 用 getter 持有可变对象：PetModel.anchor 本身是 readonly getter，测试靠改内部对象模拟位移
-const fakeAnchor = { x: 0, y: 120 }
+// 语义 = 头部左上角（实际艺术边界）：300 宽模型头部左缘 x=90，y=120 为头顶窗口坐标
+const fakeAnchor = { x: 90, y: 120 }
 const fakePet = { playIntent, get anchor() { return fakeAnchor } } as unknown as PetModel
 
 describe('SpeechBubble', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     playIntent.mockReset().mockResolvedValue(true)
-    fakeAnchor.x = 0
+    fakeAnchor.x = 90
     fakeAnchor.y = 120
     setActiveModel(fakePet)
     useWindowGeometry.setState({ size: { w: 300, h: 700 }, base: { w: 300, h: 580 } })
@@ -105,7 +106,7 @@ describe('SpeechBubble', () => {
     useChatStore.setState({ items: [{ role: 'assistant', content: '嗨' }], sending: true, replySeq: 1 })
     const { container } = render(<SpeechBubble panelOpen={false} />)
     const el = container.querySelector('.speech-bubble') as HTMLElement
-    expect(el.style.right).toBe('276px') // 300 - 0 - TAIL_INSET(24)
+    expect(el.style.right).toBe('186px') // 300 - 90 - TAIL_INSET(24)：尾巴 x=90 头部左缘
     expect(el.style.bottom).toBe('604px') // 700 - 120 + 16 + 8
     expect(el.style.maxHeight).toBe('88px') // 120 - 16 - 8 - 8
   })
@@ -113,10 +114,10 @@ describe('SpeechBubble', () => {
   it('窗口扩展后布局随几何 store 更新：气泡仍贴头顶不漂移（回归：监听顺序竞态）', () => {
     useChatStore.setState({ items: [{ role: 'assistant', content: '嗨' }], sending: true, replySeq: 1 })
     const { container } = render(<SpeechBubble panelOpen={false} />)
-    // 聊天扩展 520×120 + 菜单扩展 0×332 落地：窗口 820×1152，模型位移后 anchor.y=452
+    // 扩展落地后窗口 820×1152，模型右移 520、上移 332：头部左上角 anchor=(520+90, 452)
     act(() => {
       useWindowGeometry.setState({ size: { w: 820, h: 1152 }, base: { w: 300, h: 580 } })
-      fakeAnchor.x = 520
+      fakeAnchor.x = 610
       fakeAnchor.y = 452
     })
     const el = container.querySelector('.speech-bubble') as HTMLElement

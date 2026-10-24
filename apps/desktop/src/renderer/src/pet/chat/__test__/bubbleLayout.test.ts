@@ -5,7 +5,7 @@ describe('bubbleOffsets', () => {
   it('尾巴尖端落在头部左上角上方 16px（元素 right/bottom 偏移换算）', () => {
     const winW = 300
     const winH = 700
-    const anchor = { x: 0, y: 120 } // 头部左上角 = 模型顶（窗口坐标 y=chat 扩展量）
+    const anchor = { x: 0, y: 120 } // 头部左上角（窗口坐标 y=头顶窗口坐标）
     const o = bubbleOffsets(anchor, winW, winH)
     const tipX = winW - o.right - TAIL_INSET
     const tipY = winH - o.bottom + TAIL_H

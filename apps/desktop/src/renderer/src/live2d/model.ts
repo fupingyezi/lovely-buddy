@@ -4,7 +4,7 @@ import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
-import { modelTopLeft, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
+import { headAnchorOffset, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
 import { setModelBase } from './windowGeometry'
 import { waitForResize } from './waitForResize'
 
@@ -12,8 +12,10 @@ export interface PetModel {
   readonly name: string
   readonly x: number
   readonly y: number
-  /** 模型包围盒左上角（窗口坐标）：气泡尾巴锚点。getter 实时读 position，
-   *  windowAnchor 位移后仍准确（多面板扩展量叠加时天然正确）。 */
+  /** 角色头部左上角（窗口坐标）：气泡尾巴锚点。按默认姿态绘制部件实际艺术边界
+   *  推导（头顶 = 盒顶、头部左缘 = 顶部带并集左缘，画布留白不计）；
+   *  getter 实时叠加 position，windowAnchor 位移后仍准确（多面板扩展量叠加时天然正确）。
+   *  cubism2 包围盒首帧 draw 后才有效（矩阵初始化），加载后补算一帧即稳定。 */
   readonly anchor: Pos
   /** 画布坐标（窗口坐标系）命中检测，模型外 false */
   hitTest(sx: number, sy: number): boolean
@@ -71,10 +73,12 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   // 高度补 8px 站台偏移（脚底距窗口下沿），无额外边距——动画挥出的部位可能被窗口裁边（已知取舍）
   const targetHeight = Math.min(Math.max(Math.round(window.screen.availHeight * 0.22), 180), 380)
   const scale = targetHeight / model.height
-  const winW = Math.ceil(model.width * scale)
-  const winH = Math.ceil(model.height * scale) + 8
-  const displayW = winW
-  const displayH = winH - 8 // 窗口高 = 模型高 + 8px 站台偏移
+  // 画布像素尺寸（缩放前基准）：PIXI 的 width/height 随 scale.set 变化，
+  // 锚点等几何换算必须用这里的未缩放值（窗口尺寸也由此推导）
+  const canvasW = model.width
+  const canvasH = model.height
+  const winW = Math.ceil(canvasW * scale)
+  const winH = Math.ceil(canvasH * scale) + 8 // 窗口高 = 模型高 + 8px 站台偏移
   if (Math.abs(window.innerWidth - winW) > 2 || Math.abs(window.innerHeight - winH) > 2) {
     window.lovelybuddy.resizeWindow(winW, winH)
     await waitForResize()
@@ -111,6 +115,41 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   // 绘制部件总数（cubism4 没有基类的 drawDataCount，用 getDrawableIDs 通用获取）
   const drawableCount = model.internalModel.getDrawableIDs().length
 
+  // 头部左上角锚点（相对模型位置的偏移）：按绘制部件实际艺术边界推导——
+  // 尾巴锚画布盒顶/盒角会飘在人物上方或偏到一侧（画布留白、头部水平居中）。
+  // cubism4 加载后包围盒即可用；cubism2 的 getTransformedPoints 依赖 setupDraw
+  // （首帧 draw）初始化的矩阵、首帧前全零——退化时挂 ticker 下一帧重试。
+  let disposed = false
+  const tmpBounds = new Rectangle()
+  const headAnchor = { x: 0, y: 0 }
+  let anchorDone = false
+  let headAnchorTries = 0
+  const tryComputeHeadAnchor = (): void => {
+    if (anchorDone || disposed) return
+    const o = headAnchorOffset(
+      (i) => model.internalModel.getDrawableBounds(i, tmpBounds),
+      drawableCount,
+      canvasW,
+      canvasH,
+      scale
+    )
+    if (o) {
+      anchorDone = true
+      headAnchor.x = o.x
+      headAnchor.y = o.y
+      app.ticker.remove(tryComputeHeadAnchor)
+      return
+    }
+    if (++headAnchorTries >= 180) {
+      anchorDone = true
+      headAnchor.x = 0
+      headAnchor.y = (0 - canvasH) * scale // 兜底：包围盒始终无效时按画布顶居中
+      app.ticker.remove(tryComputeHeadAnchor)
+    }
+  }
+  tryComputeHeadAnchor()
+  if (!anchorDone) app.ticker.add(tryComputeHeadAnchor)
+
   const groups = motionGroups(model)
   const facade: PetModel = {
     name,
@@ -121,7 +160,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       return model.position.y
     },
     get anchor() {
-      return modelTopLeft(model.position.x, model.position.y, displayW, displayH)
+      return { x: model.position.x + headAnchor.x, y: model.position.y + headAnchor.y }
     },
     hitTest(sx, sy) {
       // 1) 模型自带 HitAreas（如 shizuku）：fork 的 hitTest 接受世界坐标（内部 toModelPosition）
@@ -147,6 +186,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       disposed = true
       window.clearTimeout(idleTimer)
       window.removeEventListener('resize', onWinResize)
+      app.ticker.remove(tryComputeHeadAnchor)
       try {
         model.parent?.removeChild(model)
         model.destroy()
@@ -157,7 +197,6 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
     }
   }
 
-  let disposed = false
   let idleTimer = window.setTimeout(startIdle, 2000)
   void facade.playIntent('greet')
 
