@@ -47,7 +47,7 @@ describe('useChatPanel', () => {
     expect(expandWindow).toHaveBeenCalledWith('chat', CHAT_W, CHAT_H)
   })
 
-  it('closePanel 不立即缩回：气泡期保持扩展，BUBBLE_HOLD_MS 后缩回并恢复穿透', async () => {
+  it('closePanel 不立即缩回：气泡期保持扩展，BUBBLE_HOLD_MS 后缩回（不再强制穿透）', async () => {
     const { result } = renderHook(() => useChatPanel())
     await openPanelOf(result)
     act(() => result.current.closePanel())
@@ -55,7 +55,7 @@ describe('useChatPanel', () => {
     expect(collapseWindow).not.toHaveBeenCalled() // 气泡可能还在展示：保持扩展
     act(() => vi.advanceTimersByTime(BUBBLE_HOLD_MS))
     expect(collapseWindow).toHaveBeenCalledWith('chat')
-    expect(setPassthrough).toHaveBeenCalledWith(true)
+    expect(setPassthrough).not.toHaveBeenCalled() // 延迟收起不再强制穿透（穿透由 usePassthrough 状态机管）
   })
 
   it('面板关闭但流式中：保持扩展；流式结束走完气泡期才缩回', async () => {
@@ -94,5 +94,38 @@ describe('useChatPanel', () => {
     await openPanelOf(result)
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(result.current.open).toBe(false)
+  })
+
+  it('流式成功结束自动收起面板（气泡接管展示）', async () => {
+    const { result } = renderHook(() => useChatPanel())
+    await openPanelOf(result)
+    act(() => {
+      useChatStore.setState({ items: [{ role: 'assistant', content: '回复' }], sending: true, error: null })
+    })
+    act(() => useChatStore.setState({ sending: false }))
+    expect(result.current.open).toBe(false)
+    expect(collapseWindow).not.toHaveBeenCalled() // 气泡保持期
+    act(() => vi.advanceTimersByTime(BUBBLE_HOLD_MS))
+    expect(collapseWindow).toHaveBeenCalledWith('chat')
+  })
+
+  it('出错不自动收起（错误行+重试留在面板）', async () => {
+    const { result } = renderHook(() => useChatPanel())
+    await openPanelOf(result)
+    act(() => {
+      useChatStore.setState({ sending: true })
+    })
+    act(() => useChatStore.setState({ sending: false, error: '后端离线' }))
+    expect(result.current.open).toBe(true)
+  })
+
+  it('空回复不自动收起', async () => {
+    const { result } = renderHook(() => useChatPanel())
+    await openPanelOf(result)
+    act(() => {
+      useChatStore.setState({ items: [{ role: 'user', content: '嗨' }], sending: true })
+    })
+    act(() => useChatStore.setState({ sending: false }))
+    expect(result.current.open).toBe(true)
   })
 })

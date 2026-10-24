@@ -24,7 +24,8 @@ export function useChatPanel(): { open: boolean; openPanel: () => void; closePan
     if (!expandedRef.current) return
     expandedRef.current = false
     window.lovelybuddy.collapseWindow('chat')
-    window.lovelybuddy.setPassthrough(true) // 立即恢复穿透，交给 usePassthrough 状态机接管
+    // 不再强制 setPassthrough(true)：面板关闭时 usePassthrough 已恢复穿透；
+    // 延迟收起若发生在菜单打开期间，强制穿透会让菜单点不到（点击穿到桌面）
   }
 
   const cancelCollapse = (): void => {
@@ -57,6 +58,21 @@ export function useChatPanel(): { open: boolean; openPanel: () => void; closePan
     setOpen(false)
     // 收起由下方 effect 统一调度（sending 中保持扩展，否则气泡期后缩回）
   }
+
+  // 流式成功结束 → 自动收起面板，气泡接管展示；出错保持面板（错误行+重试）。
+  // 只响应 true→false 跳变：面板关闭途中（open 已 false）不重复触发。
+  const prevSendingRef = useRef(sending)
+  useEffect(() => {
+    const was = prevSendingRef.current
+    prevSendingRef.current = sending
+    if (!was || sending) return
+    const { error, items } = useChatStore.getState()
+    const last = items[items.length - 1]
+    if (error === null && last && last.role === 'assistant' && last.content !== '') {
+      closePanel()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sending])
 
   // 面板打开/流式中：保持扩展并取消收起；否则调度延迟收起
   useEffect(() => {
