@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useChatStore } from '../../store/chatStore'
-import { getActiveModel } from '../../live2d/modelBus'
+import { getActiveModel, useActiveModel } from '../../live2d/modelBus'
 import { INTENT_MOTIONS, type MotionIntent } from '../../live2d/motionMap'
+import { useWindowGeometry } from '../../live2d/windowGeometry'
 import { useTypewriter } from '../../hooks/useTypewriter'
-import { bubbleOffsets, type BubbleOffsets } from './bubbleLayout'
+import { bubbleOffsets } from './bubbleLayout'
 import { HIDE_AFTER_MS, FADE_MS } from './bubbleTiming'
 
 interface Props {
@@ -12,33 +13,50 @@ interface Props {
 }
 
 /**
- * 打字机气泡：尾巴尖端锚定模型头部左上角上方 16px（PetModel.anchor），
- * 弹出 Scale 0.72→1.04→1 180ms + 同步淡入，8s 静默后淡出。
+ * 打字机气泡：尾巴尖端锚定模型头部左上角上方 16px（PetModel.anchor）。
+ * 布局在渲染期响应式推导（几何 store + 模型总线），不再自行监听 resize——
+ * 监听顺序会让气泡读到"模型未位移的旧锚点 + 新窗口尺寸"，造成不可见/错位。
+ * 弹出门控 replySeq：只展示本会话流式产生的回复（历史刷新不重放）；完整展示
+ * 完毕（淡出完成）后记录序号，同一回复不重放。
  * 纯展示（pointer-events:none，不加 data-interactive、不参与穿透状态机——点击穿到桌面）。
  */
 export default function SpeechBubble({ panelOpen }: Props): ReactElement | null {
   const items = useChatStore((s) => s.items)
   const sending = useChatStore((s) => s.sending)
   const lastMotion = useChatStore((s) => s.lastMotion)
+  const replySeq = useChatStore((s) => s.replySeq)
+  const pet = useActiveModel((s) => s.model)
+  const { size } = useWindowGeometry()
   const [phase, setPhase] = useState<'in' | 'out' | 'gone'>('gone')
   const outTimerRef = useRef<number | null>(null)
-  const [layout, setLayout] = useState<BubbleOffsets | null>(null)
+  const shownSeqRef = useRef(0)
 
   const last = items.length > 0 ? items[items.length - 1] : null
   const isReply = last !== null && last.role === 'assistant' && last.content !== ''
   const shown = useTypewriter(phase !== 'gone' && !panelOpen && isReply ? last.content : '')
 
-  // 回复内容变化 → 弹出；面板打开/无回复 → 立即消失；静默 8s → 淡出 200ms → 卸载
+  // 布局：anchor getter 实时读模型位置（windowAnchor 位移后仍准确），窗口尺寸来自几何 store
+  const layout = pet ? bubbleOffsets(pet.anchor, size.w, size.h) : null
+
   useEffect(() => {
     if (panelOpen || !isReply) {
       setPhase('gone')
       return
     }
-    setPhase('in')
+    // 门控：replySeq=0（纯历史）或已完整展示过 → 不弹出。
+    // willShow=true 即本 run 刚弹出，直接排 8s 淡出计时（无需等下一轮 effect）；
+    // willShow=false 时 shownSeqRef 只会在淡出完成（phase 已 'gone'）时写入，
+    // 不存在"仍在展示却无需计时"的状态，故可安全跳过。
+    const willShow = replySeq !== 0 && replySeq !== shownSeqRef.current
+    if (willShow) setPhase('in')
     if (sending) return // 流式中不计时；sending 翻 false 会重跑本 effect 起计时
+    if (!willShow) return
     const id = window.setTimeout(() => {
       setPhase('out')
-      outTimerRef.current = window.setTimeout(() => setPhase('gone'), FADE_MS)
+      outTimerRef.current = window.setTimeout(() => {
+        shownSeqRef.current = replySeq // 完整展示完毕，历史刷新等不再重放
+        setPhase('gone')
+      }, FADE_MS)
     }, HIDE_AFTER_MS)
     return () => {
       window.clearTimeout(id)
@@ -47,18 +65,7 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
         outTimerRef.current = null
       }
     }
-  }, [panelOpen, isReply, sending, last?.content])
-
-  // 锚点定位：窗口 resize（扩展/收起）后重算；无模型回退居中样式
-  useEffect(() => {
-    const recalc = (): void => {
-      const pet = getActiveModel()
-      setLayout(pet ? bubbleOffsets(pet.anchor, window.innerWidth, window.innerHeight) : null)
-    }
-    recalc()
-    window.addEventListener('resize', recalc)
-    return () => window.removeEventListener('resize', recalc)
-  }, [])
+  }, [panelOpen, isReply, sending, replySeq])
 
   // motion 事件 → 当前模型播动作（seq 去重，一次事件一个动作）
   const seqRef = useRef(0)
