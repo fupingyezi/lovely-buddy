@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useChatStore } from '../../store/chatStore'
-import { BUBBLE_HOLD_MS } from './bubbleTiming'
+import { useChatStore } from '../store/chatStore'
+import { BUBBLE_HOLD_MS } from '../pet/chat/bubbleTiming'
 
 /** 聊天区向左上扩展的宽度（px）：气泡头顶左上空白 + 输入条铺满（图 01/02 比例） */
 export const CHAT_W = 520

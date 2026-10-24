@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { loadPetModel, releasePetModel, type PetModel } from '../live2d/model'
 import { setupPetInteraction } from '../live2d/interact'
 import { getActiveModel, setActiveModel } from '../live2d/modelBus'
-import { usePassthrough } from './usePassthrough'
+import { usePassthrough } from '../hooks/usePassthrough'
 import { usePetStore } from '../store/petStore'
 
 interface Props {

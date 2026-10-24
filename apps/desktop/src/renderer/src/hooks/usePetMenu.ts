@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { planMenuPlacement } from './menuLayout'
+import { planMenuPlacement } from '../pet/menuLayout'
 
 export interface MenuPos {
   x: number

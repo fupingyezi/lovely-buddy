@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useChatStore } from '../../store/chatStore'
 import { getActiveModel } from '../../live2d/modelBus'
 import { INTENT_MOTIONS, type MotionIntent } from '../../live2d/motionMap'
-import { useTypewriter } from './useTypewriter'
+import { useTypewriter } from '../../hooks/useTypewriter'
 import { bubbleOffsets, type BubbleOffsets } from './bubbleLayout'
 import { HIDE_AFTER_MS, FADE_MS } from './bubbleTiming'
 

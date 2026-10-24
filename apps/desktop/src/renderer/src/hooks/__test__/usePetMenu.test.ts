@@ -1,7 +1,7 @@
 import { act, fireEvent, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePetMenu } from '../usePetMenu'
-import { MENU_H, MENU_W } from '../menuLayout'
+import { MENU_H, MENU_W } from '../../pet/menuLayout'
 
 const expandWindow = vi.fn()
 const collapseWindow = vi.fn()

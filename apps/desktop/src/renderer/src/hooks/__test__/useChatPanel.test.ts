@@ -1,8 +1,8 @@
 import { act, fireEvent, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useChatPanel, CHAT_W, CHAT_H } from '../useChatPanel'
-import { BUBBLE_HOLD_MS } from '../bubbleTiming'
-import { useChatStore } from '../../../store/chatStore'
+import { BUBBLE_HOLD_MS } from '../../pet/chat/bubbleTiming'
+import { useChatStore } from '../../store/chatStore'
 
 const expandWindow = vi.fn()
 const collapseWindow = vi.fn()
