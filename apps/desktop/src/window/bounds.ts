@@ -40,6 +40,11 @@ export function initialBounds(saved: Point | null, workArea: Rect): Point {
       }
 }
 
+/** 矩形平移：展开基准随窗口拖动同步位移用（只动原点，尺寸不变） */
+export function shiftRect(r: Rect, dx: number, dy: number): Rect {
+  return { x: r.x + dx, y: r.y + dy, width: r.width, height: r.height }
+}
+
 /** 增量拖动后按工作区夹紧，窗口始终完整可见。 */
 export function moveBounds(
   pos: Point,

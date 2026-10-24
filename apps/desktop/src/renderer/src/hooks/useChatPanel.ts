@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useChatStore } from '../store/chatStore'
 import { BUBBLE_HOLD_MS } from '../pet/chat/bubbleTiming'
 
-/** 聊天区向左上扩展的宽度（px）：气泡头顶左上空白 + 输入条铺满（图 01/02 比例） */
-export const CHAT_W = 520
-/** 聊天区在窗口上方扩展的高度（px）：输入条 64 + 错误行 24 + 上边距 8 + 行距 8 + 头顶呼吸 16 */
-export const CHAT_H = 120
+/** 聊天区向左上扩展的宽度（px）：输入条 344 + 两侧 24 边距 */
+export const CHAT_W = 392
+/** 聊天区在窗口上方扩展的高度（px）：输入条 56 + 错误行 24 + 上边距 8 + 行距 8 + 头顶呼吸 16 */
+export const CHAT_H = 112
 
 /**
  * 聊天面板状态机（对照 usePetMenu）：

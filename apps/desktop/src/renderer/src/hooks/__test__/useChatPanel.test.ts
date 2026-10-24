@@ -36,9 +36,9 @@ describe('useChatPanel', () => {
     vi.unstubAllGlobals()
   })
 
-  it('扩展尺寸为 520×120（输入条 64 + 错误行 24 + 边距与头顶呼吸）', () => {
-    expect(CHAT_W).toBe(520)
-    expect(CHAT_H).toBe(120)
+  it('扩展尺寸为 392×112（输入条 344 宽 + 两侧 24 边距；高度 = 输入条 56 + 错误行 24 + 边距与头顶呼吸）', () => {
+    expect(CHAT_W).toBe(392)
+    expect(CHAT_H).toBe(112)
   })
 
   it('openPanel 用 chat 键位向左上扩展 CHAT_W×CHAT_H，完成后 open=true', async () => {

@@ -4,8 +4,8 @@ import { usePetStore } from '../../store/petStore'
 
 /**
  * 对话输入条（窗口 chat 扩展区顶部）：单行输入 + 发送/停止 + 错误重试行。
- * 只留输入，历史统一进设置（README 铁律）；与气泡同锚点互斥（App 控制）。
- * data-interactive 保证穿透状态机可点。无关闭钮（图 02），关闭走 Esc / 点面板外（useChatPanel）。
+ * 只留输入，历史统一进设置；与气泡同锚点互斥（App 控制）。
+ * data-interactive 保证穿透状态机可点。无关闭钮，关闭走 Esc / 点面板外（useChatPanel）。
  */
 export default function ChatPanel(): ReactElement {
   const sending = useChatStore((s) => s.sending)
@@ -34,13 +34,15 @@ export default function ChatPanel(): ReactElement {
   const typing = !sending && value !== ''
   return (
     <div
-      className="fixed z-[90] top-(--sp-1) left-(--sp-1) right-(--sp-1) flex flex-col gap-(--sp-1) select-none"
+      className="fixed z-[90] top-(--sp-1) left-6 right-6 flex flex-col gap-(--sp-1) select-none"
       data-interactive
       onContextMenu={(e) => e.preventDefault()}
     >
+      {/* 344×56：圆角 18、白 85% 悬浮质感、左右各留 24px 边距；
+          默认 1px #EDE5DB 描边，输入中换薄荷描边 + 加重阴影 */}
       <div
-        className={`flex items-center gap-2 h-16 p-3 rounded-input bg-surface shadow-input transition-[border-color,box-shadow] duration-[150ms] ease-standard focus-within:border-[1.5px] focus-within:border-primary focus-within:shadow-focus ${
-          typing ? 'border border-primary-soft' : 'border border-(--color-border) border-x-transparent'
+        className={`flex items-center gap-2 h-14 p-2 rounded-[18px] bg-surface/85 shadow-input transition-[border-color,box-shadow] duration-[150ms] ease-standard border ${
+          typing ? 'border-primary-soft shadow-input-strong' : 'border-(--color-border)'
         }`}
       >
         <input

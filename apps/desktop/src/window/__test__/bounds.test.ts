@@ -10,7 +10,8 @@ import {
   initialBounds,
   menuExpandExtras,
   modelResizeBounds,
-  moveBounds
+  moveBounds,
+  shiftRect
 } from '../bounds'
 
 // 常见工作区：1920x1080、原点 (0,0)
@@ -106,5 +107,44 @@ describe('collapseBounds + expandBounds 往返：缩回必回原位', () => {
   it('屏幕边缘被夹紧：expand → collapse 仍回到原 bounds', () => {
     const base = { x: 5, y: 10, width: 200, height: 300 }
     expect(collapseBounds(expandBounds(base, 100, 50, WA), base)).toEqual(base)
+  })
+})
+
+describe('展开基准随窗口拖动同步位移', () => {
+  it('展开期间拖动窗口：基准按实际位移跟随，再次展开不回跳', () => {
+    const base = { x: 100, y: 200, width: 200, height: 300 } // 面板首次展开时捕获的基准
+    const expanded = expandBounds(base, 100, 80, WA) // 展开态窗口 bounds
+    // 拖动手动窗口：moveBounds 夹紧后的新位置（请求 +60,+40，无遮挡全量应用）
+    const movedPos = moveBounds(
+      { x: expanded.x, y: expanded.y },
+      { width: expanded.width, height: expanded.height },
+      60,
+      40,
+      WA
+    )
+    // 基准跟随实际位移（= 新位置 − 旧位置）
+    const shiftedBase = shiftRect(base, movedPos.x - expanded.x, movedPos.y - expanded.y)
+    // 拖动后再次展开：从跟随后的基准重算，等于移动后的展开态
+    expect(expandBounds(shiftedBase, 100, 80, WA)).toEqual({
+      x: movedPos.x,
+      y: movedPos.y,
+      width: expanded.width,
+      height: expanded.height
+    })
+  })
+
+  it('拖动被工作区夹紧：按实际位移同步，不按请求增量', () => {
+    const base = { x: 5, y: 10, width: 200, height: 300 }
+    const expanded = expandBounds(base, 100, 80, WA) // x/y 均夹到 0
+    // 向左上拖 500：窗口已贴工作区左上角，实际位移为 0
+    const movedPos = moveBounds(
+      { x: expanded.x, y: expanded.y },
+      { width: expanded.width, height: expanded.height },
+      -500,
+      -500,
+      WA
+    )
+    const shiftedBase = shiftRect(base, movedPos.x - expanded.x, movedPos.y - expanded.y)
+    expect(shiftedBase).toEqual(base) // 基准不动（按实际位移而非请求增量）
   })
 })

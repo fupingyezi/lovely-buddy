@@ -9,6 +9,7 @@ import {
   menuExpandExtras,
   modelResizeBounds,
   moveBounds,
+  shiftRect,
   type Rect
 } from './bounds'
 import type { SettingsStore } from '../main/store'
@@ -84,6 +85,11 @@ export class PetWindowManager {
     const wa = screen.getDisplayMatching(w.getBounds()).workArea
     const next = moveBounds({ x: wx, y: wy }, { width, height }, dx, dy, wa)
     w.setPosition(next.x, next.y)
+    // 展开基准跟随实际位移（夹紧后的增量）：基准与实际窗口位置保持一致，
+    // 后续面板展开/收起都从当前屏幕位置重算
+    if (this.expandedBase) {
+      this.expandedBase = shiftRect(this.expandedBase, next.x - wx, next.y - wy)
+    }
   }
 
   /** 拖拽结束 → 持久化窗口位置 */
@@ -109,6 +115,7 @@ export class PetWindowManager {
     if (!w) return { width: 0, height: 0 }
     if (!this.expandedBase) this.expandedBase = w.getBounds()
     this.extras.set(key, { width: extraWidth, height: extraHeight })
+    this.applyWindowLevel()
     return this.applyExtras()
   }
 
@@ -127,6 +134,7 @@ export class PetWindowManager {
     const w = this.win
     if (!w) return
     this.extras.delete(key)
+    this.applyWindowLevel()
     if (this.extras.size === 0) {
       if (this.expandedBase) {
         w.setBounds(collapseBounds(w.getBounds(), this.expandedBase))
@@ -135,6 +143,13 @@ export class PetWindowManager {
       return
     }
     this.applyExtras()
+  }
+
+  /** 聊天面板打开期间降到 floating：screen-saver 层级高于 macOS 输入法候选窗，
+   *  中文输入时候选栏会被桌宠窗口盖住；floating 层级候选窗可见，且仍高于普通应用窗口。
+   *  收起聊天面板（extras 里不再有 chat）恢复 screen-saver。 */
+  private applyWindowLevel(): void {
+    this.win?.setAlwaysOnTop(true, this.extras.has('chat') ? 'floating' : 'screen-saver')
   }
 
   // 从基准叠加全部活跃扩展量一次性重算（避免逐面板叠加漂移/夹紧误差累积）
