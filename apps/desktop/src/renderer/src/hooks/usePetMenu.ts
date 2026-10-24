@@ -1,46 +1,44 @@
 import { useEffect, useRef, useState } from 'react'
-import { planMenuPlacement } from '../pet/menuLayout'
-
-export interface MenuPos {
-  x: number
-  y: number
-}
+import { MENU_REQUIRED_H, MENU_REQUIRED_W } from '../pet/menuLayout'
+import { waitForResize } from '../live2d/waitForResize'
 
 /**
  * 右键菜单状态机：
- * - openMenu：菜单固定放窗口左上（角色正上方），按 menuLayout 向左上扩展窗口；
- *   模型在 resize 时补尺寸增量（live2d/windowAnchor），屏幕位置不动。
- *   递增令牌让「点开又立刻关掉」的竞态失效（expandWindow resolve 后不再 setMenu）。
+ * - openMenu：扩展量由主进程权威计算（expandMenu 按真实 bounds 补宽，杜绝渲染进程
+ *   stale innerWidth 竞态）；扩展 resolve 后再等一次 resize 落地（模型位移完成），
+ *   菜单首帧即贴头顶；菜单位置由 PetMenu 按几何 store 响应式推导（锚角色头顶，
+ *   聊天扩展叠加时不再飘到窗口左上）。
  * - closeMenu：缩回窗口、恢复穿透（交给 usePassthrough 状态机接管）。
  * - 菜单打开期间：点菜单外（含模型本体——tap 由 interact 的屏幕坐标判定正常触发）
  *   或 Esc 关闭。
  */
 export function usePetMenu(): {
-  menu: MenuPos | null
+  menuOpen: boolean
   openMenu: () => void
   closeMenu: () => void
 } {
-  const [menu, setMenu] = useState<MenuPos | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
   const tokenRef = useRef(0)
 
   const openMenu = (): void => {
     const token = ++tokenRef.current
-    const { x, y, extraW, extraH } = planMenuPlacement(window.innerWidth)
-    void window.lovelybuddy.expandWindow('menu', extraW, extraH).then(() => {
+    void window.lovelybuddy.expandMenu(MENU_REQUIRED_W, MENU_REQUIRED_H).then(async () => {
       if (token !== tokenRef.current) return // 期间已关闭/重开
-      setMenu({ x, y })
+      await waitForResize() // 窗口尺寸异步落地；超时兜底 300ms
+      if (token !== tokenRef.current) return
+      setMenuOpen(true)
     })
   }
 
   const closeMenu = (): void => {
     tokenRef.current++ // 使未完成的 openMenu 失效
-    setMenu(null)
+    setMenuOpen(false)
     window.lovelybuddy.collapseWindow('menu')
     window.lovelybuddy.setPassthrough(true) // 立即恢复穿透，交给 usePassthrough 状态机接管
   }
 
   useEffect(() => {
-    if (!menu) return
+    if (!menuOpen) return
     const onDown = (e: PointerEvent): void => {
       if (e.target instanceof Element && e.target.closest('[data-interactive]')) return
       closeMenu()
@@ -55,7 +53,7 @@ export function usePetMenu(): {
       window.removeEventListener('keydown', onKey)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [menu])
+  }, [menuOpen])
 
-  return { menu, openMenu, closeMenu }
+  return { menuOpen, openMenu, closeMenu }
 }

@@ -1,10 +1,10 @@
 import { useState, type ReactElement } from 'react'
 import { usePetStore } from '../store/petStore'
+import { useWindowGeometry } from '../live2d/windowGeometry'
+import { menuTop, MENU_INSET } from './menuLayout'
 import ImportPanel from './ImportPanel'
 
 interface Props {
-  x: number
-  y: number
   onClose: () => void
   /** 「聊天」入口（关闭菜单并打开聊天面板，由 App 决定） */
   onChat: () => void
@@ -14,9 +14,11 @@ interface Props {
 
 /**
  * 右键点击角色弹出来的小菜单（非常驻）：状态行 + 形象切换 + 导入/删除 + 聊天入口。
- * 位置由 App 在窗口扩展后夹紧算出。关闭 = 点菜单外 / 再右键 / Esc，由 App 统一处理。
+ * 位置响应式：右贴窗口（right=MENU_INSET），底边距头顶 8px（几何 store 实时推导）——
+ * 聊天扩展等叠加时窗口左上角远离角色，菜单必须锚角色头顶而不是窗口左上。
+ * 关闭 = 点菜单外 / 再右键 / Esc，由 App 统一处理。
  */
-export default function PetMenu({ x, y, onClose, onChat, onSettings }: Props): ReactElement {
+export default function PetMenu({ onClose, onChat, onSettings }: Props): ReactElement {
   const models = usePetStore((s) => s.models)
   const modelUrl = usePetStore((s) => s.modelUrl)
   const modelName = usePetStore((s) => s.modelName)
@@ -26,6 +28,8 @@ export default function PetMenu({ x, y, onClose, onChat, onSettings }: Props): R
   const selectModel = usePetStore((s) => s.selectModel)
   const deleteModel = usePetStore((s) => s.deleteModel)
   const [importOpen, setImportOpen] = useState(false)
+  const { size, base } = useWindowGeometry()
+  const top = base ? menuTop(size.h - base.h) : MENU_INSET
 
   const statusText =
     status === 'online' ? `AI桌宠在线 v${version ?? ''}` : status === 'offline' ? '后端离线' : '后端连接中…'
@@ -41,7 +45,7 @@ export default function PetMenu({ x, y, onClose, onChat, onSettings }: Props): R
     <div
       className="pet-menu fixed z-[100] flex flex-col gap-(--sp-1) w-[260px] h-[320px] overflow-y-auto p-(--sp-2) border border-(--color-border) rounded-panel bg-bg text-ink text-xs shadow-mint select-none"
       data-interactive
-      style={{ left: x, top: y }}
+      style={{ top, right: MENU_INSET }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <button

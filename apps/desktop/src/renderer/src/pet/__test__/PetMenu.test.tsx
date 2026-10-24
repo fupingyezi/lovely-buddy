@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PetMenu from '../PetMenu'
 import { usePetStore } from '../../store/petStore'
+import { useWindowGeometry } from '../../live2d/windowGeometry'
 
 function mockLovelybuddy(): void {
   vi.stubGlobal('lovelybuddy', {
@@ -51,7 +52,7 @@ const haruAvatar: AvatarInfo = { slug: 'haru', name: 'haru-cubism4', url: 'l2d:/
 const shizukuAvatar: AvatarInfo = { slug: 'shizuku', name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
 
 function renderMenu(onClose = vi.fn(), onSettings = vi.fn()): ReturnType<typeof vi.fn> {
-  render(<PetMenu x={10} y={10} onClose={onClose} onChat={() => {}} onSettings={onSettings} />)
+  render(<PetMenu onClose={onClose} onChat={() => {}} onSettings={onSettings} />)
   return onClose
 }
 
@@ -78,6 +79,15 @@ describe('PetMenu', () => {
     vi.restoreAllMocks()
   })
 
+  it('菜单右贴窗口、底边距头顶 8px（几何响应式）', () => {
+    useWindowGeometry.setState({ size: { w: 820, h: 932 }, base: { w: 300, h: 480 } })
+    render(<PetMenu onClose={() => {}} onChat={() => {}} onSettings={() => {}} />)
+    const el = screen.getByTitle('关闭菜单').closest('.pet-menu') as HTMLElement
+    expect(el.style.top).toBe('124px') // 932 - 480 - 8 - 320（聊天扩展在身）
+    expect(el.style.right).toBe('4px')
+    useWindowGeometry.setState({ base: null, size: { w: 1024, h: 768 } })
+  })
+
   it('✕ 按钮关闭菜单', () => {
     const onClose = renderMenu()
     fireEvent.click(screen.getByTitle('关闭菜单'))
@@ -86,7 +96,7 @@ describe('PetMenu', () => {
 
   it('聊天按钮触发 onChat', () => {
     const onChat = vi.fn()
-    render(<PetMenu x={4} y={4} onClose={() => {}} onChat={onChat} onSettings={() => {}} />)
+    render(<PetMenu onClose={() => {}} onChat={onChat} onSettings={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: '聊天' }))
     expect(onChat).toHaveBeenCalled()
   })

@@ -8,6 +8,7 @@ import { useChatPanel } from './hooks/useChatPanel'
 import { usePetMenu } from './hooks/usePetMenu'
 import { usePetStore } from './store/petStore'
 import { useChatStore } from './store/chatStore'
+import { useWindowGeometrySync } from './live2d/windowGeometry'
 
 export default function App(): ReactElement {
   const modelUrl = usePetStore((s) => s.modelUrl)
@@ -15,8 +16,9 @@ export default function App(): ReactElement {
   const placeholderDismissed = usePetStore((s) => s.placeholderDismissed)
   const loadModels = usePetStore((s) => s.loadModels)
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
-  const { menu, openMenu, closeMenu } = usePetMenu()
+  const { menuOpen, openMenu, closeMenu } = usePetMenu()
   const { open: chatOpen, openPanel } = useChatPanel()
+  useWindowGeometrySync()
 
   // 后端健康轮询（5s）
   useEffect(() => {
@@ -69,10 +71,10 @@ export default function App(): ReactElement {
       <PetCanvas
         url={modelUrl}
         name={modelName ?? ''}
-        menuOpen={menu !== null}
+        menuOpen={menuOpen}
         chatOpen={chatOpen}
         onMenu={() => {
-          if (menu) closeMenu()
+          if (menuOpen) closeMenu()
           else openMenu()
         }}
       />
@@ -103,10 +105,8 @@ export default function App(): ReactElement {
           </div>
         </div>
       )}
-      {menu !== null && (
+      {menuOpen && (
         <PetMenu
-          x={menu.x}
-          y={menu.y}
           onClose={closeMenu}
           onChat={() => {
             closeMenu()
