@@ -22,7 +22,7 @@ function driveSend(events: object[]): Promise<void> {
 }
 
 beforeEach(() => {
-  useChatStore.setState({ items: [], sessionId: null, sending: false, error: null, lastMotion: null })
+  useChatStore.setState({ items: [], sessionId: null, sending: false, error: null, lastMotion: null, replySeq: 0 })
   streamChatMock.mockReset()
   getHistoryMock.mockReset()
   clearHistoryMock.mockReset()
@@ -173,5 +173,30 @@ describe('chatStore.clear', () => {
     await useChatStore.getState().clear()
     expect(useChatStore.getState().items).toHaveLength(1)
     expect(useChatStore.getState().error).toBe('清空失败: HTTP 500')
+  })
+})
+
+describe('chatStore.replySeq', () => {
+  it('delta/done 递增（气泡门控信号）', async () => {
+    await driveSend([
+      { type: 'meta', session_id: 's1' },
+      { type: 'delta', text: '你' },
+      { type: 'done', text: '你好' }
+    ])
+    expect(useChatStore.getState().replySeq).toBe(2)
+  })
+
+  it('refresh 历史覆盖不递增（启动/断线恢复不重放气泡）', async () => {
+    getHistoryMock.mockResolvedValue({
+      session_id: 's1',
+      messages: [{ role: 'assistant', content: '旧回复', created_at: 't' }]
+    })
+    await useChatStore.getState().refresh()
+    expect(useChatStore.getState().replySeq).toBe(0)
+  })
+
+  it('error 事件不递增', async () => {
+    await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: 'x' }])
+    expect(useChatStore.getState().replySeq).toBe(0)
   })
 })

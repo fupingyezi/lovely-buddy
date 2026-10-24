@@ -18,6 +18,9 @@ interface ChatState {
   error: string | null
   /** 最近一次 motion 事件（气泡驱动模型动作），seq 单调递增防同意图去重 */
   lastMotion: { intent: string; seq: number } | null
+  /** 会话内流式回复序号（delta/done 递增；历史 refresh/clear 不动）——气泡门控：
+   *  启动/断线恢复拉历史不重放旧回复，只有本会话流出的内容才触发气泡 */
+  replySeq: number
   send(text: string, avatar?: string): Promise<void>
   stop(): void
   refresh(): Promise<void>
@@ -38,6 +41,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   sending: false,
   error: null,
   lastMotion: null,
+  replySeq: 0,
 
   async send(text, avatar) {
     const msg = text.trim()
@@ -69,9 +73,15 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         { avatar, message: msg },
         (ev) => {
           if (ev.type === 'meta') set({ sessionId: ev.session_id })
-          else if (ev.type === 'delta') updateLast((it) => ({ ...it, content: it.content + ev.text }))
+          else if (ev.type === 'delta') {
+            updateLast((it) => ({ ...it, content: it.content + ev.text }))
+            if (ev.text !== '') set((s) => ({ replySeq: s.replySeq + 1 }))
+          }
           else if (ev.type === 'motion') set({ lastMotion: { intent: ev.intent, seq: ++motionSeq } })
-          else if (ev.type === 'done') updateLast((it) => ({ ...it, content: ev.text, motion: ev.motion || undefined }))
+          else if (ev.type === 'done') {
+            updateLast((it) => ({ ...it, content: ev.text, motion: ev.motion || undefined }))
+            if (ev.text !== '') set((s) => ({ replySeq: s.replySeq + 1 }))
+          }
           else if (ev.type === 'error') set({ error: ev.error })
         },
         abort.signal
