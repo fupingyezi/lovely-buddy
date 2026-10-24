@@ -35,12 +35,14 @@ type ConnInput struct {
 }
 
 // TestInput 「测试连接」请求（POST /api/v1/config/test，不落盘）。
+// ID 可选：编辑表单测试时带上正在编辑的连接 id，api_key 为空则回退该连接的存储 key。
 type TestInput struct {
 	Provider  string `json:"provider"`
 	BaseURL   string `json:"base_url"`
 	Model     string `json:"model"`
 	APIKey    string `json:"api_key"`
 	MaxTokens int    `json:"max_tokens"`
+	ID        string `json:"id"`
 }
 
 // ConnectionOut 出参：APIKey 永不携带，只给掩码。
@@ -216,7 +218,18 @@ func (s *ConfigService) Test(input TestInput) TestResult {
 	if err := Validate(input); err != nil {
 		return TestResult{OK: false, Error: err.Error()}
 	}
-	p, err := llm.New(input.Provider, input.Model, input.BaseURL, input.APIKey, 1)
+	key := input.APIKey
+	if key == "" && input.ID != "" {
+		// 编辑表单 key 未动时前端发空 key（拿不到明文）——回退正在编辑的连接的存储 key。
+		// 厂商/地址已改则不回退：旧 key 属于旧端点，盲用只会误导。
+		s.mu.Lock()
+		if c := s.file.Find(input.ID); c != nil && c.Provider == input.Provider &&
+			(input.BaseURL == "" || c.BaseURL == input.BaseURL) {
+			key = c.APIKey
+		}
+		s.mu.Unlock()
+	}
+	p, err := llm.New(input.Provider, input.Model, input.BaseURL, key, 1)
 	if err != nil {
 		return TestResult{OK: false, Error: err.Error()}
 	}
@@ -236,24 +249,40 @@ func (s *ConfigService) Test(input TestInput) TestResult {
 	return TestResult{OK: true, LatencyMS: time.Since(start).Milliseconds()}
 }
 
+// classifyStatus 上游 HTTP 状态码 → 可读中文文案；未覆盖的状态返回空。
+func classifyStatus(code int) string {
+	switch code {
+	case 401:
+		return "API Key 无效（401）"
+	case 403:
+		return "无权限（403）"
+	case 404:
+		return "模型或接口路径不存在（404）"
+	case 429:
+		return "请求过于频繁（429）"
+	case 500, 502, 503:
+		return "服务商暂时不可用（" + strconv.Itoa(code) + "）"
+	}
+	return ""
+}
+
 // classifyTestErr 上游错误 → 可读中文文案（不裸透传、不含 key/URL 明文）。
+// APIError 与 RequestError 双匹配：后者在错误体非 JSON（如 DeepSeek 纯文本 401）时出现，
+// 若只匹配前者会把 go-openai 的 JSON 解析噪音（invalid character …）透给用户。
 func classifyTestErr(err error, timedOut bool) string {
 	if timedOut {
 		return "连接超时"
 	}
 	var apiErr *openai.APIError
 	if errors.As(err, &apiErr) {
-		switch apiErr.HTTPStatusCode {
-		case 401:
-			return "API Key 无效（401）"
-		case 403:
-			return "无权限（403）"
-		case 404:
-			return "模型或接口路径不存在（404）"
-		case 429:
-			return "请求过于频繁（429）"
-		case 500, 502, 503:
-			return "服务商暂时不可用（" + strconv.Itoa(apiErr.HTTPStatusCode) + "）"
+		if s := classifyStatus(apiErr.HTTPStatusCode); s != "" {
+			return s
+		}
+	}
+	var reqErr *openai.RequestError
+	if errors.As(err, &reqErr) {
+		if s := classifyStatus(reqErr.HTTPStatusCode); s != "" {
+			return s
 		}
 	}
 	return "连接失败: " + err.Error()

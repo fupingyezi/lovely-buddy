@@ -127,4 +127,14 @@ describe('connectionStore', () => {
       .test({ provider: 'deepseek', base_url: '', model: 'm', api_key: 'k', max_tokens: 0 })
     expect(useConnectionStore.getState().testResult).toEqual({ ok: false, message: '测试失败: HTTP 500' })
   })
+
+  it('test 透传 id（编辑模式 key 未动时后端按 id 回退存储 key）', async () => {
+    await useConnectionStore
+      .getState()
+      .test({ provider: 'deepseek', base_url: '', model: 'm2', api_key: '', max_tokens: 0, id: 'c1' })
+    expect(testConnectionMock).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ api_key: '', id: 'c1' })
+    )
+  })
 })

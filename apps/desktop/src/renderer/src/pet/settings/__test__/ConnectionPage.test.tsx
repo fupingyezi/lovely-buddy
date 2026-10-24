@@ -169,4 +169,15 @@ describe('ConnectionPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存并启用' }))
     await waitFor(() => expect(updateMock).toHaveBeenCalledWith('c1', expect.objectContaining({ api_key: '' })))
   })
+
+  it('编辑模式测试连接带上 id（后端按 id 回退存储 key）', async () => {
+    seed({ active_id: 'c1', connections: [conn({})] })
+    useConnectionStore.setState({
+      openEdit: (c: ConnectionInfo) => useConnectionStore.setState({ formOpen: true, editing: c })
+    })
+    render(<ConnectionPage />)
+    fireEvent.click(screen.getByText('使用中'))
+    fireEvent.click(screen.getByRole('button', { name: '测试连接' }))
+    await waitFor(() => expect(testMock).toHaveBeenCalledWith(expect.objectContaining({ api_key: '', id: 'c1' })))
+  })
 })

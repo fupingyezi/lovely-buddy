@@ -115,7 +115,8 @@ export default function ConnectionPage(): ReactElement {
   }
 
   const onTest = (): void => {
-    void test(buildInput(form))
+    // 编辑模式 key 未动时 api_key 为空——带 id 让后端回退该连接的存储 key
+    void test({ ...buildInput(form), id: editing?.id ?? '' })
   }
 
   const keyEditable = !editing || keyDirty

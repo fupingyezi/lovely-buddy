@@ -37,6 +37,16 @@ export interface TestResult {
   latency_ms?: number
 }
 
+/** 测试连接请求（POST /api/v1/config/test）：id 可选，编辑模式下后端按 id 回退存储 key。 */
+export interface TestInput {
+  provider: string
+  base_url: string
+  model: string
+  api_key: string
+  max_tokens: number
+  id?: string
+}
+
 function authHeaders(rt: ApiRuntime): Record<string, string> {
   return { Authorization: `Bearer ${rt.token}` }
 }
@@ -81,7 +91,7 @@ export async function deleteConnection(rt: ApiRuntime, id: string): Promise<Conf
   return (await res.json()) as ConfigState
 }
 
-export async function testConnection(rt: ApiRuntime, input: ConnInput): Promise<TestResult> {
+export async function testConnection(rt: ApiRuntime, input: TestInput): Promise<TestResult> {
   const res = await fetch(`${rt.baseUrl}/api/v1/config/test`, {
     method: 'POST',
     headers: { ...authHeaders(rt), 'Content-Type': 'application/json' },

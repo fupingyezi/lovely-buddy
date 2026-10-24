@@ -178,6 +178,57 @@ func TestTestConnectionTimeout(t *testing.T) {
 	}
 }
 
+// DeepSeek 401 真实返回纯文本（如 "Authentication Fails (governor)"），
+// go-openai 解析失败走 *RequestError——文案仍须按状态码映射，不裸透 JSON 解析噪音。
+func TestTestConnectionPlain401(t *testing.T) {
+	svc, _ := newSvc(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Authentication Fails (governor)", http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m", APIKey: "bad", BaseURL: srv.URL})
+	if res.OK || res.Error != "API Key 无效（401）" {
+		t.Fatalf("期望 401 中文文案，得 %+v", res)
+	}
+}
+
+// 编辑表单 key 未动（api_key 空）：按 id 回退存储 key（前端拿不到明文，只能后端回退）。
+// 模型名已改（m2 ≠ 存储的 m）——回退按 id 而非模型匹配。
+func TestTestConnectionFallsBackToStoredKey(t *testing.T) {
+	svc, _ := newSvc(t)
+	var gotAuth string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"x\"}}]}\n\ndata: [DONE]\n\n"))
+	}))
+	defer srv.Close()
+	st, err := svc.Add(ConnInput{Provider: "deepseek", Model: "m", APIKey: "sk-real", BaseURL: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m2", BaseURL: srv.URL, ID: st.ActiveID})
+	if !res.OK {
+		t.Fatalf("期望成功，得 %+v", res)
+	}
+	if gotAuth != "Bearer sk-real" {
+		t.Fatalf("应用存储 key，得 %q", gotAuth)
+	}
+}
+
+// 回退条件不满足（id 未知或厂商/地址已改）且 key 空 → 空 Bearer → 上游 401 中文文案。
+func TestTestConnectionNoKeyFallback(t *testing.T) {
+	svc, _ := newSvc(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "Authentication Fails (governor)", http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m", BaseURL: srv.URL})
+	if res.OK || res.Error != "API Key 无效（401）" {
+		t.Fatalf("期望 401 中文文案，得 %+v", res)
+	}
+}
+
 func TestStateMasksKey(t *testing.T) {
 	svc, _ := newSvc(t)
 	st, _ := svc.Add(ConnInput{Provider: "deepseek", Model: "m", APIKey: "sk-1234567890abcdef3f2a"})

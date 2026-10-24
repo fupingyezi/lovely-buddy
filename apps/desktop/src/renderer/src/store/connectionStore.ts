@@ -9,7 +9,8 @@ import {
   updateConnection,
   type ConfigState,
   type ConnInput,
-  type ConnectionInfo
+  type ConnectionInfo,
+  type TestInput
 } from '../lib/configApi'
 
 interface ConnectionStore {
@@ -28,7 +29,7 @@ interface ConnectionStore {
   add: (input: ConnInput) => Promise<void>
   update: (id: string, input: ConnInput) => Promise<void>
   remove: (id: string) => Promise<void>
-  test: (input: ConnInput) => Promise<void>
+  test: (input: TestInput) => Promise<void>
   clearTest: () => void
 }
 
