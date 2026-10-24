@@ -43,8 +43,8 @@ describe('chatStore.send', () => {
     const s = useChatStore.getState()
     expect(s.sessionId).toBe('s1')
     expect(s.items).toEqual([
-      { role: 'user', content: '嗨' },
-      { role: 'assistant', content: '你好', motion: 'happy' }
+      { role: 'user', content: '嗨', created_at: expect.any(String) },
+      { role: 'assistant', content: '你好', motion: 'happy', created_at: expect.any(String) }
     ])
     expect(s.sending).toBe(false)
     expect(s.lastMotion).toMatchObject({ intent: 'happy' })
@@ -62,7 +62,7 @@ describe('chatStore.send', () => {
     await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: '未配置 API key' }])
     const s = useChatStore.getState()
     expect(s.error).toBe('未配置 API key')
-    expect(s.items).toEqual([{ role: 'user', content: '嗨' }])
+    expect(s.items).toEqual([{ role: 'user', content: '嗨', created_at: expect.any(String) }])
   })
 
   it('stop 触发 abort（保留半截内容，不算错误）', async () => {
@@ -101,9 +101,10 @@ describe('chatStore.refresh', () => {
     await useChatStore.getState().refresh()
     const s = useChatStore.getState()
     expect(s.sessionId).toBe('s1')
+    expect(getHistoryMock).toHaveBeenCalledWith(expect.anything(), 200)
     expect(s.items).toEqual([
-      { role: 'user', content: '嗨' },
-      { role: 'assistant', content: '你好', motion: 'happy' }
+      { role: 'user', content: '嗨', created_at: 't' },
+      { role: 'assistant', content: '你好', motion: 'happy', created_at: 't' }
     ])
   })
 
@@ -118,13 +119,13 @@ describe('chatStore.refresh', () => {
 describe('chatStore.retry', () => {
   it('去掉末尾失败残留的用户消息，用同一形象重发', async () => {
     await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: '后端离线' }])
-    expect(useChatStore.getState().items).toEqual([{ role: 'user', content: '嗨' }])
+    expect(useChatStore.getState().items).toEqual([{ role: 'user', content: '嗨', created_at: expect.any(String) }])
     streamChatMock.mockImplementation(() => Promise.resolve()) // 重发不重放旧事件
     useChatStore.getState().retry()
     // send 的乐观插入在首个 await 之前同步完成：残留已移除、新 user+占位已插入
     expect(useChatStore.getState().items).toEqual([
-      { role: 'user', content: '嗨' },
-      { role: 'assistant', content: '' }
+      { role: 'user', content: '嗨', created_at: expect.any(String) },
+      { role: 'assistant', content: '', created_at: expect.any(String) }
     ])
     await vi.waitFor(() => expect(streamChatMock).toHaveBeenCalledTimes(2))
     expect(streamChatMock).toHaveBeenLastCalledWith(

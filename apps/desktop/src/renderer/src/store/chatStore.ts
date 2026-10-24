@@ -6,6 +6,8 @@ export interface ChatItem {
   role: 'user' | 'assistant'
   content: string
   motion?: string
+  /** 消息时间（服务端历史 / 本地发送时刻），设置·对话记录分组用 */
+  created_at?: string
 }
 
 interface ChatState {
@@ -40,10 +42,15 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   async send(text, avatar) {
     const msg = text.trim()
     if (!msg || get().sending) return
+    const now = new Date().toISOString()
     set((s) => ({
       ...s,
       lastAvatar: avatar,
-      items: [...s.items, { role: 'user', content: msg }, { role: 'assistant', content: '' }],
+      items: [
+        ...s.items,
+        { role: 'user', content: msg, created_at: now },
+        { role: 'assistant', content: '', created_at: now }
+      ],
       sending: true,
       error: null
     }))
@@ -123,12 +130,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   async refresh() {
     try {
       const rt = await window.lovelybuddy.getRuntime()
-      const h = await getHistory(rt)
+      const h = await getHistory(rt, 200) // 设置页承诺「仅保留最近 200 条」
       set({
         sessionId: h.session_id,
         items: h.messages.map((m) => ({
           role: m.role,
           content: m.content,
+          created_at: m.created_at,
           ...(m.motion ? { motion: m.motion } : {})
         })),
         error: null
