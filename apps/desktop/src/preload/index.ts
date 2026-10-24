@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 export interface Runtime {
   baseUrl: string
@@ -35,6 +35,12 @@ export interface LovelybuddyApi {
   notifyChatCleared: () => void
   /** 订阅「设置窗口清空对话」广播，返回退订函数 */
   onChatCleared: (cb: () => void) => () => void
+  /** 拖拽文件/文件夹取绝对路径（Electron 32+ 移除 File.path，用 webUtils） */
+  getPathForFile: (file: File) => string
+  /** 设置窗口导入/删除形象后通知主进程（主进程广播给桌宠窗口刷新形象列表） */
+  notifyModelsChanged: () => void
+  /** 订阅「形象列表变更」广播，返回退订函数 */
+  onModelsChanged: (cb: () => void) => () => void
   quit: () => void
 }
 
@@ -57,6 +63,13 @@ const lovelybuddy: LovelybuddyApi = {
     const listener = (): void => cb()
     ipcRenderer.on('lovelybuddy:chat-cleared', listener)
     return () => ipcRenderer.removeListener('lovelybuddy:chat-cleared', listener)
+  },
+  getPathForFile: (file) => webUtils.getPathForFile(file),
+  notifyModelsChanged: () => ipcRenderer.send('lovelybuddy:notify-models-changed'),
+  onModelsChanged: (cb) => {
+    const listener = (): void => cb()
+    ipcRenderer.on('lovelybuddy:models-changed', listener)
+    return () => ipcRenderer.removeListener('lovelybuddy:models-changed', listener)
   },
   quit: () => ipcRenderer.send('lovelybuddy:quit')
 }

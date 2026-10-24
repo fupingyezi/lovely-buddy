@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import SettingsPanel from './SettingsPanel'
 import { useChatStore } from '../../store/chatStore'
+import { usePetStore } from '../../store/petStore'
 
 /**
  * 独立设置窗口根组件（主进程 ?settings=1 分支）：不加载 PIXI/模型/健康轮询。
@@ -10,6 +11,10 @@ import { useChatStore } from '../../store/chatStore'
 export default function SettingsApp(): ReactElement {
   useEffect(() => {
     void useChatStore.getState().refresh()
+  }, [])
+
+  useEffect(() => {
+    void usePetStore.getState().loadModels()
   }, [])
 
   useEffect(() => {

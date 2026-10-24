@@ -24,6 +24,8 @@ interface PetState {
   /** 导入进行中（UI 显示状态、防重复提交） */
   importing: boolean
   importError: string | null
+  /** 最近一次导入尝试的源名（导入中/失败行展示；成功清除） */
+  importName: string | null
   status: BackendStatus
   version: string | null
   loadModels: () => Promise<void>
@@ -32,6 +34,8 @@ interface PetState {
   importModel: (source: ImportSource) => Promise<boolean>
   /** 删除形象；若删的是当前选中，自动切到剩余第一个。确认对话框由 UI 层负责。 */
   deleteModel: (info: AvatarInfo) => Promise<void>
+  /** 清除导入失败行（设计：失败行保留直到用户移除） */
+  clearImportError: () => void
   dismissPlaceholder: () => void
   setModelError: (err: string | null) => void
   setStatus: (status: BackendStatus, version?: string | null) => void
@@ -45,6 +49,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
   placeholderDismissed: readDismissed(),
   importing: false,
   importError: null,
+  importName: null,
   status: 'connecting',
   version: null,
 
@@ -73,7 +78,8 @@ export const usePetStore = create<PetState>()((set, get) => ({
   },
 
   async importModel(source) {
-    set({ importing: true, importError: null })
+    const label = source.type === 'url' ? source.value : (source.value.split(/[\\/]/).pop() ?? source.value)
+    set({ importing: true, importError: null, importName: label })
     try {
       const rt = await window.lovelybuddy.getRuntime()
       const avatar = await importAvatar(rt, source)
@@ -86,10 +92,12 @@ export const usePetStore = create<PetState>()((set, get) => ({
         modelName: avatar.name,
         modelError: null,
         placeholderDismissed: false,
-        importing: false
+        importing: false,
+        importName: null
       })
       return true
     } catch (e) {
+      // importName 保留：失败行展示尝试导入的源名
       set({ importing: false, importError: e instanceof Error ? e.message : String(e) })
       return false
     }
@@ -106,6 +114,10 @@ export const usePetStore = create<PetState>()((set, get) => ({
       modelName: kept?.name ?? models[0]?.name ?? null,
       modelError: null
     })
+  },
+
+  clearImportError() {
+    set({ importError: null, importName: null })
   },
 
   dismissPlaceholder() {

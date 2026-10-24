@@ -21,6 +21,8 @@ interface RawAvatar {
   homepage?: string
   persona?: string
   source?: string
+  size_bytes?: number
+  expressions?: number
 }
 
 function authHeaders(rt: ApiRuntime): Record<string, string> {
@@ -38,7 +40,9 @@ function toAvatar(a: RawAvatar): AvatarInfo {
     ...(a.version ? { version: a.version } : {}),
     ...(a.license ? { license: a.license } : {}),
     ...(a.homepage ? { homepage: a.homepage } : {}),
-    ...(a.source === 'local' || a.source === 'url' ? { source: a.source } : {})
+    ...(a.source === 'local' || a.source === 'url' ? { source: a.source } : {}),
+    ...(a.size_bytes !== undefined ? { sizeBytes: a.size_bytes } : {}),
+    ...(a.expressions ? { expressions: a.expressions } : {})
   }
 }
 

@@ -39,6 +39,10 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
   ipcMain.on('lovelybuddy:notify-chat-cleared', () => {
     win.window?.webContents.send('lovelybuddy:chat-cleared')
   })
+  // 设置窗口导入/删除形象 → 广播给桌宠窗口刷新形象列表（同 chat-cleared 跨窗同步模式）
+  ipcMain.on('lovelybuddy:notify-models-changed', () => {
+    win.window?.webContents.send('lovelybuddy:models-changed')
+  })
   // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
   ipcMain.handle('lovelybuddy:pick-import-path', async (e, mode: 'zip' | 'dir') => {
     const opts: Electron.OpenDialogOptions =

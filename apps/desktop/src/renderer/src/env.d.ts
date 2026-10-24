@@ -17,6 +17,10 @@ declare global {
     homepage?: string
     /** 来源：导入写入（local/url），手工放入为空 */
     source?: 'local' | 'url'
+    /** 模型包体积（字节，服务端探测统计） */
+    sizeBytes?: number
+    /** 表情组数量（入口 json Expressions 长度） */
+    expressions?: number
   }
 
   interface LovelybuddyApi {
@@ -43,6 +47,12 @@ declare global {
     notifyChatCleared: () => void
     /** 订阅「设置窗口清空对话」广播，返回退订函数 */
     onChatCleared: (cb: () => void) => () => void
+    /** 拖拽文件/文件夹取绝对路径（Electron 32+ 移除 File.path，用 webUtils） */
+    getPathForFile: (file: File) => string
+    /** 设置窗口导入/删除形象后通知主进程（主进程广播给桌宠窗口刷新形象列表） */
+    notifyModelsChanged: () => void
+    /** 订阅「形象列表变更」广播，返回退订函数 */
+    onModelsChanged: (cb: () => void) => () => void
     quit: () => void
   }
 

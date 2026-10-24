@@ -65,6 +65,8 @@ export default function App(): ReactElement {
 
   // 设置窗口清空对话 → 主进程广播 → 同步刷新本地历史
   useEffect(() => window.lovelybuddy.onChatCleared(() => void useChatStore.getState().refresh()), [])
+  // 设置窗口导入/删除形象 → 主进程广播 → 刷新形象列表（loadModels 已内置当前项回退）
+  useEffect(() => window.lovelybuddy.onModelsChanged(() => void usePetStore.getState().loadModels()), [])
 
   return (
     <>
