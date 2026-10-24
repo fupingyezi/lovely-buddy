@@ -50,8 +50,8 @@ function mockFetchApi(
 const haruAvatar: AvatarInfo = { slug: 'haru', name: 'haru-cubism4', url: 'l2d://model/haru/haru.model3.json', kind: 'moc3', entry: 'haru/haru.model3.json', license: 'free', source: 'local' }
 const shizukuAvatar: AvatarInfo = { slug: 'shizuku', name: 'shizuku-cubism2', url: 'l2d://model/shizuku/shizuku.model.json', kind: 'moc', entry: 'shizuku/shizuku.model.json' }
 
-function renderMenu(onClose = vi.fn()): ReturnType<typeof vi.fn> {
-  render(<PetMenu x={10} y={10} onClose={onClose} onChat={() => {}} />)
+function renderMenu(onClose = vi.fn(), onSettings = vi.fn()): ReturnType<typeof vi.fn> {
+  render(<PetMenu x={10} y={10} onClose={onClose} onChat={() => {}} onSettings={onSettings} />)
   return onClose
 }
 
@@ -86,9 +86,16 @@ describe('PetMenu', () => {
 
   it('聊天按钮触发 onChat', () => {
     const onChat = vi.fn()
-    render(<PetMenu x={4} y={4} onClose={() => {}} onChat={onChat} />)
+    render(<PetMenu x={4} y={4} onClose={() => {}} onChat={onChat} onSettings={() => {}} />)
     fireEvent.click(screen.getByRole('button', { name: '聊天' }))
     expect(onChat).toHaveBeenCalled()
+  })
+
+  it('设置按钮触发 onSettings', () => {
+    const onSettings = vi.fn()
+    renderMenu(vi.fn(), onSettings)
+    fireEvent.click(screen.getByRole('button', { name: '设置' }))
+    expect(onSettings).toHaveBeenCalled()
   })
 
   it('状态行显示在线状态与版本', () => {

@@ -445,3 +445,250 @@ body,
 .speech-bubble--center .speech-bubble-body {
   transform-origin: 50% 100%;
 }
+
+/* ===== 设置面板（覆盖整窗，图 03）===== */
+.settings-panel {
+  position: fixed;
+  inset: 12px;
+  z-index: 95;
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-mint);
+  overflow: hidden;
+  user-select: none;
+}
+
+.settings-side {
+  flex: none;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px var(--sp-2);
+  background: var(--color-bg); /* 侧栏奶油底（图 03） */
+}
+
+.settings-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: var(--sp-5);
+}
+
+.settings-brand-name {
+  color: var(--color-primary-deep);
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+.settings-brand-ver {
+  color: var(--color-ink-2);
+  font-size: var(--fs-aux);
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-nav-item {
+  border: none;
+  border-radius: var(--sp-3); /* 图 03 选中胶囊 ≈14 */
+  background: transparent;
+  padding: 10px var(--sp-2);
+  color: var(--color-ink);
+  font-size: var(--fs-body);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 120ms ease, background 120ms ease;
+}
+
+.settings-nav-item:not(:disabled):hover {
+  background: var(--color-hover-bg); /* 悬停：条目底色转奶油白（图 04） */
+}
+
+.settings-nav-item:not(:disabled):active {
+  transform: scale(0.96);
+}
+
+.settings-nav-item.active {
+  background: var(--color-selected-bg); /* 选中：图 03 薄荷胶囊 */
+  color: var(--color-primary-deep);
+}
+
+.settings-nav-item:disabled {
+  color: var(--color-ink-3);
+  cursor: default;
+}
+
+.settings-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px var(--sp-4);
+}
+
+.settings-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+}
+
+.settings-search {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  padding: 8px 14px;
+  color: var(--color-ink);
+  font-size: var(--fs-body);
+  outline: none;
+}
+
+.settings-search:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(91, 200, 166, 0.25); /* 焦点柔光（图 04） */
+}
+
+.settings-search::placeholder {
+  color: var(--color-ink-3);
+}
+
+.settings-export,
+.settings-clear {
+  flex: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  padding: 8px 14px;
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+.settings-export {
+  color: var(--color-ink-2); /* 图 03：导出为灰色文字 */
+}
+
+.settings-export:hover {
+  color: var(--color-ink);
+}
+
+.settings-clear {
+  background: var(--color-bg); /* 图 03：清空在暖色胶囊内 */
+  color: var(--color-accent-ink);
+}
+
+.settings-clear:hover {
+  transform: translateY(-1px);
+}
+
+.settings-clear:active {
+  transform: scale(0.96);
+}
+
+.settings-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.settings-convs {
+  flex: none;
+  width: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.conv-card {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: none;
+  border-radius: var(--sp-3);
+  background: var(--color-bg); /* 未选中：暖奶油（图 03） */
+  padding: var(--sp-2) var(--sp-3);
+  text-align: left;
+  cursor: pointer;
+}
+
+.conv-card.active {
+  background: var(--color-selected-bg); /* 选中：薄荷（图 03） */
+}
+
+.conv-title {
+  color: var(--color-primary-deep);
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+
+.conv-sub {
+  color: var(--color-ink-2);
+  font-size: var(--fs-aux);
+}
+
+.settings-flow {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  user-select: text;
+}
+
+.flow-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.flow-date {
+  align-self: center;
+  color: var(--color-ink-3); /* 图 03：居中灰绿日期 */
+  font-size: var(--fs-aux);
+}
+
+.flow-msg {
+  max-width: 78%;
+  padding: 10px var(--sp-3);
+  border-radius: var(--radius-msg);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.flow-msg.assistant {
+  align-self: flex-start;
+  background: var(--color-bg); /* 桌宠：奶油左气泡（图 03） */
+  color: var(--color-ink);
+}
+
+.flow-msg.user {
+  align-self: flex-end;
+  background: var(--color-primary); /* 用户：薄荷右气泡、白字（图 03） */
+  color: #fff;
+}
+
+.settings-empty {
+  color: var(--color-ink-3);
+  text-align: center;
+  margin-top: 60px;
+}
+
+.settings-footer {
+  flex: none;
+  margin-top: var(--sp-2);
+  color: var(--color-ink-3); /* 图 03 footer 灰字 */
+  font-size: var(--fs-aux);
+}

@@ -4,8 +4,10 @@ import PetMenu from './pet/PetMenu'
 import ImportPanel from './pet/ImportPanel'
 import ChatPanel from './pet/chat/ChatPanel'
 import SpeechBubble from './pet/chat/SpeechBubble'
+import SettingsPanel from './pet/settings/SettingsPanel'
 import { useChatPanel } from './pet/chat/useChatPanel'
 import { usePetMenu } from './pet/usePetMenu'
+import { useSettingsPanel } from './pet/settings/useSettingsPanel'
 import { usePetStore } from './store/petStore'
 import { useChatStore } from './store/chatStore'
 
@@ -17,6 +19,7 @@ export default function App(): ReactElement {
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
   const { menu, openMenu, closeMenu } = usePetMenu()
   const { open: chatOpen, openPanel } = useChatPanel()
+  const { open: settingsOpen, openPanel: openSettingsPanel } = useSettingsPanel()
 
   // 后端健康轮询（5s）
   useEffect(() => {
@@ -68,6 +71,7 @@ export default function App(): ReactElement {
         name={modelName ?? ''}
         menuOpen={menu !== null}
         chatOpen={chatOpen}
+        settingsOpen={settingsOpen}
         onMenu={() => {
           if (menu) closeMenu()
           else openMenu()
@@ -75,6 +79,7 @@ export default function App(): ReactElement {
       />
       {chatOpen && <ChatPanel />}
       <SpeechBubble panelOpen={chatOpen} />
+      {settingsOpen && <SettingsPanel />}
       {modelUrl === null && !placeholderDismissed && (
         <div className="placeholder" data-interactive>
           <button className="placeholder-close" title="暂不显示" onClick={dismissPlaceholder}>
@@ -96,6 +101,10 @@ export default function App(): ReactElement {
           onChat={() => {
             closeMenu()
             openPanel()
+          }}
+          onSettings={() => {
+            closeMenu()
+            openSettingsPanel()
           }}
         />
       )}

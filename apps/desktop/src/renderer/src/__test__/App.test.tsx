@@ -135,6 +135,7 @@ describe('App', () => {
       ).toBe(true)
     })
     expect(document.querySelector('.pet-menu')).toBeNull()
+    expect(document.querySelector('.settings-panel')).toBeNull()
     expect(screen.queryByText('导入形象')).toBeNull()
     expect(screen.queryByText(/AI桌宠在线|后端离线|后端连接中/)).toBeNull()
   })
