@@ -93,5 +93,5 @@ export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Pro
 
   usePassthrough(pet, menuOpen || chatOpen)
 
-  return <canvas ref={canvasRef} className="pet-canvas" />
+  return <canvas ref={canvasRef} className="pet-canvas fixed inset-0 block h-full w-full" />
 }

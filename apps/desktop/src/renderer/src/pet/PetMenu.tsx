@@ -39,30 +39,34 @@ export default function PetMenu({ x, y, onClose, onChat, onSettings }: Props): R
 
   return (
     <div
-      className="pet-menu"
+      className="pet-menu fixed z-[100] flex flex-col gap-(--sp-1) w-[260px] h-[320px] overflow-y-auto p-(--sp-2) border border-(--color-border) rounded-panel bg-bg text-ink text-xs shadow-mint select-none"
       data-interactive
       style={{ left: x, top: y }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <button
         type="button"
-        className="menu-close"
+        className="absolute top-1.5 right-(--sp-1) bg-transparent text-ink-3 text-base leading-none cursor-pointer hover:text-ink"
         title="关闭菜单"
         aria-label="关闭菜单"
         onClick={onClose}
       >
         ×
       </button>
-      <div className="menu-status">
-        <span className={`dot ${status === 'online' ? 'ok' : 'bad'}`} />
+      <div className="flex items-center gap-(--sp-1) pr-(--sp-5) pb-(--sp-1) border-b border-(--color-border) cursor-default">
+        <span className={`size-2 rounded-full ${status === 'online' ? 'bg-primary' : 'bg-accent-ink'}`} />
         <span>{statusText}</span>
       </div>
       {models.length > 1 && (
-        <div className="menu-models">
+        <div className="flex flex-col gap-1">
           {models.map((m) => (
             <button
               key={m.slug}
-              className={m.url === modelUrl ? 'active' : ''}
+              className={`px-2.5 py-1.5 border rounded-(--sp-1) text-xs text-left cursor-pointer hover:bg-hover-bg hover:text-ink ${
+                m.url === modelUrl
+                  ? 'active bg-primary text-white border-transparent'
+                  : 'bg-transparent border-(--color-border) text-ink-2'
+              }`}
               onClick={() => {
                 onClose()
                 selectModel(m)
@@ -74,18 +78,40 @@ export default function PetMenu({ x, y, onClose, onChat, onSettings }: Props): R
           ))}
         </div>
       )}
-      <div className="menu-actions">
-        <button onClick={onChat}>聊天</button>
-        <button onClick={onSettings}>设置</button>
-        <button onClick={() => setImportOpen(!importOpen)}>{importOpen ? '收起' : '导入形象'}</button>
+      <div className="flex gap-1.5">
+        <button
+          className="flex-1 px-2.5 py-1.5 border border-(--color-border) rounded-(--sp-1) bg-transparent text-ink-2 text-xs text-center cursor-pointer hover:bg-hover-bg hover:text-ink"
+          onClick={onChat}
+        >
+          聊天
+        </button>
+        <button
+          className="flex-1 px-2.5 py-1.5 border border-(--color-border) rounded-(--sp-1) bg-transparent text-ink-2 text-xs text-center cursor-pointer hover:bg-hover-bg hover:text-ink"
+          onClick={onSettings}
+        >
+          设置
+        </button>
+        <button
+          className="flex-1 px-2.5 py-1.5 border border-(--color-border) rounded-(--sp-1) bg-transparent text-ink-2 text-xs text-center cursor-pointer hover:bg-hover-bg hover:text-ink"
+          onClick={() => setImportOpen(!importOpen)}
+        >
+          {importOpen ? '收起' : '导入形象'}
+        </button>
         {modelUrl !== null && (
-          <button className="danger" onClick={confirmDelete}>
+          <button
+            className="flex-1 px-2.5 py-1.5 border border-(--color-accent) rounded-(--sp-1) bg-transparent text-accent-ink text-xs text-center cursor-pointer hover:bg-hover-bg hover:text-ink"
+            onClick={confirmDelete}
+          >
             删除当前形象
           </button>
         )}
       </div>
       {importOpen && <ImportPanel onDone={onClose} />}
-      {modelError !== null && modelUrl !== null && <div className="model-error">{modelError}</div>}
+      {modelError !== null && modelUrl !== null && (
+        <div className="max-w-[320px] px-(--sp-3) py-(--sp-1) border border-(--color-accent) rounded-[10px] bg-stop-bg text-accent-ink text-xs break-all">
+          {modelError}
+        </div>
+      )}
     </div>
   )
 }

@@ -32,27 +32,39 @@ export default function ImportPanel({ onDone }: Props): ReactElement {
   }
 
   return (
-    <div className="import-panel">
+    <div className="flex flex-col gap-(--sp-1) w-full p-(--sp-1) border border-dashed border-(--color-border) rounded-[10px] bg-transparent">
       <input
-        className="import-url"
+        className="w-full px-2.5 py-1.5 border border-(--color-border) rounded-(--sp-1) bg-surface text-ink text-xs"
         placeholder="粘贴 https://…zip 链接"
         value={urlText}
         onChange={(e) => setUrlText(e.target.value)}
         disabled={importing}
       />
-      <div className="import-buttons">
-        <button onClick={() => void importFromUrl()} disabled={importing || !urlText.trim()}>
+      <div className="flex gap-1.5">
+        <button
+          className="px-2.5 py-1.5 rounded-pill bg-primary text-white text-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          onClick={() => void importFromUrl()}
+          disabled={importing || !urlText.trim()}
+        >
           {importing ? '导入中…' : '从 URL 导入'}
         </button>
-        <button onClick={() => void importLocal('zip')} disabled={importing}>
+        <button
+          className="px-2.5 py-1.5 rounded-pill bg-primary text-white text-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          onClick={() => void importLocal('zip')}
+          disabled={importing}
+        >
           本地 zip
         </button>
-        <button onClick={() => void importLocal('dir')} disabled={importing}>
+        <button
+          className="px-2.5 py-1.5 rounded-pill bg-primary text-white text-xs cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          onClick={() => void importLocal('dir')}
+          disabled={importing}
+        >
           本地目录
         </button>
       </div>
-      {importing && <p className="import-status">导入中…（大文件可能需要一点时间）</p>}
-      {importError !== null && <p className="import-error">{importError}</p>}
+      {importing && <p className="text-xs text-ink-2">导入中…（大文件可能需要一点时间）</p>}
+      {importError !== null && <p className="text-xs text-accent-ink break-all">{importError}</p>}
     </div>
   )
 }

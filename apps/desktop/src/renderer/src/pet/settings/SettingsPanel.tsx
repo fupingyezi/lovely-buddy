@@ -40,18 +40,24 @@ export default function SettingsPanel(): ReactElement {
   }
 
   return (
-    <div className="settings-panel" data-interactive onContextMenu={(e) => e.preventDefault()}>
-      <aside className="settings-side">
-        <div className="settings-brand">
-          <span className="settings-brand-name">lovely-buddy</span>
-          <span className="settings-brand-ver">本地 AI桌宠•v0.1</span>
+    <div
+      className="settings-panel flex-1 min-h-0 flex bg-surface overflow-hidden select-none"
+      data-interactive
+      onContextMenu={(e) => e.preventDefault()}
+    >
+      <aside className="shrink-0 w-[240px] flex flex-col py-(--sp-5) px-(--sp-2) bg-bg">
+        <div className="flex flex-col gap-1 mb-(--sp-5)">
+          <span className="text-primary-deep text-(--fs-title) font-semibold">lovely-buddy</span>
+          <span className="text-ink-2 text-(--fs-aux)">本地 AI桌宠•v0.1</span>
         </div>
-        <nav className="settings-nav">
+        <nav className="flex flex-col gap-1">
           {NAV.map((name) => (
             <button
               key={name}
               type="button"
-              className={`settings-nav-item${name === '对话记录' ? ' active' : ''}`}
+              className={`rounded-(--sp-3) px-(--sp-2) py-2.5 text-(--fs-body) text-left cursor-pointer transition-[transform,background] duration-[120ms] ease-standard enabled:hover:bg-hover-bg enabled:active:scale-[0.96] disabled:text-ink-3 disabled:cursor-default ${
+                name === '对话记录' ? 'active bg-selected-bg text-primary-deep' : 'bg-transparent text-ink'
+              }`}
               disabled={name !== '对话记录'}
             >
               {name}
@@ -59,35 +65,51 @@ export default function SettingsPanel(): ReactElement {
           ))}
         </nav>
       </aside>
-      <main className="settings-main">
-        <header className="settings-toolbar">
+      <main className="flex-1 min-w-0 flex flex-col px-(--sp-4) py-4">
+        <header className="shrink-0 flex items-center gap-(--sp-1) mb-(--sp-2)">
           <input
-            className="settings-search"
+            className="flex-1 min-w-0 border border-(--color-border) rounded-pill bg-surface px-(--sp-3) py-(--sp-1) text-ink text-(--fs-body) outline-none placeholder:text-ink-3 focus:border-primary focus:shadow-focus"
             placeholder="搜索记录"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
-          <button type="button" className="settings-export" onClick={() => void doExport()}>
+          <button
+            type="button"
+            className="shrink-0 rounded-pill bg-transparent px-(--sp-3) py-(--sp-1) text-ink-2 text-(--fs-body) cursor-pointer hover:text-ink"
+            onClick={() => void doExport()}
+          >
             {exported ? '已导出' : '导出'}
           </button>
-          <button type="button" className="settings-clear" onClick={doClear}>
+          <button
+            type="button"
+            className="shrink-0 rounded-pill bg-bg px-(--sp-3) py-(--sp-1) text-accent-ink text-(--fs-body) cursor-pointer hover:-translate-y-px active:scale-[0.96]"
+            onClick={doClear}
+          >
             清空
           </button>
         </header>
-        <div className="settings-body">
-          <section className="settings-convs">
-            <button type="button" className="conv-card active">
-              <span className="conv-title">AI桌宠对话</span>
-              <span className="conv-sub">{sessionSubtitle(items)}</span>
+        <div className="flex-1 min-h-0 flex gap-(--sp-2)">
+          <section className="shrink-0 w-[280px] overflow-y-auto flex flex-col gap-(--sp-2)">
+            <button
+              type="button"
+              className="conv-card active shrink-0 flex flex-col gap-1.5 rounded-(--sp-3) bg-selected-bg px-(--sp-3) py-(--sp-2) text-left cursor-pointer"
+            >
+              <span className="text-primary-deep text-(--fs-body) font-semibold">AI桌宠对话</span>
+              <span className="text-ink-2 text-(--fs-aux)">{sessionSubtitle(items)}</span>
             </button>
           </section>
-          <section className="settings-flow">
-            {groups.length === 0 && <p className="settings-empty">暂无对话记录</p>}
+          <section className="flex-1 min-w-0 overflow-y-auto flex flex-col gap-(--sp-2) select-text">
+            {groups.length === 0 && <p className="text-ink-3 text-center mt-[60px]">暂无对话记录</p>}
             {groups.map((g) => (
-              <div key={g.label} className="flow-group">
-                <div className="flow-date">{g.label}</div>
+              <div key={g.label} className="flex flex-col gap-(--sp-1)">
+                <div className="self-center text-ink-3 text-(--fs-aux)">{g.label}</div>
                 {g.items.map((it, i) => (
-                  <div key={i} className={`flow-msg ${it.role}`}>
+                  <div
+                    key={i}
+                    className={`flow-msg max-w-[78%] px-(--sp-3) py-2.5 rounded-msg text-(--fs-body) leading-[1.6] whitespace-pre-wrap break-words ${
+                      it.role === 'assistant' ? 'assistant self-start bg-bg text-ink' : 'user self-end bg-primary text-white'
+                    }`}
+                  >
                     {it.content}
                   </div>
                 ))}
@@ -95,7 +117,7 @@ export default function SettingsPanel(): ReactElement {
             ))}
           </section>
         </div>
-        <footer className="settings-footer">仅保留最近 200 条•可导出为 Markdown</footer>
+        <footer className="shrink-0 mt-(--sp-2) text-ink-3 text-(--fs-aux)">仅保留最近 200 条•可导出为 Markdown</footer>
       </main>
     </div>
   )

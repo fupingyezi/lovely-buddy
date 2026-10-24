@@ -72,7 +72,8 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
 
   if (phase === 'gone' || panelOpen || !isReply) return null
   const classes = [
-    'speech-bubble',
+    // pointer-events-none 必须保留：点击穿到桌面（README 铁律）
+    'speech-bubble fixed z-[80] flex flex-col items-end pointer-events-none',
     phase === 'out' ? 'speech-bubble--out' : '',
     layout === null ? 'speech-bubble--center' : ''
   ]
@@ -84,8 +85,11 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
       : { right: layout.right, bottom: layout.bottom, maxWidth: layout.maxWidth, maxHeight: layout.maxHeight }
   return (
     <div className={classes} style={style} aria-live="polite">
-      <div className="speech-bubble-body">{shown}</div>
-      <span className="speech-bubble-tail" aria-hidden="true" />
+      <div className="speech-bubble-body max-w-full overflow-y-auto px-4 py-(--sp-2) rounded-bubble bg-surface text-ink text-(--fs-body) leading-[1.6] whitespace-pre-wrap break-words shadow-mint animate-bubble-pop origin-bottom-right">
+        {shown}
+      </div>
+      {/* right 与 bubbleLayout.TAIL_INSET 对齐 */}
+      <span className="speech-bubble-tail absolute right-[24px] -bottom-1.5 size-3 bg-surface rounded-bl rotate-45" aria-hidden="true" />
     </div>
   )
 }

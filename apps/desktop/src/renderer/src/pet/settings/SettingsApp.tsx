@@ -21,12 +21,15 @@ export default function SettingsApp(): ReactElement {
   }, [])
 
   return (
-    <div className="settings-app">
-      <header className="settings-titlebar" onContextMenu={(e) => e.preventDefault()}>
-        <span className="settings-titlebar-title">设置</span>
+    <div className="h-screen flex flex-col bg-bg overflow-hidden">
+      <header
+        className="settings-titlebar shrink-0 h-10 flex items-center justify-between pl-(--sp-3) bg-bg select-none"
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        <span className="text-ink-2 text-(--fs-aux)">设置</span>
         <button
           type="button"
-          className="settings-close"
+          className="settings-close w-10 h-10 flex items-center justify-center bg-transparent text-ink-2 text-lg cursor-pointer transition-[color,background] duration-[120ms] ease-standard hover:text-ink hover:bg-hover-bg"
           title="关闭"
           onClick={() => window.lovelybuddy.closeSettings()}
         >
