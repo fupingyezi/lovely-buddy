@@ -1,7 +1,33 @@
 import { act, fireEvent, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePetMenu } from '../usePetMenu'
-import { MENU_REQUIRED_H, MENU_REQUIRED_W } from '../../pet/menuLayout'
+import { MENU_REQUIRED_W, menuRequiredHeight } from '../../pet/menuLayout'
+import { usePetStore } from '../../store/petStore'
+
+// AvatarInfo 是 env.d.ts 的全局类型（declare global），不从 assetsApi import
+const models3: AvatarInfo[] = [
+  {
+    slug: 'haru',
+    name: 'haru-cubism4',
+    url: 'l2d://model/haru/haru.model3.json',
+    kind: 'moc3',
+    entry: 'haru/haru.model3.json'
+  },
+  {
+    slug: 'shizuku',
+    name: 'shizuku-cubism2',
+    url: 'l2d://model/shizuku/shizuku.model.json',
+    kind: 'moc',
+    entry: 'shizuku/shizuku.model.json'
+  },
+  {
+    slug: 'third',
+    name: 'third',
+    url: 'l2d://model/third/third.model3.json',
+    kind: 'moc3',
+    entry: 'third/third.model3.json'
+  }
+]
 
 const expandMenu = vi.fn()
 const collapseWindow = vi.fn()
@@ -18,6 +44,7 @@ describe('usePetMenu', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mockLovelybuddy()
+    usePetStore.setState({ models: models3 })
   })
 
   afterEach(() => {
@@ -30,7 +57,7 @@ describe('usePetMenu', () => {
     act(() => {
       result.current.openMenu()
     })
-    expect(expandMenu).toHaveBeenCalledWith(MENU_REQUIRED_W, MENU_REQUIRED_H)
+    expect(expandMenu).toHaveBeenCalledWith(MENU_REQUIRED_W, menuRequiredHeight(3))
     // expand 已 resolve 但 resize 未落地：菜单先不显示（防首帧错位闪烁）
     await act(async () => {
       await Promise.resolve()
@@ -41,6 +68,19 @@ describe('usePetMenu', () => {
     })
     await act(async () => {
       await Promise.resolve()
+    })
+    expect(result.current.menuOpen).toBe(true)
+  })
+
+  it('单形象紧凑态扩展量更小（menuRequiredHeight(1)=99）', async () => {
+    usePetStore.setState({ models: models3.slice(0, 1) })
+    const { result } = renderHook(() => usePetMenu())
+    act(() => {
+      result.current.openMenu()
+    })
+    expect(expandMenu).toHaveBeenCalledWith(MENU_REQUIRED_W, menuRequiredHeight(1))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
     })
     expect(result.current.menuOpen).toBe(true)
   })

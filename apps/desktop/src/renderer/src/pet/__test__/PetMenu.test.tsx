@@ -3,51 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import PetMenu from '../PetMenu'
 import { usePetStore } from '../../store/petStore'
 import { useWindowGeometry } from '../../live2d/windowGeometry'
+import { listHeight, MAX_LIST_ROWS, menuHeight, menuTop } from '../menuLayout'
 
 function mockLovelybuddy(): void {
   vi.stubGlobal('lovelybuddy', {
     getRuntime: vi.fn().mockResolvedValue({ baseUrl: 'http://127.0.0.1:8740', token: 'dev', dev: true }),
-    setPassthrough: vi.fn(),
-    quit: vi.fn(),
-    moveWindow: vi.fn(),
-    moveWindowEnd: vi.fn(),
-    resizeWindow: vi.fn(),
-    expandWindow: vi.fn().mockResolvedValue({ width: 1024, height: 768 }),
-    collapseWindow: vi.fn(),
-    pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null })
+    setPassthrough: vi.fn()
   })
 }
 
-/** fetch 按 URL 路由到有状态的假后端（assets + healthz） */
-function mockFetchApi(
-  avatars: unknown[],
-  importResult?: { ok: boolean; avatar?: Record<string, unknown>; error?: string }
-): void {
-  let list: Array<Record<string, unknown>> = [...avatars] as Array<Record<string, unknown>>
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input)
-      const method = init?.method ?? 'GET'
-      const json = (body: unknown, status = 200): Response =>
-        new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
-      if (url === 'http://127.0.0.1:8740/api/v1/assets' && method === 'GET') return json({ avatars: list })
-      if (url === 'http://127.0.0.1:8740/api/v1/assets/import' && method === 'POST') {
-        if (importResult && !importResult.ok) return json({ error: importResult.error }, 422)
-        const avatar = (importResult?.avatar ?? avatars[0]) as Record<string, unknown> | undefined
-        if (avatar && !list.some((a) => a.slug === avatar.slug)) list = [...list, avatar]
-        return json({ avatar })
-      }
-      if (url.startsWith('http://127.0.0.1:8740/api/v1/assets/') && method === 'DELETE') {
-        const slug = decodeURIComponent(url.split('/').pop() ?? '')
-        list = list.filter((a) => a.slug !== slug)
-        return json({ ok: true })
-      }
-      return json({}, 404)
-    })
-  )
-}
-
+// AvatarInfo 是 env.d.ts 的全局类型（declare global），不从 assetsApi import
 const haruAvatar: AvatarInfo = {
   slug: 'haru',
   name: 'haru-cubism4',
@@ -64,6 +29,15 @@ const shizukuAvatar: AvatarInfo = {
   kind: 'moc',
   entry: 'shizuku/shizuku.model.json'
 }
+function modelN(n: number): AvatarInfo[] {
+  return Array.from({ length: n }, (_, i) => ({
+    slug: `m${i}`,
+    name: `model-${i}`,
+    url: `l2d://model/m${i}/m${i}.model3.json`,
+    kind: 'moc3',
+    entry: `m${i}/m${i}.model3.json`
+  }))
+}
 
 function renderMenu(onClose = vi.fn(), onSettings = vi.fn()): ReturnType<typeof vi.fn> {
   render(<PetMenu onClose={onClose} onChat={() => {}} onSettings={onSettings} />)
@@ -74,15 +48,15 @@ describe('PetMenu', () => {
   beforeEach(() => {
     localStorage.clear()
     usePetStore.setState({
-      models: [],
-      modelUrl: null,
-      modelName: null,
+      models: [haruAvatar, shizukuAvatar],
+      modelUrl: haruAvatar.url,
+      modelName: haruAvatar.name,
       modelError: null,
       placeholderDismissed: false,
       importing: false,
       importError: null,
-      status: 'connecting',
-      version: null
+      status: 'online',
+      version: '0.4.1'
     })
     mockLovelybuddy()
   })
@@ -93,12 +67,13 @@ describe('PetMenu', () => {
     vi.restoreAllMocks()
   })
 
-  it('菜单右贴窗口、底边距头顶 8px（几何响应式）', () => {
+  it('菜单右贴窗口、底边距头顶 8px、高度随形象数自适应（几何响应式）', () => {
     useWindowGeometry.setState({ size: { w: 820, h: 932 }, base: { w: 300, h: 480 } })
     render(<PetMenu onClose={() => {}} onChat={() => {}} onSettings={() => {}} />)
     const el = screen.getByTitle('关闭菜单').closest('.pet-menu') as HTMLElement
-    expect(el.style.top).toBe('124px') // 932 - 480 - 8 - 320（聊天扩展在身）
+    expect(el.style.top).toBe(`${menuTop(452, 2)}px`) // 932 - 480 = 452（聊天扩展在身）
     expect(el.style.right).toBe('4px')
+    expect(el.style.height).toBe(`${menuHeight(2)}px`) // 186
     useWindowGeometry.setState({ base: null, size: { w: 1024, h: 768 } })
   })
 
@@ -108,32 +83,26 @@ describe('PetMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('聊天按钮触发 onChat', () => {
+  it('聊天按钮触发 onChat；设置按钮触发 onSettings', () => {
     const onChat = vi.fn()
-    render(<PetMenu onClose={() => {}} onChat={onChat} onSettings={() => {}} />)
+    const onSettings = vi.fn()
+    render(<PetMenu onClose={() => {}} onChat={onChat} onSettings={onSettings} />)
     fireEvent.click(screen.getByRole('button', { name: '聊天' }))
     expect(onChat).toHaveBeenCalled()
-  })
-
-  it('设置按钮触发 onSettings', () => {
-    const onSettings = vi.fn()
-    renderMenu(vi.fn(), onSettings)
     fireEvent.click(screen.getByRole('button', { name: '设置' }))
     expect(onSettings).toHaveBeenCalled()
   })
 
   it('状态行显示在线状态与版本', () => {
-    usePetStore.setState({ status: 'online', version: '0.1.0-dev' })
     renderMenu()
-    expect(screen.getByText(/AI桌宠在线/).textContent).toContain('0.1.0-dev')
+    expect(screen.getByText(/AI桌宠在线/).textContent).toContain('0.4.1')
   })
 
-  it('多形象时列出切换列表，点击切换并关闭菜单', async () => {
-    usePetStore.setState({ models: [haruAvatar, shizukuAvatar], modelUrl: haruAvatar.url, modelName: haruAvatar.name })
+  it('多形象列出缩略行：当前项高亮带勾，点击切换并关闭菜单', async () => {
     const onClose = renderMenu()
-
-    expect(screen.getByText('haru-cubism4').className).toContain('active')
-
+    // active 类在行按钮上，名称文字在内层 span
+    expect(screen.getByText('haru-cubism4').closest('button')?.className).toContain('active')
+    expect(screen.getByText('shizuku-cubism2').closest('button')?.className).not.toContain('active')
     fireEvent.click(screen.getByText('shizuku-cubism2'))
     await waitFor(() => {
       expect(usePetStore.getState().modelUrl).toBe(shizukuAvatar.url)
@@ -141,56 +110,35 @@ describe('PetMenu', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('导入形象展开面板，URL 导入成功后关闭菜单', async () => {
-    mockFetchApi([haruAvatar], {
-      ok: true,
-      avatar: { slug: 'haru', name: 'haru', kind: 'moc3', entry: 'haru/haru.model3.json', source: 'url' }
-    })
-    usePetStore.setState({ models: [haruAvatar], modelUrl: haruAvatar.url, modelName: haruAvatar.name })
-    const onClose = renderMenu()
-
-    fireEvent.click(screen.getByText('导入形象'))
-    fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
-      target: { value: ' https://example.com/haru.zip ' }
-    })
-    fireEvent.click(screen.getByText('从 URL 导入'))
-
-    await waitFor(() => {
-      expect(usePetStore.getState().modelUrl).toBe('l2d://model/haru/haru.model3.json')
-    })
-    expect(onClose).toHaveBeenCalledTimes(1)
-  })
-
-  it('导入失败显示后端错误，菜单不关闭', async () => {
-    mockFetchApi([], { ok: false, error: 'zip 含非法路径: ../../evil.txt' })
-    usePetStore.setState({ modelUrl: 'l2d://x', modelName: 'x' })
-    const onClose = renderMenu()
-
-    fireEvent.click(screen.getByText('导入形象'))
-    fireEvent.change(screen.getByPlaceholderText('粘贴 https://…zip 链接'), {
-      target: { value: 'https://example.com/evil.zip' }
-    })
-    fireEvent.click(screen.getByText('从 URL 导入'))
-
-    await waitFor(() => {
-      expect(screen.getByText('zip 含非法路径: ../../evil.txt')).toBeTruthy()
-    })
-    expect(onClose).not.toHaveBeenCalled()
-  })
-
-  it('删除当前形象（二次确认）后切换到剩余形象', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
-    mockFetchApi([haruAvatar, shizukuAvatar])
-    usePetStore.setState({ models: [haruAvatar, shizukuAvatar], modelUrl: haruAvatar.url, modelName: haruAvatar.name })
+  it('单形象紧凑态：无列表区，高度 87', () => {
+    usePetStore.setState({ models: [haruAvatar] })
     renderMenu()
+    expect(screen.queryByText('shizuku-cubism2')).toBeNull()
+    const el = screen.getByTitle('关闭菜单').closest('.pet-menu') as HTMLElement
+    expect(el.style.height).toBe('87px')
+  })
 
-    fireEvent.click(screen.getByText('删除当前形象'))
-    await waitFor(() => {
-      expect(usePetStore.getState().modelUrl).toBe(shizukuAvatar.url)
-    })
-    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>
-    expect(
-      fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/api/v1/assets/haru') && c[1]?.method === 'DELETE')
-    ).toBe(true)
+  it('超过 4 个形象列表区封顶内部滚动', () => {
+    usePetStore.setState({ models: modelN(5) })
+    renderMenu()
+    const el = screen.getByTitle('关闭菜单').closest('.pet-menu') as HTMLElement
+    expect(el.style.height).toBe(`${menuHeight(5)}px`) // 与 4 个相同
+    const list = screen.getByText('model-0').parentElement?.parentElement as HTMLElement
+    expect(list.style.maxHeight).toBe(`${listHeight(MAX_LIST_ROWS)}px`)
+  })
+
+  it('离线：状态点转蜜桃、聊天键降饱和禁用', () => {
+    usePetStore.setState({ status: 'offline' })
+    renderMenu()
+    expect(screen.getByText('后端离线')).toBeTruthy()
+    const chat = screen.getByRole('button', { name: '聊天' }) as HTMLButtonElement
+    expect(chat.disabled).toBe(true)
+    expect(chat.className).toContain('bg-[#f5f2ee]')
+  })
+
+  it('入口收敛：无导入/删除按钮', () => {
+    renderMenu()
+    expect(screen.queryByText('导入形象')).toBeNull()
+    expect(screen.queryByText('删除当前形象')).toBeNull()
   })
 })

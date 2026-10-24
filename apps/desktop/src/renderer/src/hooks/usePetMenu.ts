@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { MENU_REQUIRED_H, MENU_REQUIRED_W } from '../pet/menuLayout'
+import { MENU_REQUIRED_W, menuRequiredHeight } from '../pet/menuLayout'
 import { waitForResize } from '../live2d/waitForResize'
+import { usePetStore } from '../store/petStore'
 
 /**
  * 右键菜单状态机：
@@ -22,7 +23,8 @@ export function usePetMenu(): {
 
   const openMenu = (): void => {
     const token = ++tokenRef.current
-    void window.lovelybuddy.expandMenu(MENU_REQUIRED_W, MENU_REQUIRED_H).then(async () => {
+    const n = usePetStore.getState().models.length // 打开瞬间的模型数（模型列表在运行期稳定）
+    void window.lovelybuddy.expandMenu(MENU_REQUIRED_W, menuRequiredHeight(n)).then(async () => {
       if (token !== tokenRef.current) return // 期间已关闭/重开
       await waitForResize() // 窗口尺寸异步落地；超时兜底 300ms
       if (token !== tokenRef.current) return
