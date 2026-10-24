@@ -27,16 +27,26 @@ function dayLabel(isoLike: string | undefined, now: Date): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 
-/** 消息流分组：按本地日分组，标签今天/昨天/M月D日；无 created_at（本地新发）归今天 */
+function timeHM(d: Date): string {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+/** 分组标签：日期 + 该组首条消息时间（无 created_at 用 now） */
+function groupLabel(items: ChatItem[], now: Date): string {
+  const d = items[0].created_at ? parse(items[0]) : now
+  return `${dayLabel(items[0].created_at, now)} ${timeHM(d)}`
+}
+
+/** 消息流分组：按本地日分组，标签「今天 10:24」；无 created_at（本地新发）归今天 */
 export function groupByDay(items: ChatItem[], now: Date = new Date()): HistoryGroup[] {
-  const groups: HistoryGroup[] = []
+  const groups: { day: string; items: ChatItem[] }[] = []
   for (const it of items) {
-    const label = dayLabel(it.created_at, now)
+    const day = dayLabel(it.created_at, now)
     const last = groups[groups.length - 1]
-    if (last && last.label === label) last.items.push(it)
-    else groups.push({ label, items: [it] })
+    if (last && last.day === day) last.items.push(it)
+    else groups.push({ day, items: [it] })
   }
-  return groups
+  return groups.map((g) => ({ label: groupLabel(g.items, now), items: g.items }))
 }
 
 /** 搜索过滤：内容大小写不敏感子串；空查询原样返回 */
@@ -46,11 +56,11 @@ export function filterChatItems(items: ChatItem[], query: string): ChatItem[] {
   return items.filter((it) => it.content.toLowerCase().includes(q))
 }
 
-/** 会话卡副标题：`今天 10:24•6条`；无记录「暂无记录」 */
+/** 会话卡副标题：`今天 10:24 · 6 条`；无记录「暂无记录」 */
 export function sessionSubtitle(items: ChatItem[], now: Date = new Date()): string {
   if (items.length === 0) return '暂无记录'
   const last = parse(items[items.length - 1])
-  return `${dayLabel(items[items.length - 1].created_at, now)} ${pad(last.getHours())}:${pad(last.getMinutes())}•${items.length}条`
+  return `${dayLabel(items[items.length - 1].created_at, now)} ${timeHM(last)} · ${items.length} 条`
 }
 
 /** 导出文件名：AI桌宠对话-YYYYMMDD-HHmm.md */

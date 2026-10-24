@@ -38,7 +38,7 @@ describe('SettingsApp（独立设置窗口根组件）', () => {
     render(<SettingsApp />)
     await waitFor(() => expect(refreshMock).toHaveBeenCalled())
     expect(screen.getByText('设置')).toBeTruthy()
-    expect(screen.getByText('对话记录')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '对话记录' })).toBeTruthy() // 页标题（导航按钮同名）
     expect(screen.getByTitle('关闭')).toBeTruthy()
   })
 

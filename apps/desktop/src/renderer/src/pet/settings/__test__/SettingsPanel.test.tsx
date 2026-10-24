@@ -32,7 +32,7 @@ afterEach(() => {
 })
 
 describe('SettingsPanel', () => {
-  it('侧栏五入口渲染，仅「对话记录」可用且选中', () => {
+  it('侧栏五入口渲染，形象管理与对话记录可用，对话记录默认选中', () => {
     render(<SettingsPanel />)
     for (const name of ['形象管理', '模型与连接', '对话记录', '外观与动作', '关于']) {
       expect(screen.getByRole('button', { name })).toBeTruthy()
@@ -40,22 +40,32 @@ describe('SettingsPanel', () => {
     const active = screen.getByRole('button', { name: '对话记录' }) as HTMLButtonElement
     expect(active.className).toContain('active')
     expect(active.disabled).toBe(false)
-    expect((screen.getByRole('button', { name: '形象管理' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: '形象管理' }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: '模型与连接' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
-  it('会话卡与消息流渲染（桌宠奶油左、用户薄荷右）+ footer', () => {
+  it('页头/会话卡与消息流渲染（桌宠奶油左、用户薄荷右）+ footer', () => {
     render(<SettingsPanel />)
-    expect(screen.getByText('AI桌宠对话')).toBeTruthy()
-    expect(screen.getByText('嗨')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: '对话记录' })).toBeTruthy()
+    expect(screen.getByText('共 2 条 · 仅存于本机')).toBeTruthy()
+    // 会话卡标题 = 首条消息「嗨」；消息流里还有一条「嗨」
+    expect(screen.getAllByText('嗨')).toHaveLength(2)
     expect(screen.getByText('早呀～')).toBeTruthy()
-    expect(screen.getByText('仅保留最近 200 条•可导出为 Markdown')).toBeTruthy()
+    expect(screen.getByText('仅保留最近 200 条 · 可导出为 Markdown')).toBeTruthy()
     expect(screen.getByText('早呀～').className).toContain('assistant')
+    expect(screen.getByText('早呀～').className).toContain('bg-cream-deep')
+  })
+
+  it('点击「形象管理」切到模型页', () => {
+    render(<SettingsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: '形象管理' }))
+    expect(screen.getByRole('heading', { name: '形象管理' })).toBeTruthy()
   })
 
   it('搜索过滤消息流', () => {
     render(<SettingsPanel />)
     fireEvent.change(screen.getByPlaceholderText('搜索记录'), { target: { value: '嗨' } })
-    expect(screen.getByText('嗨')).toBeTruthy()
+    expect(screen.getAllByText('嗨').length).toBeGreaterThan(0) // 会话卡标题 + 消息
     expect(screen.queryByText('早呀～')).toBeNull()
   })
 
