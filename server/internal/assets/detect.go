@@ -126,7 +126,8 @@ func dirSize(dir string) int64 {
 	return n
 }
 
-// expressionCount 读取入口 json 的 Expressions 数组长度（Cubism 4 大写 / Cubism 2 小写通用）。
+// expressionCount 读取入口 json 的 Expressions 数组长度（encoding/json 大小写不敏感匹配，
+// Cubism 4 大写 Expressions / Cubism 2 小写 expressions 通用）。
 // 读不到/解析失败/无该字段 → 0（前端省略「N 组表情」段）。
 func expressionCount(entry string) int {
 	b, err := os.ReadFile(entry)
@@ -135,13 +136,9 @@ func expressionCount(entry string) int {
 	}
 	var doc struct {
 		Expressions []json.RawMessage `json:"Expressions"`
-		expressions []json.RawMessage `json:"expressions"`
 	}
 	if json.Unmarshal(b, &doc) != nil {
 		return 0
 	}
-	if len(doc.Expressions) > 0 {
-		return len(doc.Expressions)
-	}
-	return len(doc.expressions)
+	return len(doc.Expressions)
 }
