@@ -27,4 +27,5 @@ func Register(r *gin.Engine, pool *pgxpool.Pool, token, modelDir string, chats *
 	chatCtl := controller.NewChat(chats)
 	api.POST("/chat", chatCtl.Send)
 	api.GET("/history", chatCtl.History)
+	api.DELETE("/history", chatCtl.Clear)
 }

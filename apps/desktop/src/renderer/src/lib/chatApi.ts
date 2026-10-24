@@ -74,3 +74,12 @@ export async function getHistory(
   if (!res.ok) throw new Error(`历史读取失败: HTTP ${res.status}`)
   return (await res.json()) as { session_id: string; messages: ChatHistoryItem[] }
 }
+
+/** 清空对话记录（保留会话） */
+export async function clearHistory(rt: ApiRuntime): Promise<void> {
+  const res = await fetch(`${rt.baseUrl}/api/v1/history`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${rt.token}` }
+  })
+  if (!res.ok) throw new Error(`清空失败: HTTP ${res.status}`)
+}

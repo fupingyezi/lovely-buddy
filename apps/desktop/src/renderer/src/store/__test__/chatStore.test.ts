@@ -4,9 +4,11 @@ import { useChatStore } from '../chatStore'
 // mock chatApi：捕获 onEvent，由测试手动驱动事件流
 const streamChatMock = vi.fn()
 const getHistoryMock = vi.fn()
+const clearHistoryMock = vi.fn()
 vi.mock('../../lib/chatApi', () => ({
   streamChat: (...args: unknown[]) => streamChatMock(...args),
-  getHistory: (...args: unknown[]) => getHistoryMock(...args)
+  getHistory: (...args: unknown[]) => getHistoryMock(...args),
+  clearHistory: (...args: unknown[]) => clearHistoryMock(...args)
 }))
 
 function driveSend(events: object[]): Promise<void> {
@@ -23,6 +25,7 @@ beforeEach(() => {
   useChatStore.setState({ items: [], sessionId: null, sending: false, error: null, lastMotion: null })
   streamChatMock.mockReset()
   getHistoryMock.mockReset()
+  clearHistoryMock.mockReset()
   vi.stubGlobal('lovelybuddy', { getRuntime: () => Promise.resolve({ baseUrl: 'http://x', token: 't' }) })
 })
 
@@ -150,5 +153,24 @@ describe('chatStore.retry', () => {
     useChatStore.getState().retry()
     expect(streamChatMock.mock.calls.length).toBe(calls)
     expect(useChatStore.getState().items).toHaveLength(2)
+  })
+})
+
+describe('chatStore.clear', () => {
+  it('调后端清空并重置本地 items', async () => {
+    clearHistoryMock.mockResolvedValue(undefined)
+    useChatStore.setState({ items: [{ role: 'user', content: '嗨' }], error: 'x' })
+    await useChatStore.getState().clear()
+    expect(clearHistoryMock).toHaveBeenCalled()
+    expect(useChatStore.getState().items).toEqual([])
+    expect(useChatStore.getState().error).toBeNull()
+  })
+
+  it('后端失败置 error、不清本地', async () => {
+    clearHistoryMock.mockRejectedValue(new Error('清空失败: HTTP 500'))
+    useChatStore.setState({ items: [{ role: 'user', content: '嗨' }], error: null })
+    await useChatStore.getState().clear()
+    expect(useChatStore.getState().items).toHaveLength(1)
+    expect(useChatStore.getState().error).toBe('清空失败: HTTP 500')
   })
 })

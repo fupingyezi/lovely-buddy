@@ -134,6 +134,7 @@ func TestStreamStopPersistsPartial(t *testing.T) {
 	s := NewChatService(store, p, t.TempDir())
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	ch := s.Stream(ctx, "", "长问题")
 	var evs []Event
 	for ev := range ch {
@@ -167,6 +168,27 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 	msgs, _ := store.History(context.Background(), mustSession(t, store), 10)
 	if len(msgs) != 2 || msgs[1].Content != "半截" {
 		t.Fatalf("上游失败时已有内容应落库: %+v", msgs)
+	}
+}
+
+func TestClearHistory(t *testing.T) {
+	store := NewMemStore()
+	s := NewChatService(store, &scriptedProvider{}, t.TempDir())
+	id := mustSession(t, store)
+	if err := store.Append(context.Background(), id, "user", "嗨", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Append(context.Background(), id, "assistant", "你好呀", "happy"); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.ClearHistory(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if msgs, _ := store.History(context.Background(), id, 10); len(msgs) != 0 {
+		t.Fatalf("清空后应无消息: %+v", msgs)
+	}
+	if _, err := store.DefaultSession(context.Background()); err != nil {
+		t.Fatal("清空应保留会话行")
 	}
 }
 

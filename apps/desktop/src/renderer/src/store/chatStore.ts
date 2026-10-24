@@ -1,6 +1,6 @@
 // 聊天状态：发送（乐观插入 + SSE 累加）、停止（abort，半截保留）、历史刷新（断线恢复）。
 import { create } from 'zustand'
-import { getHistory, streamChat } from '../lib/chatApi'
+import { clearHistory, getHistory, streamChat } from '../lib/chatApi'
 
 export interface ChatItem {
   role: 'user' | 'assistant'
@@ -23,6 +23,8 @@ interface ChatState {
   lastAvatar?: string
   /** 失败重试：去掉本地末尾失败残留的用户消息后原样重发 */
   retry(): void
+  /** 清空对话记录（后端清库 + 本地重置） */
+  clear(): Promise<void>
 }
 
 let abort: AbortController | null = null
@@ -106,6 +108,16 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const text = items[tail].content
     set({ items: items.slice(0, tail), error: null })
     void get().send(text, get().lastAvatar)
+  },
+
+  async clear() {
+    try {
+      const rt = await window.lovelybuddy.getRuntime()
+      await clearHistory(rt)
+      set({ items: [], error: null })
+    } catch (e) {
+      set({ error: e instanceof Error ? e.message : String(e) })
+    }
   },
 
   async refresh() {

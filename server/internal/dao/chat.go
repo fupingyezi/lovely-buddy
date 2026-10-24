@@ -71,3 +71,9 @@ func (d *ChatDAO) History(ctx context.Context, sessionID string, limit int) ([]M
 	}
 	return msgs, rows.Err()
 }
+
+// Clear 清空某会话全部消息（保留会话行，单会话模型会话不断档）。
+func (d *ChatDAO) Clear(ctx context.Context, sessionID string) error {
+	_, err := d.pool.Exec(ctx, `DELETE FROM messages WHERE session_id = $1`, sessionID)
+	return err
+}

@@ -68,3 +68,17 @@ func (h *Chat) History(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"session_id": id, "messages": msgs})
 }
+
+// Clear DELETE /api/v1/history → 清空默认会话全部消息（保留会话行）。
+func (h *Chat) Clear(c *gin.Context) {
+	if h.svc == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "chat 服务未初始化"})
+		return
+	}
+	if err := h.svc.ClearHistory(c.Request.Context()); err != nil {
+		slog.Error("chat: 清空对话记录失败", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "清空失败"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}

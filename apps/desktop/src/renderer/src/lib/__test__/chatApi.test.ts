@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getHistory, parseSSEBlock, streamChat } from '../chatApi'
+import { clearHistory, getHistory, parseSSEBlock, streamChat } from '../chatApi'
 import type { ApiRuntime } from '../assetsApi'
 
 const rt: ApiRuntime = { baseUrl: 'http://127.0.0.1:8740', token: 'dev' }
@@ -77,5 +77,24 @@ describe('getHistory', () => {
     expect(h.session_id).toBe('s1')
     expect(h.messages).toHaveLength(2)
     expect(h.messages[1]?.motion).toBe('happy')
+  })
+})
+
+describe('clearHistory', () => {
+  afterEach(() => vi.restoreAllMocks())
+
+  it('发 DELETE 并带鉴权头', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{"ok":true}', { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await clearHistory(rt)
+    expect(fetchMock).toHaveBeenCalledWith('http://127.0.0.1:8740/api/v1/history', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer dev' }
+    })
+  })
+
+  it('非 2xx 抛错', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{"error":"清空失败"}', { status: 500 })))
+    await expect(clearHistory(rt)).rejects.toThrow('清空失败: HTTP 500')
   })
 })

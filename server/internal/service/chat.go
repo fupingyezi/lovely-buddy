@@ -42,6 +42,15 @@ func (s *ChatService) History(ctx context.Context, limit int) (string, []dao.Mes
 	return id, msgs, err
 }
 
+// ClearHistory 清空默认会话全部消息（保留会话行），供 DELETE /api/v1/history。
+func (s *ChatService) ClearHistory(ctx context.Context) error {
+	id, err := s.store.DefaultSession(ctx)
+	if err != nil {
+		return err
+	}
+	return s.store.Clear(ctx, id)
+}
+
 // Stream 一次对话全流程（编排顺序固定，勿改）：
 //  1. 未配 API key → 仅 error 事件（不建会话不落库）
 //  2. DefaultSession → meta 事件

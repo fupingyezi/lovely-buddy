@@ -59,3 +59,29 @@ func TestChatDAOAppendHistory(t *testing.T) {
 		t.Fatalf("limit 取最近一条升序: %+v", limited)
 	}
 }
+
+func TestChatDAOClear(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+	d := NewChat(pool)
+
+	var id string
+	if err := pool.QueryRow(ctx,
+		`INSERT INTO sessions (title) VALUES ('dao-clear-test') RETURNING id`).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = pool.Exec(ctx, `DELETE FROM sessions WHERE id = $1`, id) })
+
+	if err := d.Append(ctx, id, "user", "你好", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Append(ctx, id, "assistant", "你好呀", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Clear(ctx, id); err != nil {
+		t.Fatal(err)
+	}
+	if msgs, err := d.History(ctx, id, 10); err != nil || len(msgs) != 0 {
+		t.Fatalf("清空后应无消息: %v %+v", err, msgs)
+	}
+}
