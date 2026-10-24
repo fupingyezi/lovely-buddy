@@ -1,0 +1,190 @@
+package service
+
+import (
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"lovelybuddy/server/internal/configstore"
+	"lovelybuddy/server/internal/llm"
+)
+
+func newSvc(t *testing.T) (*ConfigService, *configstore.File) {
+	t.Helper()
+	t.Setenv("LOVELYBUDDY_CONFIG_FILE", filepath.Join(t.TempDir(), "config.json"))
+	file, err := configstore.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	fallback, err := llm.New("deepseek", "", "", "", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return NewConfigService(llm.NewRegistry(fallback), file, fallback), file
+}
+
+func validInput() ConnInput {
+	return ConnInput{Provider: "deepseek", Model: "deepseek-chat", APIKey: "sk-abc", BaseURL: "", MaxTokens: 0}
+}
+
+func TestValidate(t *testing.T) {
+	cases := []struct {
+		name string
+		mut  func(*TestInput)
+		bad  bool
+	}{
+		{"合法", func(*TestInput) {}, false},
+		{"未知厂商", func(in *TestInput) { in.Provider = "nope" }, true},
+		{"模型名空", func(in *TestInput) { in.Model = "  " }, true},
+		{"BaseURL 非 http(s)", func(in *TestInput) { in.BaseURL = "ftp://x" }, true},
+		{"BaseURL 远程 http 不允许", func(in *TestInput) { in.BaseURL = "http://example.com/v1" }, true},
+		{"BaseURL 本地 http 允许", func(in *TestInput) { in.BaseURL = "http://127.0.0.1:11434/v1" }, false},
+		{"MaxTokens 负数", func(in *TestInput) { in.MaxTokens = -1 }, true},
+		{"MaxTokens 超上限", func(in *TestInput) { in.MaxTokens = 1000001 }, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			base := TestInput{Provider: "deepseek", Model: "m"}
+			c.mut(&base)
+			err := Validate(base)
+			if (err != nil) != c.bad {
+				t.Fatalf("Validate = %v, 期望 bad=%v", err, c.bad)
+			}
+		})
+	}
+}
+
+func TestAddActivatesAndPersists(t *testing.T) {
+	svc, file := newSvc(t)
+	state, err := svc.Add(validInput())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.ActiveID == "" || len(state.Connections) != 1 || !state.Connections[0].Active {
+		t.Fatalf("新增应自动激活: %+v", state)
+	}
+	// 出参不得携带 key 明文，只给掩码
+	if state.Connections[0].KeyMasked == "" || !state.Connections[0].HasKey {
+		t.Fatalf("掩码/标志异常: %+v", state.Connections[0])
+	}
+	got, _ := configstore.Load()
+	if got.ActiveID == "" || got.Connections[0].APIKey != "sk-abc" {
+		t.Fatal("应已落盘且 key 明文存文件")
+	}
+	if file.ActiveID != got.ActiveID {
+		t.Fatal("内存态与磁盘应一致")
+	}
+}
+
+func TestAddDuplicate(t *testing.T) {
+	svc, _ := newSvc(t)
+	if _, err := svc.Add(validInput()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Add(validInput()); !errors.Is(err, ErrDuplicate) {
+		t.Fatalf("重复应返回 ErrDuplicate，得 %v", err)
+	}
+}
+
+func TestUpdateKeepsKeyWhenEmpty(t *testing.T) {
+	svc, _ := newSvc(t)
+	st, _ := svc.Add(validInput())
+	id := st.ActiveID
+	// key 留空 = 保留原 key（编辑表单未动 key 字段）
+	st2, err := svc.Update(id, ConnInput{Provider: "deepseek", Model: "deepseek-reasoner", APIKey: "", MaxTokens: 100})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st2.Connections[0].Model != "deepseek-reasoner" || st2.Connections[0].MaxTokens != 100 {
+		t.Fatalf("更新未生效: %+v", st2.Connections[0])
+	}
+	got, _ := configstore.Load()
+	if got.Connections[0].APIKey != "sk-abc" {
+		t.Fatal("空 key 应保留原 key")
+	}
+	// 显式传新 key = 整体替换
+	if _, err := svc.Update(id, ConnInput{Provider: "deepseek", Model: "m", APIKey: "sk-new"}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = configstore.Load()
+	if got.Connections[0].APIKey != "sk-new" {
+		t.Fatal("非空 key 应替换")
+	}
+	if _, err := svc.Update("ghost", validInput()); !errors.Is(err, ErrNotFound) {
+		t.Fatal("未知 id 应返回 ErrNotFound")
+	}
+}
+
+func TestRemoveAndSetActive(t *testing.T) {
+	svc, _ := newSvc(t)
+	svc.Add(validInput())
+	st, _ := svc.Add(ConnInput{Provider: "dashscope", Model: "qwen-plus", APIKey: "k2"})
+	second := st.Connections[1].ID
+	if _, err := svc.Remove("ghost"); !errors.Is(err, ErrNotFound) {
+		t.Fatal("未知 id 删除应返回 ErrNotFound")
+	}
+	if _, err := svc.SetActive(second); err != nil {
+		t.Fatal(err)
+	}
+	st2, err := svc.Remove(second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// 删除激活项回退剩余第一条
+	if st2.ActiveID == second || len(st2.Connections) != 1 || !st2.Connections[0].Active {
+		t.Fatalf("回退异常: %+v", st2)
+	}
+}
+
+// Test 走假 OpenAI 兼容端点：成功/401/超时 三态（不触真实网络）。
+func TestTestConnectionOK(t *testing.T) {
+	svc, _ := newSvc(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"x\"}}]}\n\ndata: [DONE]\n\n"))
+	}))
+	defer srv.Close()
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m", APIKey: "k", BaseURL: srv.URL})
+	if !res.OK {
+		t.Fatalf("期望成功，得 %+v", res)
+	}
+}
+
+func TestTestConnectionUnauthorized(t *testing.T) {
+	svc, _ := newSvc(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":{"message":"bad key"}}`, http.StatusUnauthorized)
+	}))
+	defer srv.Close()
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m", APIKey: "bad", BaseURL: srv.URL})
+	if res.OK || res.Error != "API Key 无效（401）" {
+		t.Fatalf("期望 401 文案，得 %+v", res)
+	}
+}
+
+func TestTestConnectionTimeout(t *testing.T) {
+	svc, _ := newSvc(t)
+	svc.testTimeout = 50 * time.Millisecond
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+	}))
+	defer srv.Close()
+	res := svc.Test(TestInput{Provider: "deepseek", Model: "m", APIKey: "k", BaseURL: srv.URL})
+	if res.OK || res.Error != "连接超时" {
+		t.Fatalf("期望超时文案，得 %+v", res)
+	}
+}
+
+func TestStateMasksKey(t *testing.T) {
+	svc, _ := newSvc(t)
+	st, _ := svc.Add(ConnInput{Provider: "deepseek", Model: "m", APIKey: "sk-1234567890abcdef3f2a"})
+	if got := st.Connections[0].KeyMasked; got != "sk-••••••••••••••••3f2a" {
+		t.Fatalf("掩码 = %q", got)
+	}
+	if !st.Connections[0].HasKey {
+		t.Fatal("HasKey 应为 true")
+	}
+}

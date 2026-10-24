@@ -1,0 +1,304 @@
+package service
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/url"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
+	openai "github.com/sashabaranov/go-openai"
+
+	"lovelybuddy/server/internal/configstore"
+	"lovelybuddy/server/internal/llm"
+)
+
+// ErrDuplicate 新增连接与既有连接重复（同厂商+BaseURL+模型+key）。
+var ErrDuplicate = errors.New("该连接已存在")
+
+// ErrNotFound 操作的连接 id 不存在。
+var ErrNotFound = errors.New("连接不存在")
+
+// ConnInput 新增/更新连接请求（POST /api/v1/config/connections、PUT …/:id）。
+// Tested/TestOK = 保存前「测试连接」的结果（Tested=false = 从未测试，不落 LastCheck/CheckFail）。
+type ConnInput struct {
+	Provider  string `json:"provider"`
+	BaseURL   string `json:"base_url"`
+	Model     string `json:"model"`
+	APIKey    string `json:"api_key"` // 更新时为空 = 保留原 key
+	MaxTokens int    `json:"max_tokens"`
+	Tested    bool   `json:"tested"`
+	TestOK    bool   `json:"test_ok"`
+}
+
+// TestInput 「测试连接」请求（POST /api/v1/config/test，不落盘）。
+type TestInput struct {
+	Provider  string `json:"provider"`
+	BaseURL   string `json:"base_url"`
+	Model     string `json:"model"`
+	APIKey    string `json:"api_key"`
+	MaxTokens int    `json:"max_tokens"`
+}
+
+// ConnectionOut 出参：APIKey 永不携带，只给掩码。
+type ConnectionOut struct {
+	ID        string     `json:"id"`
+	Provider  string     `json:"provider"`
+	BaseURL   string     `json:"base_url"`
+	Model     string     `json:"model"`
+	MaxTokens int        `json:"max_tokens"`
+	KeyMasked string     `json:"key_masked"`
+	HasKey    bool       `json:"has_key"`
+	LastCheck *time.Time `json:"last_check"`
+	CheckFail bool       `json:"check_fail"`
+	Active    bool       `json:"active"`
+}
+
+// ConfigState GET /api/v1/config 出参。
+type ConfigState struct {
+	ActiveID    string          `json:"active_id"`
+	Connections []ConnectionOut `json:"connections"`
+}
+
+// TestResult 连通测试结果（成功带 LatencyMS，失败带可读 Error 文案）。
+type TestResult struct {
+	OK        bool   `json:"ok"`
+	Error     string `json:"error,omitempty"`
+	LatencyMS int64  `json:"latency_ms,omitempty"`
+}
+
+// ConfigService 连接配置编排：内存态 + 落盘 + 热切换 provider。
+// 所有写操作持锁串行；每次写成功后立即落盘并 Swap 注册表。
+type ConfigService struct {
+	mu          sync.Mutex
+	file        *configstore.File
+	reg         *llm.Registry
+	fallback    llm.ChatProvider // 无激活连接时聊天回退（env/.env 默认厂商）
+	testTimeout time.Duration    // 测试可缩短
+}
+
+func NewConfigService(reg *llm.Registry, file *configstore.File, fallback llm.ChatProvider) *ConfigService {
+	return &ConfigService{file: file, reg: reg, fallback: fallback, testTimeout: 10 * time.Second}
+}
+
+// State 当前配置（key 只回掩码）。
+func (s *ConfigService) State() ConfigState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.state()
+}
+
+func (s *ConfigService) state() ConfigState {
+	out := ConfigState{ActiveID: s.file.ActiveID}
+	for _, c := range s.file.Connections {
+		out.Connections = append(out.Connections, ConnectionOut{
+			ID: c.ID, Provider: c.Provider, BaseURL: c.BaseURL, Model: c.Model, MaxTokens: c.MaxTokens,
+			KeyMasked: configstore.MaskKey(c.APIKey), HasKey: c.APIKey != "",
+			LastCheck: c.LastCheck, CheckFail: c.CheckFail, Active: c.ID == s.file.ActiveID,
+		})
+	}
+	return out
+}
+
+// Validate 校验连接输入（M3「非法配置拒绝不落盘」的格式层）。
+// BaseURL 空 = 厂商默认；http 仅允许本地端点（设计图「本地 Ollama · 127.0.0.1:11434」）。
+func Validate(in TestInput) error {
+	if _, ok := llm.Providers[in.Provider]; !ok {
+		return errors.New("未知服务商: " + in.Provider + "（可选: deepseek, dashscope, zhipu, moonshot）")
+	}
+	m := strings.TrimSpace(in.Model)
+	if m == "" {
+		return errors.New("模型名必填")
+	}
+	if len(m) > 100 {
+		return errors.New("模型名过长（≤100 字）")
+	}
+	if len(in.APIKey) > 512 {
+		return errors.New("API Key 过长（≤512 字）")
+	}
+	if in.BaseURL != "" {
+		u, err := url.Parse(in.BaseURL)
+		if err != nil || u.Host == "" {
+			return errors.New("Base URL 无效")
+		}
+		host := u.Hostname()
+		local := host == "127.0.0.1" || host == "localhost" || host == "::1"
+		if u.Scheme != "https" && !(u.Scheme == "http" && local) {
+			return errors.New("Base URL 必须为 https（本地端点可用 http）")
+		}
+	}
+	if in.MaxTokens < 0 || in.MaxTokens > 1_000_000 {
+		return errors.New("最大 Token 超出范围（0..1000000，0 = 上游默认）")
+	}
+	return nil
+}
+
+// Add 校验→查重→追加→激活→落盘→热切换。重复返回 ErrDuplicate，校验失败返回原错误。
+func (s *ConfigService) Add(input ConnInput) (ConfigState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := Validate(toTestInput(input)); err != nil {
+		return s.state(), err
+	}
+	for _, c := range s.file.Connections {
+		if c.Provider == input.Provider && c.BaseURL == input.BaseURL &&
+			c.Model == input.Model && c.APIKey == input.APIKey {
+			return s.state(), ErrDuplicate
+		}
+	}
+	c := s.newConn(input)
+	s.file.ActiveID = s.file.Add(*c).ID // ID 由 Add 内生成，取返回指针
+	if err := s.file.Save(); err != nil {
+		return s.state(), err
+	}
+	s.swapActive()
+	return s.state(), nil
+}
+
+// Update 校验→更新既有连接→激活→落盘→热切换。APIKey 空 = 保留原 key。
+func (s *ConfigService) Update(id string, input ConnInput) (ConfigState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	c := s.file.Find(id)
+	if c == nil {
+		return s.state(), ErrNotFound
+	}
+	if err := Validate(toTestInput(input)); err != nil {
+		return s.state(), err
+	}
+	c.Provider, c.BaseURL, c.Model, c.MaxTokens = input.Provider, input.BaseURL, input.Model, input.MaxTokens
+	if input.APIKey != "" {
+		c.APIKey = input.APIKey
+	}
+	s.applyTest(c, input)
+	s.file.ActiveID = id
+	if err := s.file.Save(); err != nil {
+		return s.state(), err
+	}
+	s.swapActive()
+	return s.state(), nil
+}
+
+// Remove 删除连接（激活项回退剩余第一条，configstore 内完成）。未知 id 返回 ErrNotFound。
+func (s *ConfigService) Remove(id string) (ConfigState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.file.Remove(id) {
+		return s.state(), ErrNotFound
+	}
+	if err := s.file.Save(); err != nil {
+		return s.state(), err
+	}
+	s.swapActive()
+	return s.state(), nil
+}
+
+// SetActive 切换激活连接。未知 id 返回 ErrNotFound。
+func (s *ConfigService) SetActive(id string) (ConfigState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if !s.file.SetActive(id) {
+		return s.state(), ErrNotFound
+	}
+	if err := s.file.Save(); err != nil {
+		return s.state(), err
+	}
+	s.swapActive()
+	return s.state(), nil
+}
+
+// Test 连通测试：临时建 provider 发 1-token 补全，不落盘不换注册表。
+// 失败（含校验失败）返回 OK=false + 可读文案。
+func (s *ConfigService) Test(input TestInput) TestResult {
+	if err := Validate(input); err != nil {
+		return TestResult{OK: false, Error: err.Error()}
+	}
+	p, err := llm.New(input.Provider, input.Model, input.BaseURL, input.APIKey, 1)
+	if err != nil {
+		return TestResult{OK: false, Error: err.Error()}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s.testTimeout)
+	defer cancel()
+	start := time.Now()
+	for ev := range p.StreamChat(ctx, []llm.Message{{Role: "user", Content: "hi"}}) {
+		if ev.Err != nil {
+			timedOut := ctx.Err() != nil
+			return TestResult{OK: false, Error: classifyTestErr(ev.Err, timedOut)}
+		}
+	}
+	// StreamChat 在 ctx 取消时吞错并静默关通道——此处把超时识别回来
+	if ctx.Err() != nil {
+		return TestResult{OK: false, Error: "连接超时"}
+	}
+	return TestResult{OK: true, LatencyMS: time.Since(start).Milliseconds()}
+}
+
+// classifyTestErr 上游错误 → 可读中文文案（不裸透传、不含 key/URL 明文）。
+func classifyTestErr(err error, timedOut bool) string {
+	if timedOut {
+		return "连接超时"
+	}
+	var apiErr *openai.APIError
+	if errors.As(err, &apiErr) {
+		switch apiErr.HTTPStatusCode {
+		case 401:
+			return "API Key 无效（401）"
+		case 403:
+			return "无权限（403）"
+		case 404:
+			return "模型或接口路径不存在（404）"
+		case 429:
+			return "请求过于频繁（429）"
+		case 500, 502, 503:
+			return "服务商暂时不可用（" + strconv.Itoa(apiErr.HTTPStatusCode) + "）"
+		}
+	}
+	return "连接失败: " + err.Error()
+}
+
+// newConn 由输入构造存储连接（含测试结果落盘）。
+func (s *ConfigService) newConn(input ConnInput) *configstore.Connection {
+	c := &configstore.Connection{
+		Provider: input.Provider, BaseURL: input.BaseURL, Model: input.Model,
+		MaxTokens: input.MaxTokens, APIKey: input.APIKey,
+	}
+	s.applyTest(c, input)
+	return c
+}
+
+// applyTest 落盘保存前的测试结果：Tested 且 OK → LastCheck=now；Tested 且失败 → CheckFail。
+func (s *ConfigService) applyTest(c *configstore.Connection, input ConnInput) {
+	c.LastCheck, c.CheckFail = nil, false
+	if !input.Tested {
+		return
+	}
+	if input.TestOK {
+		now := time.Now()
+		c.LastCheck = &now
+	} else {
+		c.CheckFail = true
+	}
+}
+
+// swapActive 按激活连接重建 provider 并热切换；无激活连接回退 env 默认。
+func (s *ConfigService) swapActive() {
+	active := s.file.Active()
+	if active == nil {
+		s.reg.Swap(s.fallback)
+		return
+	}
+	p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens)
+	if err != nil {
+		slog.Warn("激活连接无效，回退默认", "err", err)
+		s.reg.Swap(s.fallback)
+		return
+	}
+	s.reg.Swap(p)
+}
+
+func toTestInput(in ConnInput) TestInput {
+	return TestInput{Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, APIKey: in.APIKey, MaxTokens: in.MaxTokens}
+}
