@@ -5,6 +5,7 @@ import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
 import { modelTopLeft, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
+import { setModelBase } from './windowGeometry'
 
 export interface PetModel {
   readonly name: string
@@ -52,6 +53,7 @@ export async function releasePetModel(url: string): Promise<void> {
   } catch {
     // 加载失败无需销毁
   }
+  setModelBase(null) // 模型已释放：几何 store 回到无基准状态
 }
 
 async function createPetModel(canvas: HTMLCanvasElement, url: string, name: string): Promise<PetModel> {
@@ -81,6 +83,11 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   model.scale.set(scale)
   model.anchor.set(0.5, 1)
   model.position.set(window.innerWidth / 2, window.innerHeight - 8)
+  // 发布模型基准窗口尺寸（几何 store）：气泡/菜单靠 size.h - base.h 求头顶窗口坐标。
+  // 加载中被 releasePetModel 提前释放（快速连续切模型）则不发布，避免旧模型覆盖新基准。
+  if (cache.get(url)) {
+    setModelBase({ w: winW, h: winH })
+  }
   app.stage.addChild(model)
 
   // 窗口 resize（菜单展开/收起）时保持模型屏幕位置：展开/收起只移动窗口左/上边
