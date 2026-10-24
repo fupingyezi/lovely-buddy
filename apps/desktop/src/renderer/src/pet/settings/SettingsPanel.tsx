@@ -1,8 +1,9 @@
 import { useState, type ReactElement } from 'react'
 import ChatHistoryPage from './ChatHistoryPage'
+import ConnectionPage from './ConnectionPage'
 import ModelPage from './ModelPage'
 
-type PageId = 'chat' | 'model'
+type PageId = 'chat' | 'model' | 'connection'
 
 interface NavItem {
   name: string
@@ -26,7 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     name: '模型与连接',
-    page: null,
+    page: 'connection',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path
@@ -76,8 +77,8 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 /**
- * 设置面板壳（独立无边框窗口内的主区）：184 侧栏五入口（本期「形象管理/对话记录」
- * 可用，模型与连接 M3、外观与动作/关于 M+ 占位禁用）+ 内容区按页切换。
+ * 设置面板壳（独立无边框窗口内的主区）：184 侧栏五入口（本期「形象管理/模型与连接/对话记录」
+ * 可用，外观与动作/关于 M3+ 占位禁用）+ 内容区按页切换。
  * 窗口关闭走标题条关闭按钮 / Esc（SettingsApp），面板本身不含关闭钮。
  */
 export default function SettingsPanel(): ReactElement {
@@ -119,7 +120,7 @@ export default function SettingsPanel(): ReactElement {
         </nav>
       </aside>
       <main className="flex-1 min-w-0 flex flex-col gap-(--sp-3) p-5">
-        {page === 'chat' ? <ChatHistoryPage /> : <ModelPage />}
+        {page === 'chat' ? <ChatHistoryPage /> : page === 'model' ? <ModelPage /> : <ConnectionPage />}
       </main>
     </div>
   )

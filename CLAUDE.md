@@ -19,7 +19,7 @@
 - `apps/desktop`（Electron）：`src/main` 主进程入口（生命周期装配/托盘/CSP/设置持久化）；`src/bridge` 渲染↔主通信（`lovelybuddy:*` IPC、`l2d://` 协议）；`src/window` 窗口服务（穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口/独立设置窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display + Tailwind v4
   - `live2d/`：interact（screenX/screenY 拖拽/tap）、windowAnchor（窗口 resize 时模型位稳平移）、windowGeometry（窗口尺寸+模型基准尺寸单一事实来源）、waitForResize（等 resize 落地，超时兜底）
   - `hooks/`：usePassthrough（穿透状态机）、usePetMenu、useChatPanel、useTypewriter（测试随功能目录 `__test__/`）
-  - `pet/`：menuLayout/PetMenu（形象菜单：高度自适应 menuHeight(n) 单一事实来源、缩略行切换、渐变聊天键离线禁用、入口收敛到设置）、chat/（输入条三态+错误重试、气泡锚定头部左上角按绘制部件实际边界+弹出动画，发完自动收起、气泡只弹本会话流式回复）、settings/（独立无边框设置窗口：对话记录页搜索/导出/清空与形象管理页导入/删除，导入删除经 notify-models-changed 广播跨窗同步；nav 其余项 M3+ 禁用）
+  - `pet/`：menuLayout/PetMenu（形象菜单：高度自适应 menuHeight(n) 单一事实来源、缩略行切换、渐变聊天键离线禁用、入口收敛到设置）、chat/（输入条三态+错误重试、气泡锚定头部左上角按绘制部件实际边界+弹出动画，发完自动收起、气泡只弹本会话流式回复）、settings/（独立无边框设置窗口：对话记录页搜索/导出/清空、形象管理页导入/删除经 notify-models-changed 广播跨窗同步、模型与连接页连接增删改/测试连接/保存启用——经 /api/v1/config 注入对话 API、热切换免重启，key 只存本机 JSON 0600；nav 其余项（外观与动作/关于）M3+ 禁用）
   - `styles/tokens.css` 设计 token（design-v1 单一来源，Tailwind v4 `@theme` 生成工具类）；`styles/index.css` 仅透明窗壳/气泡相位变体/app-region；`store/petStore.ts` 全局状态；`lib/assetsApi.ts` HTTP 客户端
 - `server`（Go + gin）：`/healthz` 公开，`/api/v1/*` token 中间件；`internal/assets` 形象探测/导入/删除；`internal/db` pgvector
 - `docker-compose.yml`：lovelybuddy-postgres（pgvector），仅绑 127.0.0.1

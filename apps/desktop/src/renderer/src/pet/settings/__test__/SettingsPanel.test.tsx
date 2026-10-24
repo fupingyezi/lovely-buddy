@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingsPanel from '../SettingsPanel'
 import { useChatStore } from '../../../store/chatStore'
+import { useConnectionStore } from '../../../store/connectionStore'
 
 const clearMock = vi.fn()
 const exportFileMock = vi.fn()
@@ -32,7 +33,7 @@ afterEach(() => {
 })
 
 describe('SettingsPanel', () => {
-  it('侧栏五入口渲染，形象管理与对话记录可用，对话记录默认选中', () => {
+  it('侧栏五入口渲染，形象管理/模型与连接/对话记录可用，对话记录默认选中', () => {
     render(<SettingsPanel />)
     for (const name of ['形象管理', '模型与连接', '对话记录', '外观与动作', '关于']) {
       expect(screen.getByRole('button', { name })).toBeTruthy()
@@ -41,7 +42,7 @@ describe('SettingsPanel', () => {
     expect(active.className).toContain('active')
     expect(active.disabled).toBe(false)
     expect((screen.getByRole('button', { name: '形象管理' }) as HTMLButtonElement).disabled).toBe(false)
-    expect((screen.getByRole('button', { name: '模型与连接' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: '模型与连接' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('页头/会话卡与消息流渲染（桌宠奶油左、用户薄荷右）+ footer', () => {
@@ -60,6 +61,14 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel />)
     fireEvent.click(screen.getByRole('button', { name: '形象管理' }))
     expect(screen.getByRole('heading', { name: '形象管理' })).toBeTruthy()
+  })
+
+  it('点击「模型与连接」切到连接页', () => {
+    useConnectionStore.setState({ config: { active_id: '', connections: [] } })
+    render(<SettingsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: '模型与连接' }))
+    expect(screen.getByRole('heading', { name: '模型与连接' })).toBeTruthy()
+    expect(screen.getByText('尚未配置连接，添加后即可对话')).toBeTruthy()
   })
 
   it('搜索过滤消息流', () => {

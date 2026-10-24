@@ -1,6 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import SettingsPanel from './SettingsPanel'
 import { useChatStore } from '../../store/chatStore'
+import { useConnectionStore } from '../../store/connectionStore'
 import { usePetStore } from '../../store/petStore'
 
 /**
@@ -15,6 +16,10 @@ export default function SettingsApp(): ReactElement {
 
   useEffect(() => {
     void usePetStore.getState().loadModels()
+  }, [])
+
+  useEffect(() => {
+    void useConnectionStore.getState().load()
   }, [])
 
   useEffect(() => {
