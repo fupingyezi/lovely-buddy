@@ -18,8 +18,8 @@
 
 - `apps/desktop`（Electron）：`src/main` 主进程（窗口/托盘/穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display
   - `live2d/`：interact（screenX/screenY 拖拽/tap）、windowAnchor（窗口 resize 时模型位稳平移）
-  - `pet/`：usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）
-  - `store/petStore.ts` 全局状态；`lib/assetsApi.ts` HTTP 客户端
+  - `pet/`：usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）、chat/（输入条三态+错误重试、气泡锚定头部左上角+弹出动画）、settings/（设置面板：对话记录搜索/导出/清空）
+  - `styles/tokens.css` 设计 token（design-v1，色板/圆角/投影/字号单一来源）；`store/petStore.ts` 全局状态；`lib/assetsApi.ts` HTTP 客户端
 - `server`（Go + gin）：`/healthz` 公开，`/api/v1/*` token 中间件；`internal/assets` 形象探测/导入/删除；`internal/db` pgvector
 - `docker-compose.yml`：lovelybuddy-postgres（pgvector），仅绑 127.0.0.1
 

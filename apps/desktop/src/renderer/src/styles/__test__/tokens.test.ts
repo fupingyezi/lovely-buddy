@@ -65,4 +65,11 @@ describe('设计 token 契约', () => {
       '24px'
     ])
   })
+
+  it('index.css 不残留旧深色主题色值（全部迁移 token）', () => {
+    const css = cssOf('index')
+    for (const legacy of ['rgba(30, 30, 46', 'rgba(127, 29, 29', '#66cccc', '#4a6cf7', '#4ade80', '#f87171', '#fca5a5', '#fecaca', '#ff8080']) {
+      expect(css, `残留 ${legacy}`).not.toContain(legacy)
+    }
+  })
 })

@@ -36,7 +36,9 @@ apps/desktop/                Electron
 └── src/renderer/            React 18 + zustand + pixi.js v7 + pixi-live2d-display
     ├── live2d/              模型加载；interact（screenX/screenY 拖拽/tap，屏幕坐标防漂移）；
     │                        windowAnchor（窗口 resize 时模型位稳平移）
-    ├── pet/                 usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单）
+    ├── pet/                 usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单）、
+    │                        chat/（输入条、气泡）、settings/（设置面板·对话记录）
+    ├── styles/tokens.css    设计 token（design-v1 规范单一来源）
     ├── store/petStore.ts    全局状态（模型列表/当前形象/后端状态）
     └── lib/assetsApi.ts     HTTP API 客户端（token 由主进程通过 IPC 提供）
 
