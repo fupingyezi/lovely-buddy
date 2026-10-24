@@ -92,14 +92,23 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
       : { right: layout.right, bottom: layout.bottom, maxWidth: layout.maxWidth, maxHeight: layout.maxHeight }
   return (
     <div className={classes} style={style} aria-live="polite">
-      <div className="speech-bubble-body max-w-full overflow-y-auto px-4 py-(--sp-2) rounded-bubble bg-surface text-ink text-(--fs-body) leading-[1.6] whitespace-pre-wrap break-words shadow-mint animate-bubble-pop origin-bottom-right">
+      <div className="speech-bubble-body max-w-full overflow-y-auto p-[18px] rounded-[26px_26px_8px_26px] bg-surface text-ink text-[15px] leading-[25px] whitespace-pre-wrap break-words shadow-bubble animate-bubble-pop origin-bottom-right">
         {shown}
       </div>
-      {/* right 与 bubbleLayout.TAIL_INSET 对齐 */}
-      <span
-        className="speech-bubble-tail absolute right-[24px] -bottom-1.5 size-3 bg-surface rounded-bl rotate-45"
+      {/* right-0 与 bubbleLayout.TAIL_INSET=38 对齐（尾巴右缘=气泡右缘）；-bottom-7 伸出 28px（TAIL_H） */}
+      <svg
+        className="speech-bubble-tail pointer-events-none absolute right-0 -bottom-7"
+        width="38"
+        height="30"
+        viewBox="0 0 38 30"
+        fill="none"
         aria-hidden="true"
-      />
+      >
+        <path
+          d="M0 11C2 4 8 0 16 0H31C36 0 38 3 38 8V21C38 26 35 29 30 30H13C6 30 1 25 0 18V11Z"
+          fill="var(--color-surface)"
+        />
+      </svg>
     </div>
   )
 }
