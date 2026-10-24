@@ -17,7 +17,7 @@ function varValue(css: string, name: string): string {
   return m[1].trim()
 }
 
-// 设计 token 契约（可爱清新视觉方案 v0.1 + design-v1/README.md「设计 token」+ 图 04，值即线上规范）
+// 设计 token 契约（值即线上规范）
 const TOKENS: Record<string, string> = {
   'color-primary': '#5bc8a6',
   'color-primary-deep': '#35a483',
@@ -56,14 +56,14 @@ const TOKENS: Record<string, string> = {
 }
 
 describe('设计 token 契约', () => {
-  it('色板/圆角/字号与 design-v1 规范一致', () => {
+  it('色板/圆角/字号 token 值正确', () => {
     const css = cssOf('tokens')
     for (const [name, value] of Object.entries(TOKENS)) {
       expect(varValue(css, name), `--${name}`).toBe(value)
     }
   })
 
-  it('投影与描边 token 与规范一致', () => {
+  it('投影与描边 token 值正确', () => {
     const css = cssOf('tokens')
     expect(varValue(css, 'shadow-mint')).toBe('0 12px 32px -6px rgba(91, 200, 166, 0.12)')
     expect(varValue(css, 'shadow-mint-deep')).toBe('0 14px 36px -6px rgba(91, 200, 166, 0.2)')

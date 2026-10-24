@@ -1,4 +1,4 @@
-/** 流式结束（sending=false）后气泡静默多久淡出（图 01） */
+/** 流式结束（sending=false）后气泡静默多久淡出 */
 export const HIDE_AFTER_MS = 8000
 /** 淡出动画时长（CSS .speech-bubble--out transition 同步） */
 export const FADE_MS = 200

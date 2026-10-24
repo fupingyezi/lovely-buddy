@@ -3,7 +3,7 @@ import { useChatStore } from '../../store/chatStore'
 import { exportFileName, filterChatItems, groupByDay, historyToMarkdown, sessionSubtitle } from './historyExport'
 
 /**
- * 设置·对话记录页（图 03）：页头（标题+meta+搜索/导出/清空）+ 会话卡 + 消息流 + 页脚。
+ * 设置·对话记录页：页头（标题+meta+搜索/导出/清空）+ 会话卡 + 消息流 + 页脚。
  * 历史只读：导出走 exportFile IPC（成功短暂变「已导出」）；清空二次确认后通知主进程
  * 广播（跨窗同步）。会话卡标题取首条消息（无记录回退产品名）。
  */

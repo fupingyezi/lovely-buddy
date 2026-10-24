@@ -1,4 +1,4 @@
-// 菜单尺寸（图 07）：高度随形象数自适应——单一事实来源 menuHeight(n)，
+// 菜单尺寸：高度随形象数自适应——单一事实来源 menuHeight(n)，
 // usePetMenu（扩展量）与 PetMenu（渲染高度/menuTop）都引用它，避免固定高度
 // 与渲染内容脱节（旧版 320 固定高度，底部留白会拦截鼠标）。
 export const MENU_W = 260

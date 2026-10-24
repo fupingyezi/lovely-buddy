@@ -76,9 +76,9 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 /**
- * 设置面板壳（独立无边框窗口内的主区，图 03）：184 侧栏五入口（本期「形象管理/对话记录」
+ * 设置面板壳（独立无边框窗口内的主区）：184 侧栏五入口（本期「形象管理/对话记录」
  * 可用，模型与连接 M3、外观与动作/关于 M+ 占位禁用）+ 内容区按页切换。
- * 窗口关闭走标题条关闭按钮 / Esc（SettingsApp），面板本身不含关闭钮（图 03）。
+ * 窗口关闭走标题条关闭按钮 / Esc（SettingsApp），面板本身不含关闭钮。
  */
 export default function SettingsPanel(): ReactElement {
   const [page, setPage] = useState<PageId>('chat')

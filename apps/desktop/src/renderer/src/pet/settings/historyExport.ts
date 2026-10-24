@@ -68,7 +68,7 @@ export function exportFileName(d: Date): string {
   return `AI桌宠对话-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.md`
 }
 
-/** 对话记录 → Markdown（图 03 footer「可导出为 Markdown」） */
+/** 对话记录 → Markdown */
 export function historyToMarkdown(items: ChatItem[]): string {
   const lines = ['# AI桌宠对话记录', '']
   const d = new Date()

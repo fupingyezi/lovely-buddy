@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 
-/** 设置窗口尺寸（图 03 的 8:5 比例，正常桌面应用大小） */
+/** 设置窗口尺寸（8:5 比例，正常桌面应用大小） */
 export const SETTINGS_W = 960
 export const SETTINGS_H = 600
 const SETTINGS_MIN_W = 720
