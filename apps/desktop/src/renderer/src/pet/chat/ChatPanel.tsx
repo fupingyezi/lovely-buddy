@@ -39,12 +39,12 @@ export default function ChatPanel(): ReactElement {
       onContextMenu={(e) => e.preventDefault()}
     >
       <div
-        className={`flex items-center gap-(--sp-1) h-16 pl-4 pr-2.5 rounded-input bg-surface shadow-mint transition-[border-color,box-shadow] duration-[150ms] ease-standard focus-within:border-[1.5px] focus-within:border-primary focus-within:shadow-focus ${
+        className={`flex items-center gap-2 h-16 p-3 rounded-input bg-surface shadow-input transition-[border-color,box-shadow] duration-[150ms] ease-standard focus-within:border-[1.5px] focus-within:border-primary focus-within:shadow-focus ${
           typing ? 'border border-primary-soft' : 'border border-(--color-border) border-x-transparent'
         }`}
       >
         <input
-          className="flex-1 min-w-0 bg-transparent text-ink text-(--fs-body) outline-none placeholder:text-ink-3 disabled:text-ink-2"
+          className="flex-1 min-w-0 bg-transparent text-ink text-[14px] outline-none placeholder:text-ink-3 disabled:text-ink-2"
           autoFocus
           maxLength={4000}
           disabled={sending}
@@ -53,11 +53,11 @@ export default function ChatPanel(): ReactElement {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={onKeyDown}
         />
-        {typing && <span className="shrink-0 text-ink-3 text-(--fs-aux)">{value.length}/4000 个字</span>}
+        {typing && <span className="shrink-0 text-ink-3 text-[10px]">{value.length}/4000</span>}
         {sending ? (
           <button
             type="button"
-            className="shrink-0 px-5 py-(--sp-1) border border-(--color-accent) rounded-pill bg-stop-bg text-accent-ink text-(--fs-body) cursor-pointer transition-[transform,filter,box-shadow,background] duration-[120ms] ease-standard hover:-translate-y-px active:scale-[0.96]"
+            className="shrink-0 h-10 w-[78px] rounded-pill border border-[#ef8fa8] bg-stop-bg text-accent-ink text-xs font-medium cursor-pointer transition-[transform,filter] duration-[120ms] ease-standard hover:-translate-y-px active:scale-[0.96]"
             onClick={stop}
           >
             停止
@@ -65,21 +65,31 @@ export default function ChatPanel(): ReactElement {
         ) : (
           <button
             type="button"
-            className="shrink-0 px-5 py-(--sp-1) rounded-pill bg-primary text-white text-(--fs-body) cursor-pointer transition-[transform,filter,box-shadow,background] duration-[120ms] ease-standard enabled:hover:-translate-y-px enabled:hover:shadow-mint-deep enabled:active:scale-[0.96] enabled:active:bg-primary-press disabled:saturate-[0.6] disabled:cursor-default"
+            className="size-10 shrink-0 flex items-center justify-center rounded-full bg-linear-to-r from-[#70d9b8] to-mint-end text-white cursor-pointer transition-[transform,filter] duration-[120ms] ease-standard enabled:hover:-translate-y-px enabled:active:scale-[0.96] disabled:saturate-[0.4] disabled:cursor-default"
             disabled={!typing}
             onClick={submit}
+            aria-label="发送"
           >
-            发送
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M14.5 1.5L7 9M14.5 1.5L9.5 14.5L7 9L1.5 6.5L14.5 1.5Z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           </button>
         )}
       </div>
       {error !== null && (
         <button
           type="button"
-          className="self-start px-1 bg-transparent text-accent-ink text-(--fs-aux) text-left cursor-pointer"
+          className="self-start flex items-center gap-1.5 px-1 bg-transparent cursor-pointer text-left"
           onClick={retry}
         >
-          {error}·点击重试
+          <span className="size-1.5 shrink-0 rounded-full bg-[#f08fa4]" />
+          <span className="text-[11px] leading-[17px] text-[#a6797f]">{error}·点击重试</span>
         </button>
       )}
     </div>

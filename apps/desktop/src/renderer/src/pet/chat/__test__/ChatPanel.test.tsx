@@ -37,7 +37,7 @@ describe('ChatPanel', () => {
     render(<ChatPanel />)
     const input = screen.getByPlaceholderText('和我说点什么…') as HTMLInputElement
     fireEvent.change(input, { target: { value: '你好' } })
-    expect(screen.getByText('2/4000 个字')).toBeTruthy()
+    expect(screen.getByText('2/4000')).toBeTruthy()
     expect((screen.getByRole('button', { name: '发送' }) as HTMLButtonElement).disabled).toBe(false)
     fireEvent.keyDown(input, { key: 'Enter', isComposing: true } as EventInit)
     expect(sendMock).not.toHaveBeenCalled() // 组词中
@@ -61,10 +61,12 @@ describe('ChatPanel', () => {
     expect((screen.getByPlaceholderText('和我说点什么…') as HTMLInputElement).maxLength).toBe(4000)
   })
 
-  it('错误态：输入条下方一行提示，点击重试', () => {
+  it('错误态：圆点 + 11px 提示文案，点击重试', () => {
     useChatStore.setState({ error: '后端离线' })
     render(<ChatPanel />)
-    fireEvent.click(screen.getByRole('button', { name: '后端离线·点击重试' }))
+    const note = screen.getByText('后端离线·点击重试')
+    expect(note.className).toContain('text-[11px]')
+    fireEvent.click(note)
     expect(retryMock).toHaveBeenCalled()
   })
 })
