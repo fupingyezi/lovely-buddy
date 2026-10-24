@@ -17,3 +17,6 @@ node_modules/
 # 系统
 .DS_Store
 *.log
+
+# 设计图
+docs/design-v1
