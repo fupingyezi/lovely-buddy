@@ -16,3 +16,8 @@ export interface Size {
 export function shiftToKeepScreenPosition(pos: Pos, prev: Size, next: Size): Pos {
   return { x: pos.x + (next.w - prev.w), y: pos.y + (next.h - prev.h) }
 }
+
+/** 模型包围盒左上角（窗口坐标）：模型锚点 (0.5,1) 站在 (centerX, footY)，显示尺寸 w×h。 */
+export function modelTopLeft(centerX: number, footY: number, w: number, h: number): Pos {
+  return { x: centerX - w / 2, y: footY - h }
+}

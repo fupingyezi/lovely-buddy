@@ -4,12 +4,15 @@ import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
-import { shiftToKeepScreenPosition } from './windowAnchor'
+import { modelTopLeft, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
 
 export interface PetModel {
   readonly name: string
   readonly x: number
   readonly y: number
+  /** 模型包围盒左上角（窗口坐标）：气泡尾巴锚点。getter 实时读 position，
+   *  windowAnchor 位移后仍准确（多面板扩展量叠加时天然正确）。 */
+  readonly anchor: Pos
   /** 画布坐标（窗口坐标系）命中检测，模型外 false */
   hitTest(sx: number, sy: number): boolean
   moveTo(x: number, y: number): void
@@ -67,6 +70,8 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   const scale = targetHeight / model.height
   const winW = Math.ceil(model.width * scale)
   const winH = Math.ceil(model.height * scale) + 8
+  const displayW = winW
+  const displayH = winH - 8 // 窗口高 = 模型高 + 8px 站台偏移
   if (Math.abs(window.innerWidth - winW) > 2 || Math.abs(window.innerHeight - winH) > 2) {
     window.lovelybuddy.resizeWindow(winW, winH)
     await nextResize()
@@ -106,6 +111,9 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
     },
     get y() {
       return model.position.y
+    },
+    get anchor() {
+      return modelTopLeft(model.position.x, model.position.y, displayW, displayH)
     },
     hitTest(sx, sy) {
       // 1) 模型自带 HitAreas（如 shizuku）：fork 的 hitTest 接受世界坐标（内部 toModelPosition）

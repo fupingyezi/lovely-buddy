@@ -12,6 +12,7 @@ function fakePet(): PetModel {
     name: 'fake',
     x: 0,
     y: 0,
+    anchor: { x: 0, y: 0 },
     hitTest: (x, y) => x < 100 && y < 100,
     moveTo: vi.fn(),
     playIntent: () => Promise.resolve(true),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shiftToKeepScreenPosition } from '../windowAnchor'
+import { modelTopLeft, shiftToKeepScreenPosition } from '../windowAnchor'
 
 // haru 模型窗口 164×227；菜单展开向左上扩 (120, 532)
 describe('shiftToKeepScreenPosition', () => {
@@ -18,5 +18,12 @@ describe('shiftToKeepScreenPosition', () => {
   it('尺寸不变时位置不变', () => {
     const pos = shiftToKeepScreenPosition({ x: 82, y: 219 }, { w: 164, h: 227 }, { w: 164, h: 227 })
     expect(pos).toEqual({ x: 82, y: 219 })
+  })
+})
+
+describe('modelTopLeft', () => {
+  it('modelTopLeft：中心锚点 (0.5,1) 站在 (centerX, footY)，显示尺寸 w×h → 包围盒左上角', () => {
+    expect(modelTopLeft(200, 700, 400, 600)).toEqual({ x: 0, y: 100 })
+    expect(modelTopLeft(164, 500, 164, 400)).toEqual({ x: 82, y: 100 })
   })
 })
