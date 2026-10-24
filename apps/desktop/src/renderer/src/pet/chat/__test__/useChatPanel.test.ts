@@ -21,6 +21,10 @@ describe('useChatPanel', () => {
   })
   afterEach(() => vi.unstubAllGlobals())
 
+  it('扩展高度为 120（输入条 64 + 错误行 24 + 边距与头顶呼吸）', () => {
+    expect(CHAT_H).toBe(120)
+  })
+
   it('openPanel 用 chat 键位向上扩展 CHAT_H，完成后 open=true', async () => {
     const { result } = renderHook(() => useChatPanel())
     act(() => result.current.openPanel())

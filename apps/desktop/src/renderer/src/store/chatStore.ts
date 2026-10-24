@@ -19,6 +19,10 @@ interface ChatState {
   send(text: string, avatar?: string): Promise<void>
   stop(): void
   refresh(): Promise<void>
+  /** 最近一次发送使用的形象 slug（retry 复用） */
+  lastAvatar?: string
+  /** 失败重试：去掉本地末尾失败残留的用户消息后原样重发 */
+  retry(): void
 }
 
 let abort: AbortController | null = null
@@ -35,6 +39,8 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     const msg = text.trim()
     if (!msg || get().sending) return
     set((s) => ({
+      ...s,
+      lastAvatar: avatar,
       items: [...s.items, { role: 'user', content: msg }, { role: 'assistant', content: '' }],
       sending: true,
       error: null
@@ -81,6 +87,25 @@ export const useChatStore = create<ChatState>()((set, get) => ({
 
   stop() {
     abort?.abort()
+  },
+
+  // 重试：离线/请求失败后点击错误行。常见失败=后端未收到（未落库），去掉本地残留
+  // 用户消息不留重；服务端已收而客户端失败的罕见重复由断线恢复 refresh 对齐。
+  retry() {
+    if (get().sending) return
+    const items = get().items
+    let tail = items.length
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (items[i].role === 'assistant' && items[i].content !== '') break // 已有成功回复
+      if (items[i].role === 'user') {
+        tail = i
+        break
+      }
+    }
+    if (tail >= items.length) return
+    const text = items[tail].content
+    set({ items: items.slice(0, tail), error: null })
+    void get().send(text, get().lastAvatar)
   },
 
   async refresh() {

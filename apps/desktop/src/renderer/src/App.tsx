@@ -16,7 +16,7 @@ export default function App(): ReactElement {
   const loadModels = usePetStore((s) => s.loadModels)
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
   const { menu, openMenu, closeMenu } = usePetMenu()
-  const { open: chatOpen, openPanel, closePanel } = useChatPanel()
+  const { open: chatOpen, openPanel } = useChatPanel()
 
   // 后端健康轮询（5s）
   useEffect(() => {
@@ -73,7 +73,7 @@ export default function App(): ReactElement {
           else openMenu()
         }}
       />
-      {chatOpen && <ChatPanel onClose={closePanel} />}
+      {chatOpen && <ChatPanel />}
       <SpeechBubble panelOpen={chatOpen} />
       {modelUrl === null && !placeholderDismissed && (
         <div className="placeholder" data-interactive>

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useChatStore } from '../../store/chatStore'
 
-/** 聊天区在窗口上方扩展的高度（px）：历史列表 + 输入框 */
-export const CHAT_H = 240
+/** 聊天区在窗口上方扩展的高度（px）：输入条 64 + 错误行 24 + 上边距 8 + 行距 8 + 头顶呼吸 16 */
+export const CHAT_H = 120
 
 /**
  * 聊天面板状态机（对照 usePetMenu）：

@@ -252,115 +252,128 @@ body,
   word-break: break-all;
 }
 
-/* ===== 聊天面板（chat 扩展区，靠窗口顶部）===== */
-.chat-panel {
+/* ===== 对话输入条（chat 扩展区顶部：单行输入 + 发送/停止 + 错误重试行）===== */
+.chat-input-wrap {
   position: fixed;
   z-index: 90;
-  top: 8px;
-  left: 8px;
-  right: 8px;
-  height: 224px; /* CHAT_H 240 - 上下留白 */
+  top: var(--sp-1);
+  left: var(--sp-1);
+  right: var(--sp-1);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 14px;
-  background: rgba(30, 30, 46, 0.92);
-  color: #eee;
-  font-size: 12px;
+  gap: var(--sp-1);
   user-select: none;
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
-.chat-head {
+.chat-input {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  color: #999;
+  gap: var(--sp-1);
+  height: 64px;
+  padding: 0 10px 0 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-input);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-mint);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  /* 状态 A 默认：仅上下描边（左右留口，图 02） */
+  border-left-color: transparent;
+  border-right-color: transparent;
 }
 
-.chat-close {
+/* 状态 B 输入中：完整薄荷描边 */
+.chat-input--typing {
+  border-color: #68c0a0;
+}
+
+/* 焦点：描边转薄荷绿 1.5px，外侧 3px 柔光（图 04） */
+.chat-input:focus-within {
+  border: 1.5px solid var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(91, 200, 166, 0.25);
+}
+
+.chat-input input {
+  flex: 1;
+  min-width: 0;
   border: none;
   background: transparent;
-  color: #999;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.chat-messages {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
-  user-select: text;
-}
-
-.chat-empty {
-  color: #777;
-  text-align: center;
-  margin-top: 40px;
-}
-
-.chat-msg {
-  max-width: 85%;
-  padding: 6px 10px;
-  border-radius: 10px;
-  line-height: 1.5;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-.chat-msg.user {
-  align-self: flex-end;
-  background: #4a6cf7;
-  color: #fff;
-}
-
-.chat-msg.assistant {
-  align-self: flex-start;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.chat-error {
-  color: #ff8080;
-  font-size: 11px;
-}
-
-.chat-input-row {
-  display: flex;
-  gap: 6px;
-}
-
-.chat-input-row input {
-  flex: 1;
-  padding: 6px 10px;
-  border: none;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #eee;
-  font-size: 12px;
+  color: var(--color-ink);
+  font-size: var(--fs-body);
   outline: none;
 }
 
-.chat-input-row input:focus {
-  background: rgba(255, 255, 255, 0.16);
+.chat-input input::placeholder {
+  color: var(--color-ink-3);
 }
 
-.chat-input-row button {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 8px;
-  background: #4a6cf7;
-  color: #fff;
-  font-size: 12px;
+.chat-input input:disabled {
+  color: var(--color-ink-2);
+}
+
+.chat-count {
+  flex: none;
+  color: var(--color-ink-3);
+  font-size: var(--fs-aux);
+}
+
+.chat-send,
+.chat-stop {
+  flex: none;
+  padding: 8px 20px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-body);
   cursor: pointer;
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
-.chat-input-row .chat-stop {
-  background: rgba(255, 255, 255, 0.12);
+.chat-send {
+  border: none;
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* 禁用：输入为空发送键降饱和 40%（仍可聚焦输入框，图 04） */
+.chat-send:disabled {
+  filter: saturate(0.6);
+  cursor: default;
+}
+
+/* 悬停：上浮 1px、投影加深；按下：缩放 0.96、主色加深 8%、松开 120ms 回弹（图 04） */
+.chat-send:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-mint-deep);
+}
+
+.chat-send:not(:disabled):active {
+  transform: scale(0.96);
+  background: var(--color-primary-press);
+}
+
+/* 状态 C 生成中：蜜桃停止键（图 02） */
+.chat-stop {
+  border: 1px solid var(--color-accent);
+  background: var(--color-stop-bg);
+  color: var(--color-accent-ink);
+}
+
+.chat-stop:hover {
+  transform: translateY(-1px);
+}
+
+.chat-stop:active {
+  transform: scale(0.96);
+}
+
+/* 错误态：输入条下方一行提示，点击可重试（图 02） */
+.chat-error {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 0 4px;
+  color: var(--color-accent-ink);
+  font-size: var(--fs-aux);
+  text-align: left;
+  cursor: pointer;
 }
 
 /* ===== 打字机气泡（尾巴锚定头部左上角上方 16px，纯展示不吞鼠标）===== */

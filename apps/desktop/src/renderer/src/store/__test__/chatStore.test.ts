@@ -111,3 +111,44 @@ describe('chatStore.refresh', () => {
     expect(useChatStore.getState().items).toHaveLength(1)
   })
 })
+
+describe('chatStore.retry', () => {
+  it('去掉末尾失败残留的用户消息，用同一形象重发', async () => {
+    await driveSend([{ type: 'meta', session_id: 's1' }, { type: 'error', error: '后端离线' }])
+    expect(useChatStore.getState().items).toEqual([{ role: 'user', content: '嗨' }])
+    streamChatMock.mockImplementation(() => Promise.resolve()) // 重发不重放旧事件
+    useChatStore.getState().retry()
+    // send 的乐观插入在首个 await 之前同步完成：残留已移除、新 user+占位已插入
+    expect(useChatStore.getState().items).toEqual([
+      { role: 'user', content: '嗨' },
+      { role: 'assistant', content: '' }
+    ])
+    await vi.waitFor(() => expect(streamChatMock).toHaveBeenCalledTimes(2))
+    expect(streamChatMock).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { avatar: 'haru', message: '嗨' },
+      expect.anything(),
+      expect.anything()
+    )
+  })
+
+  it('sending 中不重试', async () => {
+    streamChatMock.mockImplementation(() => new Promise<void>(() => {}))
+    const p = useChatStore.getState().send('嗨', 'haru')
+    await vi.waitFor(() => expect(streamChatMock).toHaveBeenCalledTimes(1)) // send 先 await getRuntime
+    useChatStore.getState().retry()
+    expect(streamChatMock.mock.calls.length).toBe(1)
+    void p
+  })
+
+  it('末尾是成功回复时无可重试', async () => {
+    await driveSend([
+      { type: 'meta', session_id: 's1' },
+      { type: 'done', text: '你好', motion: '' }
+    ])
+    const calls = streamChatMock.mock.calls.length
+    useChatStore.getState().retry()
+    expect(streamChatMock.mock.calls.length).toBe(calls)
+    expect(useChatStore.getState().items).toHaveLength(2)
+  })
+})

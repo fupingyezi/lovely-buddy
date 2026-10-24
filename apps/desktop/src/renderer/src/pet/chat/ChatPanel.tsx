@@ -1,19 +1,19 @@
-import { useRef, type KeyboardEvent, type ReactElement } from 'react'
+import { useState, type KeyboardEvent, type ReactElement } from 'react'
 import { useChatStore } from '../../store/chatStore'
 import { usePetStore } from '../../store/petStore'
 
-interface Props {
-  onClose: () => void
-}
-
-/** 聊天面板（窗口 chat 扩展区）：最近对话 + 输入框。data-interactive 保证穿透状态机可点。 */
-export default function ChatPanel({ onClose }: Props): ReactElement {
-  const items = useChatStore((s) => s.items)
+/**
+ * 对话输入条（窗口 chat 扩展区顶部）：单行输入 + 发送/停止 + 错误重试行。
+ * 只留输入，历史统一进设置（README 铁律）；与气泡同锚点互斥（App 控制）。
+ * data-interactive 保证穿透状态机可点。无关闭钮（图 02），关闭走 Esc / 点面板外（useChatPanel）。
+ */
+export default function ChatPanel(): ReactElement {
   const sending = useChatStore((s) => s.sending)
   const error = useChatStore((s) => s.error)
   const send = useChatStore((s) => s.send)
   const stop = useChatStore((s) => s.stop)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const retry = useChatStore((s) => s.retry)
+  const [value, setValue] = useState('')
 
   const currentSlug = (): string | undefined => {
     const { models, modelUrl } = usePetStore.getState()
@@ -21,11 +21,9 @@ export default function ChatPanel({ onClose }: Props): ReactElement {
   }
 
   const submit = (): void => {
-    const input = inputRef.current
-    if (!input) return
-    const v = input.value.trim()
-    if (!v) return
-    input.value = ''
+    const v = value.trim()
+    if (!v || sending) return
+    setValue('')
     void send(v, currentSlug())
   }
 
@@ -33,35 +31,35 @@ export default function ChatPanel({ onClose }: Props): ReactElement {
     if (e.key === 'Enter' && !e.nativeEvent.isComposing) submit()
   }
 
+  const typing = !sending && value !== ''
   return (
-    <div className="chat-panel" data-interactive onContextMenu={(e) => e.preventDefault()}>
-      <div className="chat-head">
-        <span>聊天</span>
-        <button type="button" className="chat-close" title="收起" aria-label="收起" onClick={onClose}>
-          ×
-        </button>
-      </div>
-      <div className="chat-messages">
-        {items.length === 0 && <p className="chat-empty">和 AI桌宠 说点什么吧～</p>}
-        {items.map((it, i) => (
-          <div key={i} className={`chat-msg ${it.role}`}>
-            {it.content}
-          </div>
-        ))}
-        {error !== null && <div className="chat-error">{error}</div>}
-      </div>
-      <div className="chat-input-row">
-        <input ref={inputRef} autoFocus data-interactive placeholder={sending ? '回复中…' : '按 Enter 发送'} onKeyDown={onKeyDown} />
+    <div className="chat-input-wrap" data-interactive onContextMenu={(e) => e.preventDefault()}>
+      <div className={`chat-input${typing ? ' chat-input--typing' : ''}`}>
+        <input
+          autoFocus
+          maxLength={4000}
+          disabled={sending}
+          placeholder={sending ? '回复中…' : '和我说点什么…'}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={onKeyDown}
+        />
+        {typing && <span className="chat-count">{value.length}/4000 个字</span>}
         {sending ? (
           <button type="button" className="chat-stop" onClick={stop}>
             停止
           </button>
         ) : (
-          <button type="button" className="chat-send" onClick={submit}>
+          <button type="button" className="chat-send" disabled={!typing} onClick={submit}>
             发送
           </button>
         )}
       </div>
+      {error !== null && (
+        <button type="button" className="chat-error" onClick={retry}>
+          {error}·点击重试
+        </button>
+      )}
     </div>
   )
 }
