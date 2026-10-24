@@ -5,19 +5,22 @@ import { loadCubismCores } from './loader'
 import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
 import { headAnchorOffset, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
+import { getActiveModel, setActiveModel } from './modelBus'
 import { setModelBase } from './windowGeometry'
 import { waitForResize } from './waitForResize'
 
 export interface PetModel {
   readonly name: string
+  /** 模型位置（窗口坐标，脚底中点）；销毁后兜底 0（总线先摘，正常读不到） */
   readonly x: number
   readonly y: number
   /** 角色头部左上角（窗口坐标）：气泡尾巴锚点。按默认姿态绘制部件实际艺术边界
    *  推导（头顶 = 盒顶、头部左缘 = 顶部带并集左缘，画布留白不计）；
    *  getter 实时叠加 position，windowAnchor 位移后仍准确（多面板扩展量叠加时天然正确）。
-   *  cubism2 包围盒首帧 draw 后才有效（矩阵初始化），加载后补算一帧即稳定。 */
+   *  cubism2 包围盒首帧 draw 后才有效（矩阵初始化），加载后补算一帧即稳定。
+   *  销毁后兜底 (0,0)。 */
   readonly anchor: Pos
-  /** 画布坐标（窗口坐标系）命中检测，模型外 false */
+  /** 画布坐标（窗口坐标系）命中检测，模型外/已销毁 false */
   hitTest(sx: number, sy: number): boolean
   moveTo(x: number, y: number): void
   /** 按意图播动作；无匹配动作时返回 false */
@@ -52,6 +55,12 @@ export async function releasePetModel(url: string): Promise<void> {
   cache.delete(url)
   try {
     const pet = await p
+    // 先摘总线再销毁：PIXI destroy 会把 transform 置空，销毁后 facade 的
+    // anchor/x/y getter 读 model.position 直接抛 "reading 'position'"——
+    // 而紧随其后的 setModelBase(null) 会让订阅几何的组件（气泡）在
+    // "已销毁、总线未清"的窗口内重渲染（总线清空原本在下一轮 effect
+    // cleanup，晚于这里的微任务）。先摘总线把窗口关死。
+    if (getActiveModel() === pet) setActiveModel(null)
     pet.destroy()
   } catch {
     // 加载失败无需销毁
@@ -153,16 +162,20 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   const groups = motionGroups(model)
   const facade: PetModel = {
     name,
+    // 销毁后 PIXI transform 已置空，读 model.position 会抛错——所有 getter 兜底。
+    // 正常路径总线先摘（releasePetModel），这些兜底防的是残留引用（interact 监听器等）。
     get x() {
-      return model.position.x
+      return disposed ? 0 : model.position.x
     },
     get y() {
-      return model.position.y
+      return disposed ? 0 : model.position.y
     },
     get anchor() {
+      if (disposed) return { x: 0, y: 0 }
       return { x: model.position.x + headAnchor.x, y: model.position.y + headAnchor.y }
     },
     hitTest(sx, sy) {
+      if (disposed) return false
       // 1) 模型自带 HitAreas（如 shizuku）：fork 的 hitTest 接受世界坐标（内部 toModelPosition）
       if (model.hitTest(sx, sy).length > 0) return true
       // 2) 无 HitAreas 的模型（如官方 haru）：按实际绘制部件顶点做可视碰撞箱检测
@@ -171,9 +184,11 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       return hitAnyDrawable((i) => im.getDrawableBounds(i, hitBounds), drawableCount, p.x, p.y)
     },
     moveTo(x, y) {
+      if (disposed) return
       model.position.set(x, y)
     },
     playIntent(intent, priority = 1) {
+      if (disposed) return Promise.resolve(false)
       const group = pickMotion(intent, groups)
       if (!group) return Promise.resolve(false)
       return model
