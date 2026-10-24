@@ -24,6 +24,8 @@ declare global {
     setPassthrough: (on: boolean) => void
     /** 弹出本地文件/目录选择框（zip 或目录），返回路径或 canceled */
     pickImportPath: (mode: 'zip' | 'dir') => Promise<{ canceled: boolean; path: string | null }>
+    /** 导出文本文件：主进程弹保存对话框（默认 Downloads）并写入，返回保存结果 */
+    exportFile: (defaultName: string, content: string) => Promise<{ saved: boolean; path: string | null }>
     moveWindow: (dx: number, dy: number) => void
     moveWindowEnd: () => void
     resizeWindow: (width: number, height: number) => void

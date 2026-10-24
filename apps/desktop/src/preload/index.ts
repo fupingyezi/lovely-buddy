@@ -13,6 +13,8 @@ export interface LovelybuddyApi {
   setPassthrough: (on: boolean) => void
   /** 弹出本地文件/目录选择框（zip 或目录），返回路径或 canceled */
   pickImportPath: (mode: 'zip' | 'dir') => Promise<{ canceled: boolean; path: string | null }>
+  /** 导出文本文件：主进程弹保存对话框（默认 Downloads）并写入，返回保存结果 */
+  exportFile: (defaultName: string, content: string) => Promise<{ saved: boolean; path: string | null }>
   /** 拖拽：按屏幕坐标增量移动窗口（主进程夹紧在屏幕内） */
   moveWindow: (dx: number, dy: number) => void
   /** 拖拽结束：持久化窗口位置 */
@@ -30,6 +32,7 @@ const lovelybuddy: LovelybuddyApi = {
   getRuntime: () => ipcRenderer.invoke('lovelybuddy:get-runtime'),
   setPassthrough: (on) => ipcRenderer.send('lovelybuddy:set-passthrough', on),
   pickImportPath: (mode) => ipcRenderer.invoke('lovelybuddy:pick-import-path', mode),
+  exportFile: (defaultName, content) => ipcRenderer.invoke('lovelybuddy:export-file', defaultName, content),
   moveWindow: (dx, dy) => ipcRenderer.send('lovelybuddy:move-window', dx, dy),
   moveWindowEnd: () => ipcRenderer.send('lovelybuddy:move-window-end'),
   resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),

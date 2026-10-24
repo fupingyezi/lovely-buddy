@@ -1,3 +1,5 @@
+import { writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { app, dialog, ipcMain } from 'electron'
 import type { PetWindowManager } from './window/manager'
 
@@ -32,5 +34,16 @@ export function setupIPC(win: PetWindowManager): void {
     const { canceled, filePaths } = await dialog.showOpenDialog(win.window!, opts)
     if (canceled || filePaths.length === 0) return { canceled: true, path: null }
     return { canceled: false, path: filePaths[0] }
+  })
+  // 导出文本文件（对话记录 Markdown）：保存对话框默认 Downloads/<name>，用户取消不写
+  ipcMain.handle('lovelybuddy:export-file', async (_e, defaultName: string, content: string) => {
+    const { canceled, filePath } = await dialog.showSaveDialog(win.window!, {
+      title: '导出对话记录',
+      defaultPath: join(app.getPath('downloads'), defaultName),
+      filters: [{ name: 'Markdown', extensions: ['md'] }]
+    })
+    if (canceled || !filePath) return { saved: false, path: null }
+    await writeFile(filePath, content, 'utf-8')
+    return { saved: true, path: filePath }
   })
 }
