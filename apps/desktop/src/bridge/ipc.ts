@@ -25,6 +25,10 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
   ipcMain.handle('lovelybuddy:expand-window', (_e, key: string, extraWidth: number, extraHeight: number) =>
     win.expandFor(key, extraWidth, extraHeight))
   ipcMain.on('lovelybuddy:collapse-window', (_e, key: string) => win.collapseFor(key))
+  // 菜单展开：主进程按真实 bounds 计算扩展量（渲染进程 innerWidth 落后 resize 事件，
+  // 连续 Cmd+点击会读到过期宽度导致菜单被截断）
+  ipcMain.handle('lovelybuddy:expand-menu', (_e, requiredW: number, requiredH: number) =>
+    win.expandForMenu(requiredW, requiredH))
   ipcMain.on('lovelybuddy:quit', () => app.quit())
   // 设置窗口：独立无边框窗口（复用同一渲染进程 ?settings=1），已开则聚焦
   ipcMain.handle('lovelybuddy:open-settings', () => settingsWin.open())

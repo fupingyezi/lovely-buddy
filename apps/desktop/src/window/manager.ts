@@ -1,6 +1,6 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
-import { WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, modelResizeBounds, moveBounds, type Rect } from './bounds'
+import { WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, menuExpandExtras, modelResizeBounds, moveBounds, type Rect } from './bounds'
 import type { SettingsStore } from '../main/store'
 
 /**
@@ -100,6 +100,16 @@ export class PetWindowManager {
     if (!this.expandedBase) this.expandedBase = w.getBounds()
     this.extras.set(key, { width: extraWidth, height: extraHeight })
     return this.applyExtras()
+  }
+
+  /** 菜单展开（main 权威）：requiredW/H 为菜单+内边距的绝对需求（渲染进程传常量）。
+   *  宽用当前真实 bounds 补足（渲染进程 innerWidth 落后于 resize 事件，读它会被
+   *  连续 Cmd+点击竞态算错导致菜单截断）；高给满保证菜单打开期间头顶空间恒定。 */
+  expandForMenu(requiredW: number, requiredH: number): { width: number; height: number } {
+    const w = this.win
+    if (!w) return { width: 0, height: 0 }
+    const extras = menuExpandExtras(w.getBounds(), requiredW, requiredH)
+    return this.expandFor('menu', extras.width, extras.height)
   }
 
   /** 面板关闭：去掉该 key；全部关闭后缩回基准（右下角固定）。 */

@@ -7,13 +7,16 @@ import { useWindowGeometry } from '../../../live2d/windowGeometry'
 import type { PetModel } from '../../../live2d/model'
 
 const playIntent = vi.fn()
-const fakePet = { playIntent, anchor: { x: 0, y: 120 } } as unknown as PetModel
+// anchor 用 getter 持有可变对象：PetModel.anchor 本身是 readonly getter，测试靠改内部对象模拟位移
+const fakeAnchor = { x: 0, y: 120 }
+const fakePet = { playIntent, get anchor() { return fakeAnchor } } as unknown as PetModel
 
 describe('SpeechBubble', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     playIntent.mockReset().mockResolvedValue(true)
-    fakePet.anchor = { x: 0, y: 120 }
+    fakeAnchor.x = 0
+    fakeAnchor.y = 120
     setActiveModel(fakePet)
     useWindowGeometry.setState({ size: { w: 300, h: 700 }, base: { w: 300, h: 580 } })
     useChatStore.setState({ items: [], sending: false, error: null, lastMotion: null, replySeq: 0 })
@@ -113,7 +116,8 @@ describe('SpeechBubble', () => {
     // 聊天扩展 520×120 + 菜单扩展 0×332 落地：窗口 820×1152，模型位移后 anchor.y=452
     act(() => {
       useWindowGeometry.setState({ size: { w: 820, h: 1152 }, base: { w: 300, h: 580 } })
-      fakePet.anchor = { x: 520, y: 452 }
+      fakeAnchor.x = 520
+      fakeAnchor.y = 452
     })
     const el = container.querySelector('.speech-bubble') as HTMLElement
     expect(el.style.bottom).toBe('724px') // 1152 - 452 + 24：贴头顶；旧实现会算出 1152-120+24=1056 漂到窗口顶

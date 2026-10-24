@@ -23,6 +23,8 @@ export interface LovelybuddyApi {
   resizeWindow: (width: number, height: number) => void
   /** 面板打开：向左上扩展窗口（右下角固定，key 记账可多面板共存），返回扩展后实际尺寸 */
   expandWindow: (key: string, extraWidth: number, extraHeight: number) => Promise<{ width: number; height: number }>
+  /** 菜单展开：主进程按当前真实窗口尺寸计算扩展量，返回扩展后实际尺寸 */
+  expandMenu: (requiredW: number, requiredH: number) => Promise<{ width: number; height: number }>
   /** 面板关闭：去掉该 key 的扩展量，全部关闭后缩回基准（右下角固定） */
   collapseWindow: (key: string) => void
   /** 打开独立无边框设置窗口（已开则聚焦） */
@@ -46,6 +48,7 @@ const lovelybuddy: LovelybuddyApi = {
   resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),
   expandWindow: (key, extraWidth, extraHeight) =>
     ipcRenderer.invoke('lovelybuddy:expand-window', key, extraWidth, extraHeight),
+  expandMenu: (requiredW, requiredH) => ipcRenderer.invoke('lovelybuddy:expand-menu', requiredW, requiredH),
   collapseWindow: (key) => ipcRenderer.send('lovelybuddy:collapse-window', key),
   openSettings: () => ipcRenderer.invoke('lovelybuddy:open-settings'),
   closeSettings: () => ipcRenderer.send('lovelybuddy:close-settings'),

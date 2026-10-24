@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { MIN_H, MIN_W, WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, modelResizeBounds, moveBounds } from '../bounds'
+import { MIN_H, MIN_W, WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, menuExpandExtras, modelResizeBounds, moveBounds } from '../bounds'
 
 // 常见工作区：1920x1080、原点 (0,0)
 const WA = { x: 0, y: 0, width: 1920, height: 1080 }
@@ -69,6 +69,20 @@ describe('expandBounds：菜单展开（右下角锚定）', () => {
 
   it('屏幕上缘遮挡 → y 夹到 0，高度只增长剩余量', () => {
     expect(expandBounds({ ...cur, y: 30 }, 0, 100, WA)).toEqual({ x: 100, y: 0, width: 200, height: 330 })
+  })
+})
+
+describe('menuExpandExtras：菜单展开扩展量（主进程权威）', () => {
+  it('窄窗口补足宽（菜单右贴窗完整可见），高给满', () => {
+    expect(menuExpandExtras({ x: 0, y: 0, width: 164, height: 227 }, 288, 332)).toEqual({ width: 124, height: 332 })
+  })
+
+  it('宽窗口不再横向扩展', () => {
+    expect(menuExpandExtras({ x: 0, y: 0, width: 400, height: 227 }, 288, 332)).toEqual({ width: 0, height: 332 })
+  })
+
+  it('高度永远是绝对需求值（其他面板中途收起时头顶空间不缩水，菜单不压角色）', () => {
+    expect(menuExpandExtras({ x: 0, y: 0, width: 820, height: 700 }, 288, 332).height).toBe(332)
   })
 })
 

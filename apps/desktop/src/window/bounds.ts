@@ -67,6 +67,18 @@ export function expandBounds(current: Rect, extraWidth: number, extraHeight: num
   return { x, y, width: current.width + (current.x - x), height: current.height + (current.y - y) }
 }
 
+/** 菜单展开的扩展量（主进程权威，杜绝渲染进程 stale innerWidth 竞态——连续
+ *  Cmd+点击时渲染进程的 resize 事件落后于主进程 setBounds，读窗口尺寸会算错）：
+ *  - 宽：按当前窗口真实宽度补足 requiredW（菜单右贴窗口，宽度不足向左扩）。
+ *  - 高：绝对 requiredH——菜单打开期间头顶空间恒定（≥requiredH），其他面板
+ *    中途收起（如气泡保持期结束）菜单仍贴头顶不压角色。 */
+export function menuExpandExtras(current: Rect, requiredW: number, requiredH: number): { width: number; height: number } {
+  return {
+    width: Math.max(0, requiredW - current.width),
+    height: requiredH
+  }
+}
+
 /** 菜单收起：缩回基准尺寸，右下角固定 → 一定回到展开前的屏幕区域。 */
 export function collapseBounds(current: Rect, base: Rect): Rect {
   return {
