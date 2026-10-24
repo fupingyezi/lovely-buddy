@@ -1,5 +1,5 @@
 // 形象 API 客户端：与 Go 后端 /api/v1/assets 通信（Bearer token）。
-// 服务端返回相对路径 entry，渲染端拼 l2d:// URL（Electron 特权协议，见 main/protocol.ts）。
+// 服务端返回相对路径 entry，渲染端拼 l2d:// URL（Electron 特权协议，见 bridge/protocol.ts）。
 export interface ApiRuntime {
   baseUrl: string
   token: string

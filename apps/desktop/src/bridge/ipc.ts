@@ -1,14 +1,14 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BrowserWindow, app, dialog, ipcMain } from 'electron'
-import type { PetWindowManager } from './window/manager'
-import type { createSettingsWindow } from './settingsWindow'
+import type { PetWindowManager } from '../window/manager'
+import type { createSettingsWindow } from '../window/settings'
 
 // dev 模式固定值（make dev 时 Go 监听 8740）；打包模式由 goProcess 动态生成（M4 实现）
 const DEV_ADDR = process.env.LOVELYBUDDY_ADDR ?? '127.0.0.1:8740'
 const DEV_TOKEN = process.env.LOVELYBUDDY_DEV_TOKEN ?? 'dev'
 
-/** 注册全部 lovelybuddy:* 频道：只做转发，窗口/设置操作落在 windowManager 与 settingsWindow。 */
+/** 注册全部 lovelybuddy:* 频道：只做转发，窗口/设置操作落在 window/manager 与 window/settings。 */
 export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof createSettingsWindow>): void {
   ipcMain.handle('lovelybuddy:get-runtime', () => ({
     baseUrl: `http://${DEV_ADDR}`,

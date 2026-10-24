@@ -31,7 +31,9 @@ cd server && go test ./...                                                      
 
 ```
 apps/desktop/                Electron
-├── src/main/                主进程：透明置顶小窗、托盘、点击穿透、窗口扩展/缩回/缩放、独立无边框设置窗口、子进程管理
+├── src/main/                主进程入口：生命周期装配、托盘、CSP、设置持久化
+├── src/bridge/              渲染进程 ↔ 主进程通信：lovelybuddy:* IPC、l2d:// 协议
+├── src/window/              窗口服务：桌宠窗口（穿透/移动/扩展/缩回）、bounds 数学（__test__）、设置窗口
 ├── src/preload/             contextBridge 暴露 window.lovelybuddy（IPC 前缀 lovelybuddy:*）
 └── src/renderer/            React 18 + zustand + pixi.js v7 + pixi-live2d-display + Tailwind v4
     ├── live2d/              模型加载；interact（screenX/screenY 拖拽/tap，屏幕坐标防漂移）；

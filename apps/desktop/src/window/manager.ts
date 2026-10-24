@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 import { WIN_H, WIN_W, collapseBounds, expandBounds, initialBounds, modelResizeBounds, moveBounds, type Rect } from './bounds'
-import type { SettingsStore } from '../store'
+import type { SettingsStore } from '../main/store'
 
 /**
  * 桌宠窗口生命周期与 bounds 状态机：唯一持有窗口引用和展开基准 expandedBase 的地方。

@@ -1,11 +1,11 @@
 import { app, BrowserWindow } from 'electron'
-import { registerScheme, registerL2DProtocol } from './protocol'
+import { registerScheme, registerL2DProtocol } from '../bridge/protocol'
 import { SettingsStore } from './store'
 import { setupCSP } from './csp'
-import { setupIPC } from './ipc'
+import { setupIPC } from '../bridge/ipc'
 import { createTray } from './tray'
-import { PetWindowManager } from './window/manager'
-import { createSettingsWindow } from './settingsWindow'
+import { PetWindowManager } from '../window/manager'
+import { createSettingsWindow } from '../window/settings'
 
 // 组装根：特权协议必须在 app.ready 之前注册
 registerScheme()

@@ -16,7 +16,7 @@
 
 ## 架构速览
 
-- `apps/desktop`（Electron）：`src/main` 主进程（窗口/托盘/穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display
+- `apps/desktop`（Electron）：`src/main` 主进程入口（生命周期装配/托盘/CSP/设置持久化）；`src/bridge` 渲染↔主通信（`lovelybuddy:*` IPC、`l2d://` 协议）；`src/window` 窗口服务（穿透/expand-collapse-resize 窗口/独立设置窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display
   - `live2d/`：interact（screenX/screenY 拖拽/tap）、windowAnchor（窗口 resize 时模型位稳平移）
   - `pet/`：usePassthrough（穿透状态机）、usePetMenu/menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）
   - `store/petStore.ts` 全局状态；`lib/assetsApi.ts` HTTP 客户端

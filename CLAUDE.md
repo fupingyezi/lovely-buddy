@@ -16,7 +16,7 @@
 
 ## 架构速览
 
-- `apps/desktop`（Electron）：`src/main` 主进程（窗口/托盘/穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口/独立设置窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display + Tailwind v4
+- `apps/desktop`（Electron）：`src/main` 主进程入口（生命周期装配/托盘/CSP/设置持久化）；`src/bridge` 渲染↔主通信（`lovelybuddy:*` IPC、`l2d://` 协议）；`src/window` 窗口服务（穿透 `setIgnoreMouseEvents(on, {forward:true})`/expand-collapse-resize 窗口/独立设置窗口）；`src/preload` 暴露 `window.lovelybuddy`；`src/renderer` React 18 + zustand + PIXI v7 + pixi-live2d-display + Tailwind v4
   - `live2d/`：interact（screenX/screenY 拖拽/tap）、windowAnchor（窗口 resize 时模型位稳平移）
   - `hooks/`：usePassthrough（穿透状态机）、usePetMenu、useChatPanel、useTypewriter（测试随功能目录 `__test__/`）
   - `pet/`：menuLayout/PetMenu（形象菜单：固定窗口左上、向上扩展、距角色头顶 8px）、chat/（输入条三态+错误重试、气泡锚定头部左上角+弹出动画）、settings/（独立无边框设置窗口：对话记录搜索/导出/清空，清空后跨窗同步）
