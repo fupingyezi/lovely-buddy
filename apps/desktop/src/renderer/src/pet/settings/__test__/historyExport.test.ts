@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { exportFileName, filterChatItems, groupByDay, historyToMarkdown, sessionSubtitle } from '../historyExport'
 import type { ChatItem } from '../../../store/chatStore'
 
@@ -49,13 +49,19 @@ describe('sessionSubtitle', () => {
 
 describe('historyToMarkdown', () => {
   it('按天分组导出（标签带时间），user→我、assistant→AI桌宠', () => {
-    const md = historyToMarkdown(items)
-    expect(md).toContain('# AI桌宠对话记录')
-    expect(md).toContain('## 今天 10:24')
-    expect(md).toContain('**我**：嗨')
-    expect(md).toContain('**AI桌宠**：早呀～')
-    expect(md).toContain('## 昨天 21:10')
-    expect(md).toContain('## 10月20日 09:00')
+    // historyToMarkdown 内部用真实 now（无注入参数）——固定系统时间，避免跨天后「今天」漂移
+    vi.setSystemTime(NOW)
+    try {
+      const md = historyToMarkdown(items)
+      expect(md).toContain('# AI桌宠对话记录')
+      expect(md).toContain('## 今天 10:24')
+      expect(md).toContain('**我**：嗨')
+      expect(md).toContain('**AI桌宠**：早呀～')
+      expect(md).toContain('## 昨天 21:10')
+      expect(md).toContain('## 10月20日 09:00')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('空记录只有标题与导出时间', () => {
