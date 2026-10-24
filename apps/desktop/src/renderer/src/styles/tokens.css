@@ -1,10 +1,19 @@
 /* 设计 token（design-v1/README.md + 04-specs）：全部界面样式只引用这里，不写裸值。
-   图 04 规范：色板/圆角/投影/交互状态/字号间距，值即线上规范，改这里=改全产品。 */
-:root {
+   图 04 规范：色板/圆角/投影/交互状态/字号间距，值即线上规范，改这里=改全产品。
+
+   Tailwind v4：@theme 内变量全部落到 :root（tokens.test.ts 直接读本文件校验值），
+   并按命名空间生成同名工具类：--color-*→bg-/text-/border-、--radius-*→rounded-、
+   --shadow-*→shadow-、--font-*→font-、--ease-*→ease-、--animate-*→animate-。
+   --sp-*（间距）/--fs-*（字号）不属于工具类命名空间，用括号简写引用：
+   gap-(--sp-1)、text-(--fs-body)。token 没有的裸值用默认刻度或任意值（px-2.5、w-[260px]）。 */
+@import 'tailwindcss';
+
+@theme {
   /* 色板 */
   --color-primary: #5bc8a6; /* 薄荷主色（渐变起点、选中态） */
   --color-primary-deep: #35a483; /* 薄荷深（图标、强调文字） */
   --color-primary-press: #54b899; /* 主色加深 8%（按下态） */
+  --color-primary-soft: #68c0a0; /* 薄荷浅（图 02 状态 B 输入中完整描边） */
   --color-accent: #ffb9c7; /* 蜜桃辅色（停止/危险操作） */
   --color-accent-ink: #e36f8c; /* 蜜桃深（停止/危险文字） */
   --color-bg: #fbf7f0; /* 奶油底（卡片/侧栏/桌宠消息气泡） */
@@ -26,6 +35,7 @@
   /* 投影（薄荷 12%，offset 0 12，blur 32，spread -6） */
   --shadow-mint: 0 12px 32px -6px rgba(91, 200, 166, 0.12);
   --shadow-mint-deep: 0 14px 36px -6px rgba(91, 200, 166, 0.2); /* 悬停：投影加深 */
+  --shadow-focus: 0 0 0 3px rgba(91, 200, 166, 0.25); /* 焦点柔光（图 04） */
   /* 字号（标题 19 Semi Bold / 正文 12-15 / 辅助 10-11） */
   --fs-title: 19px;
   --fs-body: 13px;
@@ -39,4 +49,22 @@
   /* 字体：中文 Sarasa Gothic SC（未安装回退 PingFang SC），数字/拉丁 Inter */
   --font-cjk: 'Sarasa Gothic SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-latin: 'Inter', var(--font-cjk);
+  /* 过渡缓动：微交互统一 ease（120/150/200ms） */
+  --ease-standard: ease;
+  /* 气泡弹出：Scale 0.72→1.04→1，180ms 弹性 + 同步淡入（图 01「弹出节奏」） */
+  --animate-bubble-pop: bubble-pop 180ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  @keyframes bubble-pop {
+    from {
+      opacity: 0;
+      transform: scale(0.72);
+    }
+    70% {
+      opacity: 1;
+      transform: scale(1.04);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
 }
