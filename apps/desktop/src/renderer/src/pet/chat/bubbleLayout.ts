@@ -1,11 +1,11 @@
 import type { Pos } from '../../live2d/windowAnchor'
 
-/** 尾巴尖端距头部左上角的呼吸距离（图 01） */
+/** 尾巴尖端距头部左上角的呼吸距离 */
 export const TAIL_GAP = 16
 /** 尾巴伸出气泡底缘的高度 */
-export const TAIL_H = 28
-/** 尾巴距气泡右缘的距离（SVG 尾巴右缘贴气泡右缘 → 0，尖端在气泡左缘 → 38） */
-export const TAIL_INSET = 38
+export const TAIL_H = 8
+/** 尾巴距气泡右缘的距离 */
+export const TAIL_INSET = 24
 /** 气泡与窗口边的内边距 */
 export const BUBBLE_INSET = 8
 
@@ -17,8 +17,7 @@ export interface BubbleOffsets {
 }
 
 /**
- * 气泡右下锚定换算：尾巴尖端落在 (anchor.x, anchor.y - 16)（头部左上角上方 16px，
- * 尾部为 38×30 SVG，右缘贴气泡右缘，尖端在气泡左缘）。
+ * 气泡右下锚定换算：尾巴尖端落在 (anchor.x, anchor.y - 16)（头部左上角上方 16px）。
  * 元素 right/bottom 偏移 = 窗口尺寸 − 锚点坐标 ± 尾巴几何；maxWidth/maxHeight 把气泡
  * 夹在窗口与头部上方空间（扩展区）内，负值回 0。
  */

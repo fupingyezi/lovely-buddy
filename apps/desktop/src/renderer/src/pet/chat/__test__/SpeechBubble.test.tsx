@@ -111,12 +111,12 @@ describe('SpeechBubble', () => {
     useChatStore.setState({ items: [{ role: 'assistant', content: '嗨' }], sending: true, replySeq: 1 })
     const { container } = render(<SpeechBubble panelOpen={false} />)
     const el = container.querySelector('.speech-bubble') as HTMLElement
-    expect(el.style.right).toBe('172px') // 300 - 90 - TAIL_INSET(38)：尾巴右缘贴气泡右缘
-    expect(el.style.bottom).toBe('624px') // 700 - 120 + 16 + 28
-    expect(el.style.maxHeight).toBe('68px') // 120 - 16 - 28 - 8
+    expect(el.style.right).toBe('186px') // 300 - 90 - TAIL_INSET(24)：尾巴 x=90 头部左缘
+    expect(el.style.bottom).toBe('604px') // 700 - 120 + 16 + 8
+    expect(el.style.maxHeight).toBe('88px') // 120 - 16 - 8 - 8
   })
 
-  it('窗口扩展后布局随几何 store 更新：气泡仍贴头顶不漂移（回归：监听顺序竞态）', () => {
+  it('窗口扩展后布局随几何 store 更新：气泡仍贴头顶不漂移', () => {
     useChatStore.setState({ items: [{ role: 'assistant', content: '嗨' }], sending: true, replySeq: 1 })
     const { container } = render(<SpeechBubble panelOpen={false} />)
     // 扩展落地后窗口 820×1152，模型右移 520、上移 332：头部左上角 anchor=(520+90, 452)
@@ -126,7 +126,7 @@ describe('SpeechBubble', () => {
       fakeAnchor.y = 452
     })
     const el = container.querySelector('.speech-bubble') as HTMLElement
-    expect(el.style.bottom).toBe('744px') // 1152 - 452 + 44：贴头顶；旧实现会算出 1152-120+44=1076 漂到窗口顶
+    expect(el.style.bottom).toBe('724px') // 1152 - 452 + 24：贴头顶；旧实现会算出 1152-120+24=1056 漂到窗口顶
   })
 
   it('无模型时回退居中样式', () => {
