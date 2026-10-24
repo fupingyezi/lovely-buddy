@@ -6,6 +6,7 @@ import { initStage } from './stage'
 import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
 import { modelTopLeft, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
 import { setModelBase } from './windowGeometry'
+import { waitForResize } from './waitForResize'
 
 export interface PetModel {
   readonly name: string
@@ -76,7 +77,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   const displayH = winH - 8 // 窗口高 = 模型高 + 8px 站台偏移
   if (Math.abs(window.innerWidth - winW) > 2 || Math.abs(window.innerHeight - winH) > 2) {
     window.lovelybuddy.resizeWindow(winW, winH)
-    await nextResize()
+    await waitForResize()
   }
 
   // 锚点取脚底中点，站在窗口下沿中央（拖拽移动的是窗口，主进程持久化位置）
@@ -185,16 +186,4 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
 /** 模型可用的动作组名（来自模型设定文件中的 motion 定义） */
 function motionGroups(model: Live2DModel): string[] {
   return Object.keys(model.internalModel.motionManager.definitions)
-}
-
-/** 等窗口完成 resize（主进程 setBounds 触发 window resize 事件），超时兜底 300ms。 */
-function nextResize(timeoutMs = 300): Promise<void> {
-  return new Promise((resolve) => {
-    const done = (): void => {
-      window.removeEventListener('resize', done)
-      resolve()
-    }
-    window.addEventListener('resize', done)
-    window.setTimeout(done, timeoutMs)
-  })
 }
