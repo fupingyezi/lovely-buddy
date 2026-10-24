@@ -1,4 +1,4 @@
-/* 设计 token（design-v1/README.md + 04-specs）：全部界面样式只引用这里，不写裸值。
+/* 设计 token（可爱清新视觉方案 v0.1 + design-v1/README.md 04-specs）：全部界面样式只引用这里，不写裸值。
    图 04 规范：色板/圆角/投影/交互状态/字号间距，值即线上规范，改这里=改全产品。
 
    Tailwind v4：@theme 内变量全部落到 :root（tokens.test.ts 直接读本文件校验值），
@@ -11,20 +11,30 @@
 @theme {
   /* 色板 */
   --color-primary: #5bc8a6; /* 薄荷主色（渐变起点、选中态） */
-  --color-primary-deep: #35a483; /* 薄荷深（图标、强调文字） */
+  --color-primary-deep: #35a483; /* 薄荷深（品牌字、图标、徽章字） */
   --color-primary-press: #54b899; /* 主色加深 8%（按下态） */
-  --color-primary-soft: #68c0a0; /* 薄荷浅（图 02 状态 B 输入中完整描边） */
-  --color-accent: #ffb9c7; /* 蜜桃辅色（停止/危险操作） */
-  --color-accent-ink: #e36f8c; /* 蜜桃深（停止/危险文字） */
+  --color-primary-soft: #6bc7a6; /* 薄荷浅（图 02 输入中完整描边） */
+  --color-mint-end: #36a382; /* 渐变终点（发送键） */
+  --color-deep-end: #2e9c7d; /* 渐变终点（菜单聊天/导入模型/保存并启用） */
+  --color-active-ink: #2e8b70; /* 选中态文字（导航/会话卡/菜单当前形象/已连接） */
+  --color-accent: #ffb9c7; /* 蜜桃辅色 */
+  --color-accent-ink: #e0748d; /* 蜜桃深（停止/清空/失败文字） */
+  --color-accent-bg: #fff0f2; /* 蜜桃浅底（清空键） */
   --color-bg: #fbf7f0; /* 奶油底（卡片/侧栏/桌宠消息气泡） */
+  --color-cream-deep: #faf7f0; /* 奶油深（白面板内分区：导航底/搜索键/会话卡/菜单设置键） */
   --color-surface: #ffffff; /* 白（输入条/气泡） */
   --color-ink: #33403b; /* 墨绿正文 */
   --color-ink-2: #7c8c86; /* 一级辅助灰绿 */
   --color-ink-3: #a6b3ad; /* 二级辅助灰绿（占位符/计数） */
-  --color-border: #efe8de; /* 描边 1px */
-  --color-selected-bg: #e8f2ee; /* 选中条目底（会话卡） */
+  --color-ink-soft: #5e6e68; /* 次级文字（未选中导航/会话卡标题/状态行/导出键） */
+  --color-ink-faint: #b7c6c1; /* 弱文字（搜索占位/行标签/日期分隔） */
+  --color-ink-footer: #c4cfca; /* 页脚说明 */
+  --color-meta-mint: #79a99a; /* 薄荷语境辅助（选中会话卡 meta/连接卡 meta） */
+  --color-border: #ede5db; /* 描边 1px（输入条/导出键/表单） */
+  --color-border-warm: #f0e8de; /* 菜单描边 */
+  --color-selected-bg: #ebf7f2; /* 选中条目底（导航/会话卡/菜单当前项/使用中徽章） */
   --color-hover-bg: #fdfaf5; /* 悬停条目奶油白 */
-  --color-stop-bg: #fef0f0; /* 停止键底 */
+  --color-stop-bg: #fff0f3; /* 停止键底 */
   /* 圆角 */
   --radius-card: 28px;
   --radius-panel: 24px;
@@ -36,6 +46,10 @@
   --shadow-mint: 0 12px 32px -6px rgba(91, 200, 166, 0.12);
   --shadow-mint-deep: 0 14px 36px -6px rgba(91, 200, 166, 0.2); /* 悬停：投影加深 */
   --shadow-focus: 0 0 0 3px rgba(91, 200, 166, 0.25); /* 焦点柔光（图 04） */
+  --shadow-bubble: 0 10px 24px -4px rgba(56, 102, 87, 0.16); /* 气泡本体 */
+  --shadow-input: 0 6px 16px -2px rgba(56, 102, 87, 0.08); /* 输入条 */
+  --shadow-menu: 0 8px 24px -4px rgba(56, 102, 87, 0.16); /* 菜单 */
+  --shadow-button: 0 4px 12px -2px rgba(54, 162, 130, 0.3); /* 渐变主按钮 */
   /* 字号（标题 19 Semi Bold / 正文 12-15 / 辅助 10-11） */
   --fs-title: 19px;
   --fs-body: 13px;
