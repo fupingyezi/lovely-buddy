@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"lovelybuddy/server/internal/configstore"
-	"lovelybuddy/server/internal/llm"
 	"lovelybuddy/server/internal/lovely-agent/model"
+	"lovelybuddy/server/internal/lovely-agent/model/forward"
 )
 
 func newSvc(t *testing.T) (*ConfigService, *configstore.File) {
@@ -255,12 +255,12 @@ func TestForwardAddSwapAndState(t *testing.T) {
 	if len(state.Connections) != 1 || len(state.Connections[0].Forward) == 0 {
 		t.Fatalf("forward 应落盘并回传: %+v", state.Connections)
 	}
-	if _, ok := svc.reg.Current().(*llm.ForwardProvider); !ok {
+	if _, ok := svc.reg.Current().(*forward.ForwardProvider); !ok {
 		t.Fatalf("激活连接应为 ForwardProvider: %T", svc.reg.Current())
 	}
 }
 
-// 重启恢复：已保存的激活 forward 连接必须在启动时重新生效（不能走 llm.New 而被丢弃）。
+// 重启恢复：已保存的激活 forward 连接必须在启动时重新生效（不能走 model.New 而被丢弃）。
 func TestApplyActiveRestoresForward(t *testing.T) {
 	svc, file := newSvc(t)
 	c := file.Add(configstore.Connection{Provider: "forward", Forward: json.RawMessage(fwdSpec)})
@@ -275,7 +275,7 @@ func TestApplyActiveRestoresForward(t *testing.T) {
 	if p == nil {
 		t.Fatal("ApplyActive 后注册表不应为空")
 	}
-	if _, ok := p.(*llm.ForwardProvider); !ok {
+	if _, ok := p.(*forward.ForwardProvider); !ok {
 		t.Fatalf("重启后应恢复 ForwardProvider: %T", p)
 	}
 }

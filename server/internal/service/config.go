@@ -16,8 +16,8 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 
 	"lovelybuddy/server/internal/configstore"
-	"lovelybuddy/server/internal/llm"
 	"lovelybuddy/server/internal/lovely-agent/model"
+	"lovelybuddy/server/internal/lovely-agent/model/forward"
 )
 
 // ErrDuplicate 新增连接与既有连接重复（同厂商+BaseURL+模型+key）。
@@ -345,7 +345,7 @@ func (s *ConfigService) swapActive() error {
 		return nil
 	}
 	if active.Provider == "forward" {
-		p, err := llm.NewForward(active.Forward, active.Model)
+		p, err := forward.NewForward(active.Forward, active.Model)
 		if err != nil {
 			slog.Warn("激活连接无效，回退默认", "err", err)
 			s.reg.Swap(s.fallback)
@@ -369,12 +369,12 @@ func toTestInput(in ConnInput) TestInput {
 }
 
 // validateForward 转发连接的保存/测试校验（spec §4.4）：配置语法 + {{model}} 依赖。
-// 不复用厂商表检查——"forward" 不在 model.Providers 里（spec §4.4：加进去会让 llm.New 用空 BaseURL 建客户端）。
+// 不复用厂商表检查——"forward" 不在 model.Providers 里（spec §4.4：加进去会让 model.New 用空 BaseURL 建客户端）。
 func validateForward(raw json.RawMessage, model string) error {
-	if _, err := llm.ParseForwardSpec(raw); err != nil {
+	if _, err := forward.ParseForwardSpec(raw); err != nil {
 		return err
 	}
-	if model == "" && llm.UsesPlaceholder(raw, "model") {
+	if model == "" && forward.UsesPlaceholder(raw, "model") {
 		return errors.New("转发配置用到了 {{model}} 但模型名为空")
 	}
 	return nil
@@ -382,7 +382,7 @@ func validateForward(raw json.RawMessage, model string) error {
 
 // testForward 转发探活：有 probe 打 probe，无 probe 只做语法校验（spec §4.9）。
 func (s *ConfigService) testForward(input TestInput) TestResult {
-	spec, err := llm.ParseForwardSpec(input.Forward)
+	spec, err := forward.ParseForwardSpec(input.Forward)
 	if err != nil {
 		return TestResult{OK: false, Error: err.Error()}
 	}
