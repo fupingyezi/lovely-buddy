@@ -6,6 +6,7 @@ import (
 
 	"lovelybuddy/server/internal/assets"
 	"lovelybuddy/server/internal/dao"
+	"lovelybuddy/server/internal/lovely-agent/agent"
 	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
@@ -19,7 +20,7 @@ type Event struct {
 	Error     string `json:"error,omitempty"`      // error
 }
 
-// historyLimit 每次请求注入的历史条数（spec §4 prompt 顺序中的「历史」段）。
+// historyLimit 每次请求注入的历史条数（design.md §4 prompt 顺序中的「历史」段）。
 const historyLimit = 20
 
 type ChatService struct {
@@ -52,11 +53,11 @@ func (s *ChatService) ClearHistory(ctx context.Context) error {
 	return s.store.Clear(ctx, id)
 }
 
-// Stream 一次对话全流程（编排顺序固定，勿改）：
+// Stream 一次对话全流程（顺序固定，勿改）：
 //  1. 未配 API key → 仅 error 事件（不建会话不落库）
 //  2. DefaultSession → meta 事件
 //  3. 读历史（不含本次输入）→ 落用户消息
-//  4. persona（avatar.json，无则空）+ SystemPrompt + 历史 + 输入 → provider 流式
+//  4. 组装 agent.Loop（单轮直通）→ agent 构建上下文（人设+动作协议 → 历史 → 最新输入）→ provider 流式
 //  5. MotionFilter 净化：可见增量发 delta、识别意图发 motion
 //  6. 正常结束 Flush；assistant（干净全文 + 最后意图）落库 → done
 //  7. ctx 取消（用户停止）：半截内容照常落库后发 done（不算错误）
@@ -87,14 +88,21 @@ func (s *ChatService) Stream(ctx context.Context, avatarSlug, userText string) <
 			return
 		}
 
-		persona, _ := assets.PersonaText(s.modelDir, avatarSlug)
+		// 组装 harness：历史在落用户消息前已读好并捕获；Loop 不接触 store（记录语义归 service）。
+		loop := agent.NewLoop(provider, agent.ContextConfig{
+			SystemPrompt:  SystemPrompt,
+			PersonaLoader: func(slug string) (string, bool) { return assets.PersonaText(s.modelDir, slug) },
+			History:       func() []model.Message { return toModel(history) },
+			HistoryLimit:  historyLimit,
+		})
+
 		filter := NewMotionFilter()
 		var full strings.Builder
 		lastMotion := ""
-		for ev := range provider.StreamChat(ctx, BuildMessages(persona, history, userText, historyLimit)) {
+		for ev := range loop.Run(ctx, avatarSlug, userText) {
 			if ev.Err != nil {
 				s.persistPartial(sessionID, full.String(), lastMotion)
-				ch <- Event{Type: "error", Error: "模型调用失败: " + ev.Err.Error()}
+				ch <- Event{Type: "error", Error: ev.Err.Error()}
 				return
 			}
 			visible, motion := filter.Push(ev.Delta)
@@ -132,4 +140,13 @@ func (s *ChatService) persistPartial(sessionID, content, motion string) {
 		return
 	}
 	_ = s.store.Append(context.Background(), sessionID, "assistant", content, motion)
+}
+
+// toModel dao.Message → model.Message（harness 不 import dao，转换在 service）。
+func toModel(msgs []dao.Message) []model.Message {
+	out := make([]model.Message, len(msgs))
+	for i, m := range msgs {
+		out[i] = model.Message{Role: m.Role, Content: m.Content}
+	}
+	return out
 }
