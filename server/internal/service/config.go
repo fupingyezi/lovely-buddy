@@ -72,10 +72,11 @@ type ConfigState struct {
 }
 
 // TestResult 连通测试结果（成功带 LatencyMS，失败带可读 Error 文案）。
+// LatencyMS 用指针：nil = 未实际探活（无 probe，只做语法校验），非 nil 时即使 0 也会序列化。
 type TestResult struct {
 	OK        bool   `json:"ok"`
 	Error     string `json:"error,omitempty"`
-	LatencyMS int64  `json:"latency_ms,omitempty"`
+	LatencyMS *int64 `json:"latency_ms,omitempty"`
 }
 
 // ConfigService 连接配置编排：内存态 + 落盘 + 热切换 provider。
@@ -260,7 +261,8 @@ func (s *ConfigService) Test(input TestInput) TestResult {
 	if ctx.Err() != nil {
 		return TestResult{OK: false, Error: "连接超时"}
 	}
-	return TestResult{OK: true, LatencyMS: time.Since(start).Milliseconds()}
+	latency := time.Since(start).Milliseconds()
+	return TestResult{OK: true, LatencyMS: &latency}
 }
 
 // classifyStatus 上游 HTTP 状态码 → 可读中文文案；未覆盖的状态返回空。
@@ -326,30 +328,39 @@ func (s *ConfigService) applyTest(c *configstore.Connection, input ConnInput) {
 	}
 }
 
+// ApplyActive 按已保存配置恢复激活连接（启动时调用）。无激活连接或无有效配置时回退 fallback。
+func (s *ConfigService) ApplyActive() error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.swapActive()
+}
+
 // swapActive 按激活连接重建 provider 并热切换；无激活连接回退 env 默认。
-func (s *ConfigService) swapActive() {
+// 返回激活连接构建失败的错误（调用方通常忽略：此时已回退 fallback）。
+func (s *ConfigService) swapActive() error {
 	active := s.file.Active()
 	if active == nil {
 		s.reg.Swap(s.fallback)
-		return
+		return nil
 	}
 	if active.Provider == "forward" {
 		p, err := llm.NewForward(active.Forward, active.Model)
 		if err != nil {
 			slog.Warn("激活连接无效，回退默认", "err", err)
 			s.reg.Swap(s.fallback)
-			return
+			return err
 		}
 		s.reg.Swap(p)
-		return
+		return nil
 	}
 	p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens)
 	if err != nil {
 		slog.Warn("激活连接无效，回退默认", "err", err)
 		s.reg.Swap(s.fallback)
-		return
+		return err
 	}
 	s.reg.Swap(p)
+	return nil
 }
 
 func toTestInput(in ConnInput) TestInput {
@@ -375,7 +386,7 @@ func (s *ConfigService) testForward(input TestInput) TestResult {
 		return TestResult{OK: false, Error: err.Error()}
 	}
 	if spec.Probe == nil {
-		return TestResult{OK: true} // LatencyMS 0 → 前端显示「配置合法（未配置探活地址）」
+		return TestResult{OK: true} // LatencyMS nil → 前端显示「配置合法（未配置探活地址）」
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), s.testTimeout)
 	defer cancel()
@@ -392,5 +403,6 @@ func (s *ConfigService) testForward(input TestInput) TestResult {
 	if resp.StatusCode != spec.Probe.ExpectStatus {
 		return TestResult{OK: false, Error: fmt.Sprintf("探活失败: HTTP %d（期望 %d）", resp.StatusCode, spec.Probe.ExpectStatus)}
 	}
-	return TestResult{OK: true, LatencyMS: time.Since(start).Milliseconds()}
+	latency := time.Since(start).Milliseconds()
+	return TestResult{OK: true, LatencyMS: &latency}
 }

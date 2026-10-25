@@ -259,6 +259,26 @@ func TestForwardAddSwapAndState(t *testing.T) {
 	}
 }
 
+// 重启恢复：已保存的激活 forward 连接必须在启动时重新生效（不能走 llm.New 而被丢弃）。
+func TestApplyActiveRestoresForward(t *testing.T) {
+	svc, file := newSvc(t)
+	c := file.Add(configstore.Connection{Provider: "forward", Forward: json.RawMessage(fwdSpec)})
+	file.ActiveID = c.ID
+	if err := file.Save(); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.ApplyActive(); err != nil {
+		t.Fatal(err)
+	}
+	p := svc.reg.Current()
+	if p == nil {
+		t.Fatal("ApplyActive 后注册表不应为空")
+	}
+	if _, ok := p.(*llm.ForwardProvider); !ok {
+		t.Fatalf("重启后应恢复 ForwardProvider: %T", p)
+	}
+}
+
 func TestForwardDedupByConfig(t *testing.T) {
 	svc, _ := newSvc(t)
 	rawA := json.RawMessage(`{"request":{"url":"http://127.0.0.1:1/a","method":"GET"},"response":{"type":"text"}}`)
@@ -293,8 +313,6 @@ func TestForwardTestProbe(t *testing.T) {
 	svc, _ := newSvc(t)
 	probe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/status" {
-			// 本地回环往返常 <1ms，Milliseconds() 会截断为 0——加少量延迟让「探活成功带正延迟」可确定断言。
-			time.Sleep(2 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
 			return
 		}
@@ -305,8 +323,8 @@ func TestForwardTestProbe(t *testing.T) {
 	ok := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fmt.Sprintf(
 		`{"request":{"url":"%s/x","method":"GET"},"response":{"type":"text"},"probe":{"url":"%s/status"}}`,
 		probe.URL, probe.URL))})
-	if !ok.OK || ok.LatencyMS <= 0 {
-		t.Fatalf("探活应成功: %+v", ok)
+	if !ok.OK || ok.LatencyMS == nil || *ok.LatencyMS < 0 {
+		t.Fatalf("探活应成功且带耗时: %+v", ok)
 	}
 	bad := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fmt.Sprintf(
 		`{"request":{"url":"%s/x","method":"GET"},"response":{"type":"text"},"probe":{"url":"%s/status","expect_status":201}}`,
@@ -315,7 +333,7 @@ func TestForwardTestProbe(t *testing.T) {
 		t.Fatalf("期望 201 应失败: %+v", bad)
 	}
 	nop := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fwdSpec)})
-	if !nop.OK || nop.LatencyMS != 0 {
-		t.Fatalf("无 probe 应直接 OK: %+v", nop)
+	if !nop.OK || nop.LatencyMS != nil {
+		t.Fatalf("无 probe 应直接 OK 且无耗时: %+v", nop)
 	}
 }

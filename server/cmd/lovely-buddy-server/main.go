@@ -71,14 +71,11 @@ func main() {
 		slog.Warn("模型与连接配置读取失败，忽略", "err", err)
 		file = &configstore.File{}
 	}
-	if active := file.Active(); active != nil {
-		if p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens); err != nil {
-			slog.Warn("已保存的连接无效，回退环境默认", "err", err)
-		} else {
-			reg.Swap(p)
-		}
-	}
 	cfgSvc := service.NewConfigService(reg, file, fallback)
+	// 启动恢复激活连接（含 forward）：与运行期保存/启用的热切换同一路径。
+	if err := cfgSvc.ApplyActive(); err != nil {
+		slog.Warn("已保存的连接无效，回退环境默认", "err", err)
+	}
 
 	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir)
 	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc)
