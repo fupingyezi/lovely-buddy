@@ -17,6 +17,7 @@ import (
 
 	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 // ErrDuplicate 新增连接与既有连接重复（同厂商+BaseURL+模型+key）。
@@ -84,12 +85,12 @@ type TestResult struct {
 type ConfigService struct {
 	mu          sync.Mutex
 	file        *configstore.File
-	reg         *llm.Registry
-	fallback    llm.ChatProvider // 无激活连接时聊天回退（env/.env 默认厂商）
-	testTimeout time.Duration    // 测试可缩短
+	reg         *model.Registry
+	fallback    model.ChatProvider // 无激活连接时聊天回退（env/.env 默认厂商）
+	testTimeout time.Duration      // 测试可缩短
 }
 
-func NewConfigService(reg *llm.Registry, file *configstore.File, fallback llm.ChatProvider) *ConfigService {
+func NewConfigService(reg *model.Registry, file *configstore.File, fallback model.ChatProvider) *ConfigService {
 	return &ConfigService{file: file, reg: reg, fallback: fallback, testTimeout: 10 * time.Second}
 }
 
@@ -119,7 +120,7 @@ func Validate(in TestInput) error {
 	if in.Provider == "forward" {
 		return validateForward(in.Forward, in.Model)
 	}
-	if _, ok := llm.Providers[in.Provider]; !ok {
+	if _, ok := model.Providers[in.Provider]; !ok {
 		return errors.New("未知服务商: " + in.Provider + "（可选: deepseek, dashscope, zhipu, moonshot）")
 	}
 	m := strings.TrimSpace(in.Model)
@@ -244,14 +245,14 @@ func (s *ConfigService) Test(input TestInput) TestResult {
 		}
 		s.mu.Unlock()
 	}
-	p, err := llm.New(input.Provider, input.Model, input.BaseURL, key, 1)
+	p, err := model.New(input.Provider, input.Model, input.BaseURL, key, 1)
 	if err != nil {
 		return TestResult{OK: false, Error: err.Error()}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), s.testTimeout)
 	defer cancel()
 	start := time.Now()
-	for ev := range p.StreamChat(ctx, []llm.Message{{Role: "user", Content: "hi"}}) {
+	for ev := range p.StreamChat(ctx, []model.Message{{Role: "user", Content: "hi"}}) {
 		if ev.Err != nil {
 			timedOut := ctx.Err() != nil
 			return TestResult{OK: false, Error: classifyTestErr(ev.Err, timedOut)}
@@ -353,7 +354,7 @@ func (s *ConfigService) swapActive() error {
 		s.reg.Swap(p)
 		return nil
 	}
-	p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens)
+	p, err := model.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens)
 	if err != nil {
 		slog.Warn("激活连接无效，回退默认", "err", err)
 		s.reg.Swap(s.fallback)
@@ -368,7 +369,7 @@ func toTestInput(in ConnInput) TestInput {
 }
 
 // validateForward 转发连接的保存/测试校验（spec §4.4）：配置语法 + {{model}} 依赖。
-// 不复用厂商表检查——"forward" 不在 llm.Providers 里（spec §4.4：加进去会让 llm.New 用空 BaseURL 建客户端）。
+// 不复用厂商表检查——"forward" 不在 model.Providers 里（spec §4.4：加进去会让 llm.New 用空 BaseURL 建客户端）。
 func validateForward(raw json.RawMessage, model string) error {
 	if _, err := llm.ParseForwardSpec(raw); err != nil {
 		return err

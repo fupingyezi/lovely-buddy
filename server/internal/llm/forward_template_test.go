@@ -3,14 +3,16 @@ package llm
 import (
 	"encoding/json"
 	"testing"
+
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 func ctxFor(t *testing.T) placeholderCtx {
 	t.Helper()
 	return placeholderCtx{
 		LastUser: "你好", System: "你是桌宠",
-		Messages: []Message{{Role: "system", Content: "你是桌宠"}, {Role: "user", Content: "你好"}},
-		History:  []Message{{Role: "assistant", Content: "既往回复"}},
+		Messages: []model.Message{{Role: "system", Content: "你是桌宠"}, {Role: "user", Content: "你好"}},
+		History:  []model.Message{{Role: "assistant", Content: "既往回复"}},
 		Model:    "m1", SessionID: "pet", Now: "123",
 	}
 }
@@ -21,7 +23,7 @@ func TestRenderWholePlaceholderRawType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msgs, ok := out.(map[string]any)["messages"].([]Message)
+	msgs, ok := out.(map[string]any)["messages"].([]model.Message)
 	if !ok || len(msgs) != 2 {
 		t.Fatalf("整串占位符应渲染为原始 []Message: %#v", out)
 	}

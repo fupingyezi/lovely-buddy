@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"lovelybuddy/server/internal/configstore"
-	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 	"lovelybuddy/server/internal/service"
 )
 
@@ -23,12 +23,12 @@ const testToken = "test-token"
 // scriptedLLM 与 service 包测试的假 provider 同构（server 包本地一份，避免导出测试工具）。
 type scriptedLLM struct{}
 
-func (scriptedLLM) StreamChat(_ context.Context, _ []llm.Message) <-chan llm.StreamEvent {
-	ch := make(chan llm.StreamEvent)
+func (scriptedLLM) StreamChat(_ context.Context, _ []model.Message) <-chan model.StreamEvent {
+	ch := make(chan model.StreamEvent)
 	go func() {
 		defer close(ch)
-		ch <- llm.StreamEvent{Delta: "你好"}
-		ch <- llm.StreamEvent{Delta: "[motion:happy]呀"}
+		ch <- model.StreamEvent{Delta: "你好"}
+		ch <- model.StreamEvent{Delta: "[motion:happy]呀"}
 	}()
 	return ch
 }
@@ -39,7 +39,7 @@ func (scriptedLLM) KeyEnv() string   { return "DEEPSEEK_API_KEY" }
 func newTestServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 	root := t.TempDir()
-	reg := llm.NewRegistry(scriptedLLM{})
+	reg := model.NewRegistry(scriptedLLM{})
 	chats := service.NewChatService(service.NewMemStore(), reg, root)
 	cfgSvc := service.NewConfigService(reg, &configstore.File{}, scriptedLLM{})
 	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc)

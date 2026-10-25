@@ -6,7 +6,7 @@ import (
 
 	"lovelybuddy/server/internal/assets"
 	"lovelybuddy/server/internal/dao"
-	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 // Event SSE 事件（JSON 字段名即线上协议，renderer lib/chatApi.ts 与之对齐）。
@@ -24,12 +24,12 @@ const historyLimit = 20
 
 type ChatService struct {
 	store    ChatStore
-	reg      *llm.Registry
+	reg      *model.Registry
 	modelDir string
 }
 
 // NewChatService 以厂商注册表组装：每次对话从 reg 取当前厂商（M3 设置界面热切换）。
-func NewChatService(store ChatStore, reg *llm.Registry, modelDir string) *ChatService {
+func NewChatService(store ChatStore, reg *model.Registry, modelDir string) *ChatService {
 	return &ChatService{store: store, reg: reg, modelDir: modelDir}
 }
 

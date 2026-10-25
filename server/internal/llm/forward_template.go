@@ -6,21 +6,23 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 // placeholderCtx 渲染上下文：占位符取值来源（spec §4.5）。
 type placeholderCtx struct {
 	LastUser  string
 	System    string
-	Messages  []Message
-	History   []Message
+	Messages  []model.Message
+	History   []model.Message
 	Model     string
 	SessionID string
 	Now       string
 }
 
 // newPlaceholderCtx 组装渲染上下文；Now = 当前毫秒时间戳。
-func newPlaceholderCtx(sys, lastUser string, eff, history []Message, model, sessionID string) placeholderCtx {
+func newPlaceholderCtx(sys, lastUser string, eff, history []model.Message, model, sessionID string) placeholderCtx {
 	return placeholderCtx{
 		LastUser: lastUser, System: sys, Messages: eff, History: history,
 		Model: model, SessionID: sessionID,

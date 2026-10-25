@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 // forwardSpec 造一个指向指定 URL 的 json 类型 provider：chunk 2、延迟 0（测试快）。
@@ -30,7 +32,7 @@ func forwardSpec(t *testing.T, url string) *ForwardProvider {
 	return p
 }
 
-func collect(t *testing.T, p *ForwardProvider, msgs []Message) (string, []string) {
+func collect(t *testing.T, p *ForwardProvider, msgs []model.Message) (string, []string) {
 	t.Helper()
 	var deltas []string
 	for ev := range p.StreamChat(context.Background(), msgs) {
@@ -48,7 +50,7 @@ func TestForwardJSONChunkedChinese(t *testing.T) {
 		fmt.Fprint(w, `{"reply":"你好世界"}`)
 	}))
 	t.Cleanup(srv.Close)
-	full, deltas := collect(t, forwardSpec(t, srv.URL), []Message{{Role: "user", Content: "hi"}})
+	full, deltas := collect(t, forwardSpec(t, srv.URL), []model.Message{{Role: "user", Content: "hi"}})
 	if full != "你好世界" || len(deltas) != 2 {
 		t.Fatalf("full=%q deltas=%v; 期望按 rune 切 2 段不乱码", full, deltas)
 	}
@@ -64,7 +66,7 @@ func TestForwardTextTypeNoMockStream(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	full, deltas := collect(t, p, []Message{{Role: "user", Content: "hi"}})
+	full, deltas := collect(t, p, []model.Message{{Role: "user", Content: "hi"}})
 	if full != "纯文本回复" || len(deltas) != 1 {
 		t.Fatalf("mock_stream=false 应整段一次推: %q %v", full, deltas)
 	}
@@ -80,7 +82,7 @@ func TestForwardNDJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	full, deltas := collect(t, p, []Message{{Role: "user", Content: "hi"}})
+	full, deltas := collect(t, p, []model.Message{{Role: "user", Content: "hi"}})
 	if full != "第一段第二段" || len(deltas) != 2 {
 		t.Fatalf("ndjson 应每行一段: %q %v", full, deltas)
 	}
@@ -97,7 +99,7 @@ func TestForwardSSEOpenAI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	full, deltas := collect(t, p, []Message{{Role: "user", Content: "hi"}})
+	full, deltas := collect(t, p, []model.Message{{Role: "user", Content: "hi"}})
 	if full != "你好" || len(deltas) != 2 {
 		t.Fatalf("sse_openai 应逐 delta 推: %q %v", full, deltas)
 	}
@@ -119,7 +121,7 @@ func TestForwardIncludeSystemFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msgs := []Message{{Role: "system", Content: "人设"}, {Role: "user", Content: "hi"}}
+	msgs := []model.Message{{Role: "system", Content: "人设"}, {Role: "user", Content: "hi"}}
 	if full, _ := collect(t, p, msgs); full != "ok" {
 		t.Fatalf("回复应为 ok: %q", full)
 	}
@@ -150,7 +152,7 @@ func TestForwardIncludeHistoryFalse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	msgs := []Message{
+	msgs := []model.Message{
 		{Role: "system", Content: "人设"}, {Role: "user", Content: "第一句"},
 		{Role: "assistant", Content: "回复"}, {Role: "user", Content: "第二句"},
 	}
@@ -179,7 +181,7 @@ func TestForwardNon2xxErrorPath(t *testing.T) {
 		t.Fatal(err)
 	}
 	var gotErr error
-	for ev := range p.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}) {
+	for ev := range p.StreamChat(context.Background(), []model.Message{{Role: "user", Content: "hi"}}) {
 		if ev.Err != nil {
 			gotErr = ev.Err
 		}
@@ -204,7 +206,7 @@ func TestForwardCtxCancelStops(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	ch := p.StreamChat(ctx, []Message{{Role: "user", Content: "hi"}})
+	ch := p.StreamChat(ctx, []model.Message{{Role: "user", Content: "hi"}})
 	<-ch // 收第一块后取消
 	cancel()
 	done := make(chan struct{})
@@ -233,7 +235,7 @@ func TestForwardArrayPlaceholderInHeaderFails(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for ev := range p.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}) {
+	for ev := range p.StreamChat(context.Background(), []model.Message{{Role: "user", Content: "hi"}}) {
 		if ev.Err == nil || !strings.Contains(ev.Err.Error(), "不是字符串") {
 			t.Fatalf("数组占位符进 header 应报错且不 panic，收到 %v", ev)
 		}
@@ -263,7 +265,7 @@ func TestForwardQuerySecretNotInError(t *testing.T) {
 		t.Fatal(err)
 	}
 	var errs []string
-	for ev := range p.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}) {
+	for ev := range p.StreamChat(context.Background(), []model.Message{{Role: "user", Content: "hi"}}) {
 		if ev.Err != nil {
 			errs = append(errs, ev.Err.Error())
 		}

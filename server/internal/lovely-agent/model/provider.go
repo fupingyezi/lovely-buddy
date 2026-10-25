@@ -1,5 +1,6 @@
-// Package llm 模型厂商抽象（spec §4）。M2 只有对话；EmbeddingProvider 留给 M5。
-package llm
+// Package model 模型层：换脑插槽（harness 设计 docs/superpowers/specs/2026-10-25-harness-layering-design.md）。
+// 拿消息流，还流式文本；无状态、无记忆。M2 只有对话；EmbeddingProvider 留给 M5。
+package model
 
 import "context"
 

@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 const maxForwardBody = 8 << 20 // 8 MB：响应体上限（spec §4.8）
@@ -42,8 +44,8 @@ func (p *ForwardProvider) KeyEnv() string   { return "" }
 
 // StreamChat 一次转发对话（spec §4.3）：裁剪 → 拆分 → 渲染 → 请求 → 按 type 读响应 → 推事件。
 // ctx 取消时静默关通道（与 OpenAICompat 一致：ctx.Err() == nil 才推 Err）。
-func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []Message) <-chan StreamEvent {
-	ch := make(chan StreamEvent)
+func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []model.Message) <-chan model.StreamEvent {
+	ch := make(chan model.StreamEvent)
 	go func() {
 		defer close(ch)
 		eff := applyOptions(msgs, p.spec.Options)
@@ -52,20 +54,20 @@ func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []Message) <-chan
 		body, err := renderBody(p.spec.Request.Body, phCtx)
 		if err != nil {
 			if ctx.Err() == nil {
-				ch <- StreamEvent{Err: err}
+				ch <- model.StreamEvent{Err: err}
 			}
 			return
 		}
 		resp, err := p.do(ctx, phCtx, body)
 		if err != nil {
 			if ctx.Err() == nil {
-				ch <- StreamEvent{Err: fmt.Errorf("转发失败: %w", err)}
+				ch <- model.StreamEvent{Err: fmt.Errorf("转发失败: %w", err)}
 			}
 			return
 		}
 		defer resp.Body.Close()
 		if err := p.emit(ctx, resp, ch); err != nil && ctx.Err() == nil {
-			ch <- StreamEvent{Err: err}
+			ch <- model.StreamEvent{Err: err}
 		}
 	}()
 	return ch
@@ -73,8 +75,8 @@ func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []Message) <-chan
 
 // applyOptions 按 include_system / include_history 裁剪消息。
 // 裁剪必须作用在 msgs 上而不是各占位符上（spec §4.3），否则 {{system}} 与 {{messages}} 语义打架。
-func applyOptions(msgs []Message, o ForwardOpts) []Message {
-	eff := make([]Message, 0, len(msgs))
+func applyOptions(msgs []model.Message, o ForwardOpts) []model.Message {
+	eff := make([]model.Message, 0, len(msgs))
 	for _, m := range msgs {
 		if m.Role == "system" && !*o.IncludeSystem {
 			continue
@@ -82,7 +84,7 @@ func applyOptions(msgs []Message, o ForwardOpts) []Message {
 		eff = append(eff, m)
 	}
 	if !*o.IncludeHistory {
-		out := make([]Message, 0, 2)
+		out := make([]model.Message, 0, 2)
 		for _, m := range eff {
 			if m.Role == "system" {
 				out = append(out, m)
@@ -97,7 +99,7 @@ func applyOptions(msgs []Message, o ForwardOpts) []Message {
 }
 
 // lastUserOf 从后往前找最后一条 user（无则 nil）。
-func lastUserOf(msgs []Message) *Message {
+func lastUserOf(msgs []model.Message) *model.Message {
 	for i := len(msgs) - 1; i >= 0; i-- {
 		if msgs[i].Role == "user" {
 			return &msgs[i]
@@ -109,9 +111,9 @@ func lastUserOf(msgs []Message) *Message {
 // split 拆分 eff：system = 第一条 system 的 Content（无则 ""）；lastUser = 最后一条 user 的 Content；
 // history = eff 去掉第一条 system 与最后一条 user 后的剩余（spec §4.3）。
 // 实现：先定位 lastUser 下标，再单次遍历跳过首条 system 与 lastUser。
-func split(eff []Message) (system, lastUser string, history []Message) {
+func split(eff []model.Message) (system, lastUser string, history []model.Message) {
 	// 空历史也必须是空数组：nil slice 经 json.Marshal 会变 null，{{history}} 契约是数组。
-	history = make([]Message, 0, len(eff))
+	history = make([]model.Message, 0, len(eff))
 	for _, m := range eff {
 		if m.Role == "system" {
 			system = m.Content
@@ -246,7 +248,7 @@ func errText(raw []byte, path string) (string, bool) {
 }
 
 // emit 按 response.type 读响应并推事件（spec §4.7 四种类型）。
-func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan<- StreamEvent) error {
+func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan<- model.StreamEvent) error {
 	typ := p.spec.Response.Type
 	switch typ {
 	case "json", "text":
@@ -262,7 +264,7 @@ func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan
 			return err
 		}
 		if !*p.spec.Options.MockStream {
-			return send(ctx, ch, StreamEvent{Delta: text})
+			return send(ctx, ch, model.StreamEvent{Delta: text})
 		}
 		return p.emitChunked(ctx, text, ch)
 	case "ndjson":
@@ -277,7 +279,7 @@ func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan
 			if err != nil {
 				return err
 			}
-			if err := send(ctx, ch, StreamEvent{Delta: text}); err != nil {
+			if err := send(ctx, ch, model.StreamEvent{Delta: text}); err != nil {
 				return err
 			}
 		}
@@ -304,7 +306,7 @@ func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan
 				continue // 非目标 JSON 帧（如 usage）跳过，不中断流
 			}
 			if len(ev.Choices) > 0 && ev.Choices[0].Delta.Content != "" {
-				if err := send(ctx, ch, StreamEvent{Delta: ev.Choices[0].Delta.Content}); err != nil {
+				if err := send(ctx, ch, model.StreamEvent{Delta: ev.Choices[0].Delta.Content}); err != nil {
 					return err
 				}
 			}
@@ -329,7 +331,7 @@ func (p *ForwardProvider) extractText(typ string, raw []byte) (string, error) {
 
 // emitChunked 按 rune 切块模拟流式（spec §4.7：按 rune 不按 byte，中文不乱码）；
 // sleepCtx 保证「停止」即时生效（spec §4.7）。
-func (p *ForwardProvider) emitChunked(ctx context.Context, text string, ch chan<- StreamEvent) error {
+func (p *ForwardProvider) emitChunked(ctx context.Context, text string, ch chan<- model.StreamEvent) error {
 	runes := []rune(text)
 	n := p.spec.Options.MockStreamChunk
 	for i := 0; i < len(runes); i += n {
@@ -337,7 +339,7 @@ func (p *ForwardProvider) emitChunked(ctx context.Context, text string, ch chan<
 		if end > len(runes) {
 			end = len(runes)
 		}
-		if err := send(ctx, ch, StreamEvent{Delta: string(runes[i:end])}); err != nil {
+		if err := send(ctx, ch, model.StreamEvent{Delta: string(runes[i:end])}); err != nil {
 			return err
 		}
 		if err := p.sleepCtx(ctx); err != nil {
@@ -358,7 +360,7 @@ func (p *ForwardProvider) sleepCtx(ctx context.Context) error {
 }
 
 // send 带 ctx 检查的事件发送。
-func send(ctx context.Context, ch chan<- StreamEvent, ev StreamEvent) error {
+func send(ctx context.Context, ch chan<- model.StreamEvent, ev model.StreamEvent) error {
 	select {
 	case ch <- ev:
 		return nil

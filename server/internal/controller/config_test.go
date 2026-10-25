@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"lovelybuddy/server/internal/configstore"
-	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 	"lovelybuddy/server/internal/service"
 )
 
@@ -19,8 +19,8 @@ func newConfigRouter(t *testing.T) *gin.Engine {
 	t.Helper()
 	t.Setenv("LOVELYBUDDY_CONFIG_FILE", filepath.Join(t.TempDir(), "config.json"))
 	file, _ := configstore.Load()
-	fallback, _ := llm.New("deepseek", "", "", "", 0)
-	svc := service.NewConfigService(llm.NewRegistry(fallback), file, fallback)
+	fallback, _ := model.New("deepseek", "", "", "", 0)
+	svc := service.NewConfigService(model.NewRegistry(fallback), file, fallback)
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	ctl := NewConfig(svc)

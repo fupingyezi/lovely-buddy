@@ -13,6 +13,7 @@ import (
 
 	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 func newSvc(t *testing.T) (*ConfigService, *configstore.File) {
@@ -22,11 +23,11 @@ func newSvc(t *testing.T) (*ConfigService, *configstore.File) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fallback, err := llm.New("deepseek", "", "", "", 0)
+	fallback, err := model.New("deepseek", "", "", "", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return NewConfigService(llm.NewRegistry(fallback), file, fallback), file
+	return NewConfigService(model.NewRegistry(fallback), file, fallback), file
 }
 
 func validInput() ConnInput {

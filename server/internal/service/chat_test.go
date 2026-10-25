@@ -7,19 +7,19 @@ import (
 	"strings"
 	"testing"
 
-	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
 // scriptedProvider 按脚本回放的假 ChatProvider，并捕获收到的消息（验 persona/prompt）。
 type scriptedProvider struct {
 	key   bool
-	calls [][]llm.Message
-	run   func(ctx context.Context, out chan<- llm.StreamEvent)
+	calls [][]model.Message
+	run   func(ctx context.Context, out chan<- model.StreamEvent)
 }
 
-func (p *scriptedProvider) StreamChat(ctx context.Context, msgs []llm.Message) <-chan llm.StreamEvent {
+func (p *scriptedProvider) StreamChat(ctx context.Context, msgs []model.Message) <-chan model.StreamEvent {
 	p.calls = append(p.calls, msgs)
-	ch := make(chan llm.StreamEvent)
+	ch := make(chan model.StreamEvent)
 	go func() {
 		defer close(ch)
 		p.run(ctx, ch)
@@ -29,9 +29,9 @@ func (p *scriptedProvider) StreamChat(ctx context.Context, msgs []llm.Message) <
 func (p *scriptedProvider) Configured() bool { return p.key }
 func (p *scriptedProvider) KeyEnv() string   { return "DEEPSEEK_API_KEY" }
 
-func send(ch chan<- llm.StreamEvent, deltas ...string) {
+func send(ch chan<- model.StreamEvent, deltas ...string) {
 	for _, d := range deltas {
-		ch <- llm.StreamEvent{Delta: d}
+		ch <- model.StreamEvent{Delta: d}
 	}
 }
 
@@ -53,7 +53,7 @@ func types(evs []Event) string {
 
 func TestStreamNoKey(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, llm.NewRegistry(&scriptedProvider{}), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir())
 	evs := collect(s.Stream(context.Background(), "", "你好"))
 	if len(evs) != 1 || evs[0].Type != "error" || !strings.Contains(evs[0].Error, "DEEPSEEK_API_KEY") {
 		t.Fatalf("evs=%+v", evs)
@@ -74,10 +74,10 @@ func mustSession(t *testing.T, store ChatStore) string {
 
 func TestStreamHappyPath(t *testing.T) {
 	store := NewMemStore()
-	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- llm.StreamEvent) {
+	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {
 		send(out, "你好", "[motion:hap", "py]呀")
 	}}
-	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
 
 	evs := collect(s.Stream(context.Background(), "", "嗨"))
 	if got := types(evs); got != "meta,delta,motion,delta,done," {
@@ -117,8 +117,8 @@ func TestStreamPersonaFromAvatar(t *testing.T) {
 		t.Fatal(err)
 	}
 	store := NewMemStore()
-	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- llm.StreamEvent) {}}
-	s := NewChatService(store, llm.NewRegistry(p), dir)
+	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {}}
+	s := NewChatService(store, model.NewRegistry(p), dir)
 	collect(s.Stream(context.Background(), "haru", "喵"))
 	if !strings.HasPrefix(p.calls[0][0].Content, "你是猫。") {
 		t.Fatalf("avatar persona 应注入 system 开头: %q", p.calls[0][0].Content)
@@ -127,11 +127,11 @@ func TestStreamPersonaFromAvatar(t *testing.T) {
 
 func TestStreamStopPersistsPartial(t *testing.T) {
 	store := NewMemStore()
-	p := &scriptedProvider{key: true, run: func(ctx context.Context, out chan<- llm.StreamEvent) {
+	p := &scriptedProvider{key: true, run: func(ctx context.Context, out chan<- model.StreamEvent) {
 		send(out, "已经说到一半")
 		<-ctx.Done() // 用户停止后上游才断
 	}}
-	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -155,11 +155,11 @@ func TestStreamStopPersistsPartial(t *testing.T) {
 
 func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 	store := NewMemStore()
-	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- llm.StreamEvent) {
+	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {
 		send(out, "半截")
-		out <- llm.StreamEvent{Err: context.DeadlineExceeded}
+		out <- model.StreamEvent{Err: context.DeadlineExceeded}
 	}}
-	s := NewChatService(store, llm.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
 
 	evs := collect(s.Stream(context.Background(), "", "hi"))
 	if types(evs) != "meta,delta,error," {
@@ -173,7 +173,7 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 
 func TestClearHistory(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, llm.NewRegistry(&scriptedProvider{}), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir())
 	id := mustSession(t, store)
 	if err := store.Append(context.Background(), id, "user", "嗨", ""); err != nil {
 		t.Fatal(err)

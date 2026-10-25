@@ -16,7 +16,7 @@ import (
 	"lovelybuddy/server/internal/controller"
 	"lovelybuddy/server/internal/dao"
 	"lovelybuddy/server/internal/db"
-	"lovelybuddy/server/internal/llm"
+	"lovelybuddy/server/internal/lovely-agent/model"
 	"lovelybuddy/server/internal/server"
 	"lovelybuddy/server/internal/service"
 )
@@ -58,12 +58,12 @@ func main() {
 	}
 
 	cfg := config.Load()
-	fallback, err := llm.Resolve(cfg.Chat.Provider, cfg.Chat.Model, cfg.Chat.BaseURL)
+	fallback, err := model.Resolve(cfg.Chat.Provider, cfg.Chat.Model, cfg.Chat.BaseURL)
 	if err != nil {
 		slog.Error("对话厂商配置无效", "err", err)
 		os.Exit(1)
 	}
-	reg := llm.NewRegistry(fallback)
+	reg := model.NewRegistry(fallback)
 
 	// M3 模型与连接：界面注入优先（有已保存连接时 env/.env 不参与）
 	file, err := configstore.Load()
