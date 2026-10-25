@@ -5,8 +5,8 @@ import "context"
 
 // Message 一条对话消息（Role: system | user | assistant）。
 type Message struct {
-	Role    string
-	Content string
+	Role    string `json:"role"`
+	Content string `json:"content"`
 }
 
 // StreamEvent 流式片段；Err 非 nil 表示上游失败（事件通道随后关闭）。
