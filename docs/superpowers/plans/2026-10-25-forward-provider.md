@@ -140,7 +140,7 @@ func TestParseForwardSpecErrors(t *testing.T) {
 		"缺 type":   `{"request": {"url": "http://127.0.0.1:1/x", "method": "GET"}}`,
 		"json 缺 text_path": `{"request": {"url": "http://127.0.0.1:1/x", "method": "GET"}, "response": {"type": "json"}}`,
 		"未知占位符": `{"request": {"url": "http://127.0.0.1:1/x", "method": "GET", "body": {"t": "{{nope}}"}}, "response": {"type": "text"}}`,
-		"chunk 为 0": `{"request": {"url": "http://127.0.0.1:1/x", "method": "GET"}, "response": {"type": "text"}, "options": {"mock_stream_chunk": 0}}`,
+		"chunk 为负": `{"request": {"url": "http://127.0.0.1:1/x", "method": "GET"}, "response": {"type": "text"}, "options": {"mock_stream_chunk": -1}}`,
 	}
 	for name, raw := range cases {
 		t.Run(name, func(t *testing.T) {
