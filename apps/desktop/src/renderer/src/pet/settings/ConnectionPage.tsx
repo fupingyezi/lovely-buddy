@@ -1,7 +1,7 @@
 import { useState, type FormEvent, type ReactElement } from 'react'
 import { useConnectionStore } from '../../store/connectionStore'
 import type { ConnectionInfo } from '../../lib/configApi'
-import { hostOf, providerLabel, relTime } from './connectionFormat'
+import { hostOf, modelLabel, PROVIDER_LABEL, providerLabel, relTime } from './connectionFormat'
 
 /** 表单字段本地态（编辑模式下 key 未动 = api_key 留空提交，服务端保留原 key）。 */
 interface FormState {
@@ -10,9 +10,10 @@ interface FormState {
   apiKey: string
   model: string
   maxTokens: string
+  forward: string
 }
 
-const EMPTY_FORM: FormState = { provider: 'deepseek', baseUrl: '', apiKey: '', model: '', maxTokens: '' }
+const EMPTY_FORM: FormState = { provider: 'deepseek', baseUrl: '', apiKey: '', model: '', maxTokens: '', forward: '' }
 
 function formFromConn(c: ConnectionInfo): FormState {
   return {
@@ -20,7 +21,39 @@ function formFromConn(c: ConnectionInfo): FormState {
     baseUrl: c.base_url,
     apiKey: '',
     model: c.model,
-    maxTokens: c.max_tokens > 0 ? String(c.max_tokens) : ''
+    maxTokens: c.max_tokens > 0 ? String(c.max_tokens) : '',
+    forward: c.forward ? JSON.stringify(c.forward, null, 2) : ''
+  }
+}
+
+/** 「填入示例」模板：最小可用转发配置（无任何真实令牌，令牌用 {{env:NAME}}）。 */
+const FORWARD_EXAMPLE = `{
+  "version": 1,
+  "request": {
+    "url": "http://127.0.0.1:3100/api/chat",
+    "method": "POST",
+    "headers": { "content-type": "application/json" },
+    "body": { "text": "{{last_user}}" }
+  },
+  "response": { "type": "json", "text_path": "reply" },
+  "options": { "include_system": false, "include_history": false, "session_id": "pet" },
+  "probe": { "url": "http://127.0.0.1:3100/api/status" }
+}`
+
+/** 转发 JSON 文本 → 错误文案（null = 合法）。空文本不算错（保存按钮另行禁用）。 */
+function parseForwardErr(text: string): string | null {
+  if (text.trim() === '') return null
+  try {
+    JSON.parse(text)
+    return null
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'JSON 语法错误'
+    const m = /position (\d+)/.exec(msg)
+    if (m !== null) {
+      const line = text.slice(0, Number(m[1])).split('\n').length
+      return `JSON 语法错误（第 ${line} 行）: ${msg}`
+    }
+    return `JSON 语法错误: ${msg}`
   }
 }
 
@@ -31,14 +64,17 @@ function buildInput(f: FormState): {
   model: string
   api_key: string
   max_tokens: number
+  forward?: unknown
 } {
   const n = Number.parseInt(f.maxTokens, 10)
+  const forward = f.provider === 'forward' ? JSON.parse(f.forward) : undefined // 调用前 forwardErr === null 兜底
   return {
     provider: f.provider,
     base_url: f.baseUrl.trim(),
     model: f.model.trim(),
     api_key: f.apiKey,
-    max_tokens: Number.isFinite(n) && n > 0 ? n : 0
+    max_tokens: Number.isFinite(n) && n > 0 ? n : 0,
+    forward
   }
 }
 
@@ -74,7 +110,9 @@ export default function ConnectionPage(): ReactElement {
 
   const connections = config?.connections ?? []
   const active = connections.find((c) => c.active) ?? null
-  const meta = active ? `当前 ${active.model} · 共 ${connections.length} 个连接` : `共 ${connections.length} 个连接`
+  const meta = active
+    ? `当前 ${modelLabel(active)} · 共 ${connections.length} 个连接`
+    : `共 ${connections.length} 个连接`
 
   const openAddForm = (): void => {
     setForm(EMPTY_FORM)
@@ -99,6 +137,11 @@ export default function ConnectionPage(): ReactElement {
     clearTest() // 输入变化后旧测试结果失效（设计：失败浮红字保留输入，改输入则清除）
   }
 
+  const forwardErr = parseForwardErr(form.forward)
+  const canSave =
+    (form.provider === 'forward' ? form.forward.trim() !== '' && forwardErr === null : form.model.trim() !== '') &&
+    !saving
+
   const onSubmit = (e: FormEvent): void => {
     e.preventDefault()
     const input = buildInput(form)
@@ -115,12 +158,12 @@ export default function ConnectionPage(): ReactElement {
   }
 
   const onTest = (): void => {
+    if (form.provider === 'forward' && (forwardErr !== null || form.forward.trim() === '')) return
     // 编辑模式 key 未动时 api_key 为空——带 id 让后端回退该连接的存储 key
     void test({ ...buildInput(form), id: editing?.id ?? '' })
   }
 
   const keyEditable = !editing || keyDirty
-  const canSave = form.model.trim() !== '' && !saving
 
   return (
     <>
@@ -160,7 +203,7 @@ export default function ConnectionPage(): ReactElement {
           </div>
           <div className="min-w-0 flex-1 flex flex-col gap-[3px]">
             <span className="truncate text-xs font-semibold text-[#2e5e50]">
-              {providerLabel(active.provider)} · {active.model}
+              {providerLabel(active.provider)} · {modelLabel(active)}
             </span>
             <span className="truncate text-[10px] text-meta-mint">
               {hostOf(active)} · {active.check_fail ? '服务未启动' : relTime(active.last_check)}
@@ -193,7 +236,7 @@ export default function ConnectionPage(): ReactElement {
             </div>
             <div className="min-w-0 flex-1 flex flex-col gap-0.5">
               <span className="truncate text-xs text-ink">
-                {providerLabel(c.provider)} · {c.model}
+                {providerLabel(c.provider)} · {modelLabel(c)}
               </span>
               <span className="truncate text-[10px] text-ink-3">
                 {hostOf(c)} · {c.check_fail ? '服务未启动' : c.has_key ? '密钥已保存' : '未填密钥'}
@@ -250,12 +293,7 @@ export default function ConnectionPage(): ReactElement {
                   value={form.provider}
                   onChange={(e) => patch({ provider: e.target.value })}
                 >
-                  {Object.entries({
-                    deepseek: 'DeepSeek',
-                    dashscope: '阿里云百炼',
-                    zhipu: '智谱 AI',
-                    moonshot: '月之暗面 Kimi'
-                  }).map(([v, label]) => (
+                  {Object.entries(PROVIDER_LABEL).map(([v, label]) => (
                     <option key={v} value={v}>
                       {label}
                     </option>
@@ -279,60 +317,87 @@ export default function ConnectionPage(): ReactElement {
                 </svg>
               </div>
             </label>
-            <label className="flex-1 flex flex-col gap-1">
-              <span className={labelCls}>Base URL</span>
-              <input
-                className={inputCls}
-                placeholder="留空使用服务商默认"
-                value={form.baseUrl}
-                onChange={(e) => patch({ baseUrl: e.target.value })}
-              />
-            </label>
-          </div>
-          <label className="flex flex-col gap-1">
-            <span className={labelCls}>API Key</span>
-            {keyEditable ? (
-              <input
-                type="password"
-                className={inputCls}
-                placeholder={editing ? '输入新 key 整体替换' : 'sk-…'}
-                value={form.apiKey}
-                autoFocus={editing !== null}
-                onChange={(e) => patch({ apiKey: e.target.value })}
-              />
-            ) : (
-              <button
-                type="button"
-                className={`${inputCls} flex items-center justify-between cursor-pointer`}
-                onClick={() => setKeyDirty(true)}
-              >
-                <span className="truncate text-[11px] text-ink">{editing?.key_masked}</span>
-                <span className="shrink-0 text-[9px] text-primary-deep">已保存</span>
-              </button>
+            {form.provider !== 'forward' && (
+              <label className="flex-1 flex flex-col gap-1">
+                <span className={labelCls}>Base URL</span>
+                <input
+                  className={inputCls}
+                  placeholder="留空使用服务商默认"
+                  value={form.baseUrl}
+                  onChange={(e) => patch({ baseUrl: e.target.value })}
+                />
+              </label>
             )}
-          </label>
-          <div className="flex gap-2">
-            <label className="flex-1 flex flex-col gap-1">
-              <span className={labelCls}>模型名</span>
-              <input
-                className={inputCls}
-                placeholder="deepseek-chat / qwen-plus / …"
-                value={form.model}
-                onChange={(e) => patch({ model: e.target.value })}
-              />
-            </label>
-            <label className="w-[104px] shrink-0 flex flex-col gap-1">
-              <span className={labelCls}>最大 Token</span>
-              <input
-                className={inputCls}
-                type="number"
-                min={0}
-                placeholder="默认"
-                value={form.maxTokens}
-                onChange={(e) => patch({ maxTokens: e.target.value })}
-              />
-            </label>
           </div>
+          {form.provider === 'forward' ? (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className={labelCls}>转发配置（JSON）</span>
+                <button
+                  type="button"
+                  className="text-[9px] text-primary-deep cursor-pointer hover:underline"
+                  onClick={() => patch({ forward: FORWARD_EXAMPLE })}
+                >
+                  填入示例
+                </button>
+              </div>
+              <textarea
+                className="h-[160px] w-full resize-none rounded-[9px] border border-border bg-surface px-2.5 py-2 font-mono text-[10px] text-ink outline-none placeholder:text-ink-faint focus:border-primary-soft focus:shadow-focus"
+                aria-label="转发配置"
+                placeholder='{"request": {"url": "http://127.0.0.1:3100/api/chat", "method": "POST"}, "response": {"type": "json", "text_path": "reply"}}'
+                value={form.forward}
+                onChange={(e) => patch({ forward: e.target.value })}
+              />
+              {forwardErr !== null && <span className="text-[10px] text-accent-ink">{forwardErr}</span>}
+            </div>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className={labelCls}>API Key</span>
+                {keyEditable ? (
+                  <input
+                    type="password"
+                    className={inputCls}
+                    placeholder={editing ? '输入新 key 整体替换' : 'sk-…'}
+                    value={form.apiKey}
+                    autoFocus={editing !== null}
+                    onChange={(e) => patch({ apiKey: e.target.value })}
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className={`${inputCls} flex items-center justify-between cursor-pointer`}
+                    onClick={() => setKeyDirty(true)}
+                  >
+                    <span className="truncate text-[11px] text-ink">{editing?.key_masked}</span>
+                    <span className="shrink-0 text-[9px] text-primary-deep">已保存</span>
+                  </button>
+                )}
+              </label>
+              <div className="flex gap-2">
+                <label className="flex-1 flex flex-col gap-1">
+                  <span className={labelCls}>模型名</span>
+                  <input
+                    className={inputCls}
+                    placeholder="deepseek-chat / qwen-plus / …"
+                    value={form.model}
+                    onChange={(e) => patch({ model: e.target.value })}
+                  />
+                </label>
+                <label className="w-[104px] shrink-0 flex flex-col gap-1">
+                  <span className={labelCls}>最大 Token</span>
+                  <input
+                    className={inputCls}
+                    type="number"
+                    min={0}
+                    placeholder="默认"
+                    value={form.maxTokens}
+                    onChange={(e) => patch({ maxTokens: e.target.value })}
+                  />
+                </label>
+              </div>
+            </>
+          )}
           <div className="flex items-center justify-between">
             <span
               className={`text-[11px] ${
@@ -363,7 +428,9 @@ export default function ConnectionPage(): ReactElement {
       )}
 
       <footer className="shrink-0 text-[10px] text-ink-footer">
-        密钥存于本机 keychain，不随对话上传 · 兼容 OpenAI 协议
+        {formOpen && form.provider === 'forward'
+          ? '转发配置存于本机 config.json（0600）；令牌请用 {{env:NAME}} 引用，勿写明文'
+          : '密钥存于本机 keychain，不随对话上传 · 兼容 OpenAI 协议'}
       </footer>
     </>
   )

@@ -13,6 +13,7 @@ export interface ConnectionInfo {
   last_check: string | null
   check_fail: boolean
   active: boolean
+  forward?: unknown
 }
 
 export interface ConfigState {
@@ -26,6 +27,7 @@ export interface ConnInput {
   model: string
   api_key: string
   max_tokens: number
+  forward?: unknown
   /** 保存前执行过「测试连接」；test_ok = 其结果 */
   tested?: boolean
   test_ok?: boolean
@@ -44,6 +46,7 @@ export interface TestInput {
   model: string
   api_key: string
   max_tokens: number
+  forward?: unknown
   id?: string
 }
 

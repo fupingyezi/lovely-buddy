@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hostOf, providerLabel, relTime } from '../connectionFormat'
+import { hostOf, modelLabel, providerLabel, relTime } from '../connectionFormat'
 
 const base = {
   max_tokens: 0,
@@ -41,5 +41,20 @@ describe('connectionFormat', () => {
     expect(hostOf({ ...base, id: 'x', provider: 'deepseek', base_url: 'http://127.0.0.1:11434/v1', model: 'm' })).toBe(
       '127.0.0.1:11434'
     )
+  })
+
+  it('forward 显示名 / modelLabel / hostOf 取 request.url', () => {
+    expect(providerLabel('forward')).toBe('自定义（转发）')
+    expect(modelLabel({ ...base, id: 'x', provider: 'forward', base_url: '', model: '' })).toBe('转发')
+    expect(
+      hostOf({
+        ...base,
+        id: 'x',
+        provider: 'forward',
+        base_url: '',
+        model: '',
+        forward: { request: { url: 'http://127.0.0.1:3100/api/chat' } }
+      })
+    ).toBe('127.0.0.1:3100')
   })
 })

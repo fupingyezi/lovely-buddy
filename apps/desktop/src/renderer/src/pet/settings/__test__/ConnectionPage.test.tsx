@@ -181,3 +181,48 @@ describe('ConnectionPage', () => {
     await waitFor(() => expect(testMock).toHaveBeenCalledWith(expect.objectContaining({ api_key: '', id: 'c1' })))
   })
 })
+
+describe('转发表单', () => {
+  const openForwardForm = (): void => {
+    fireEvent.click(screen.getByText('添加连接'))
+    fireEvent.change(screen.getByLabelText('服务商'), { target: { value: 'forward' } })
+  }
+
+  it('选择自定义（转发）后隐藏四项输入，显示 JSON 框', () => {
+    seed({ active_id: '', connections: [] })
+    render(<ConnectionPage />)
+    openForwardForm()
+    expect(screen.getByLabelText('转发配置')).toBeTruthy()
+    expect(screen.queryByLabelText('Base URL')).toBeNull()
+    expect(screen.queryByLabelText('API Key')).toBeNull()
+    expect(screen.queryByLabelText('模型名')).toBeNull()
+    expect(screen.queryByLabelText('最大 Token')).toBeNull()
+  })
+
+  it('填入示例后保存：add 收到解析后的 forward 对象', () => {
+    seed({ active_id: '', connections: [] })
+    render(<ConnectionPage />)
+    openForwardForm()
+    fireEvent.click(screen.getByText('填入示例'))
+    fireEvent.click(screen.getByText('保存并启用'))
+    expect(addMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: 'forward',
+        forward: expect.objectContaining({
+          version: 1,
+          request: expect.objectContaining({ url: 'http://127.0.0.1:3100/api/chat' })
+        })
+      })
+    )
+  })
+
+  it('非法 JSON：红字带行号，保存与测试禁用', () => {
+    seed({ active_id: '', connections: [] })
+    render(<ConnectionPage />)
+    openForwardForm()
+    fireEvent.change(screen.getByLabelText('转发配置'), { target: { value: '{\n "request": {' } })
+    expect(screen.getByText(/JSON 语法错误（第 2 行）/)).toBeTruthy()
+    expect((screen.getByText('保存并启用').closest('button') as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByText('测试连接').closest('button') as HTMLButtonElement).disabled).toBe(true)
+  })
+})

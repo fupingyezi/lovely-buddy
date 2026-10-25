@@ -112,7 +112,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       const r = await testConnection(rt, input)
       set({
         testResult: r.ok
-          ? { ok: true, message: `连接成功 · ${r.latency_ms ?? 0}ms` }
+          ? {
+              ok: true,
+              message: r.latency_ms === undefined ? '配置合法（未配置探活地址）' : `连接成功 · ${r.latency_ms}ms`
+            }
           : { ok: false, message: r.error ?? '连接失败' }
       })
     } catch (e) {

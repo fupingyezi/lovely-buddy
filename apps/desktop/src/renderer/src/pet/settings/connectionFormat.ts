@@ -5,7 +5,8 @@ export const PROVIDER_LABEL: Record<string, string> = {
   deepseek: 'DeepSeek',
   dashscope: '阿里云百炼',
   zhipu: '智谱 AI',
-  moonshot: '月之暗面 Kimi'
+  moonshot: '月之暗面 Kimi',
+  forward: '自定义（转发）'
 }
 
 const PROVIDER_DEFAULT_URL: Record<string, string> = {
@@ -19,8 +20,16 @@ export function providerLabel(provider: string): string {
   return PROVIDER_LABEL[provider] ?? provider
 }
 
-/** base_url → host；空用厂商默认域名（与 Go llm.Providers 镜像）。 */
+/** base_url → host；空用厂商默认域名（与 Go llm.Providers 镜像）。转发连接从 forward.request.url 取 host。 */
 export function hostOf(c: ConnectionInfo): string {
+  if (c.provider === 'forward' && c.forward) {
+    const cfg = c.forward as { request?: { url?: string } }
+    try {
+      return new URL(cfg.request?.url ?? '').host
+    } catch {
+      /* 非法配置：走下方兜底 */
+    }
+  }
   const raw = c.base_url || PROVIDER_DEFAULT_URL[c.provider] || ''
   try {
     return new URL(raw).host
@@ -39,4 +48,9 @@ export function relTime(t: string | null): string {
   const hm = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
   const sameDay = d.toDateString() === new Date().toDateString()
   return sameDay ? `今天 ${hm} 校验通过` : `${d.getMonth() + 1}月${d.getDate()}日 ${hm} 校验通过`
+}
+
+/** 列表显示名：转发连接无模型名，显示「转发」。 */
+export function modelLabel(c: ConnectionInfo): string {
+  return c.provider === 'forward' ? '转发' : c.model
 }
