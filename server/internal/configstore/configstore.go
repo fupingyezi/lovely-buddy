@@ -18,12 +18,12 @@ import (
 // CheckFail = 最近一次测试失败；两者皆无 = 从未测试。
 type Connection struct {
 	ID        string          `json:"id"`
-	Provider  string          `json:"provider"`   // llm.Providers 的键（deepseek/dashscope/zhipu/moonshot）或 "forward"
+	Provider  string          `json:"provider"`   // model.Providers 的键（deepseek/dashscope/zhipu/moonshot）或 "forward"
 	BaseURL   string          `json:"base_url"`   // 空 = 厂商默认地址
 	Model     string          `json:"model"`      // 空 = 厂商默认模型
 	MaxTokens int             `json:"max_tokens"` // 0 = 不传（上游默认）
 	APIKey    string          `json:"api_key"`
-	Forward   json.RawMessage `json:"forward,omitempty"` // 仅 provider=="forward"；声明式转发配置（llm.ForwardSpec）
+	Forward   json.RawMessage `json:"forward,omitempty"` // 仅 provider=="forward"；声明式转发配置（forward.ForwardSpec）
 	LastCheck *time.Time      `json:"last_check"`
 	CheckFail bool            `json:"check_fail"`
 }

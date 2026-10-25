@@ -34,7 +34,7 @@
 现有对话链路只有一个抽象，加实现不动调用方：
 
 ```
-service.ChatService ──▶ llm.Registry.Current() ──▶ ChatProvider.StreamChat()
+service.ChatService ──▶ model.Registry.Current() ──▶ ChatProvider.StreamChat()
                                                         │
                                           ┌─────────────┴─────────────┐
                                     OpenAICompat                 ForwardProvider（本次新增）
@@ -42,13 +42,13 @@ service.ChatService ──▶ llm.Registry.Current() ──▶ ChatProvider.Stre
 
 | 现有构件 | 位置 | 本次是否改 |
 |---|---|---|
-| `ChatProvider` 接口（`StreamChat` / `Configured` / `KeyEnv`） | `server/internal/llm/provider.go:19-26` | 不改 |
-| `Providers` 厂商表 | `server/internal/llm/provider.go:36-41` | **不加** forward 条目（见 §4.4） |
-| `OpenAICompat` | `server/internal/llm/openai_compat.go` | 不改 |
-| `Registry`（热切换） | `server/internal/llm/registry.go` | 不改 |
+| `ChatProvider` 接口（`StreamChat` / `Configured` / `KeyEnv`） | `server/internal/lovely-agent/model/provider.go:20-27` | 不改 |
+| `Providers` 厂商表 | `server/internal/lovely-agent/model/provider.go:37-42` | **不加** forward 条目（见 §4.4） |
+| `OpenAICompat` | `server/internal/lovely-agent/model/openai_compat.go` | 不改 |
+| `Registry`（热切换） | `server/internal/lovely-agent/model/registry.go` | 不改 |
 | `Connection` 结构 | `server/internal/configstore/configstore.go:19-28` | **加字段** |
 | `Validate` / `Test` / `swapActive` | `server/internal/service/config.go:110` / `:217` / `:316` | **加分支** |
-| 聊天前置检查 | `server/internal/service/chat.go:69`（`if !provider.Configured()`） | 不改（靠 `Configured()` 返回 true 绕过） |
+| 聊天前置检查 | `server/internal/service/chat.go:70`（`if !provider.Configured()`） | 不改（靠 `Configured()` 返回 true 绕过） |
 
 **关键**：`ChatProvider` 只有三个方法，`ForwardProvider` 实现它之后，聊天主链路一行不用动。
 
@@ -132,7 +132,7 @@ type ForwardProbe struct {
 ### 4.1 模块划分
 
 ```
-server/internal/llm/
+server/internal/lovely-agent/model/forward/
 ├── forward.go          ForwardProvider：组装流程、实现 ChatProvider 三方法
 ├── forward_spec.go     ForwardSpec 解析 + 校验 + 默认值填充
 ├── forward_template.go 占位符渲染
@@ -171,7 +171,7 @@ func (p *ForwardProvider) Configured() bool { return p.spec != nil }
 func (p *ForwardProvider) KeyEnv() string   { return "" }
 ```
 
-`Configured()` 返回 `spec != nil`：转发不需要 key，但 `chat.go:69` 会拦「未配置」。返回 true 让主链路直接放行。
+`Configured()` 返回 `spec != nil`：转发不需要 key，但 `server/internal/service/chat.go:70` 会拦「未配置」。返回 true 让主链路直接放行。
 
 ### 4.3 `StreamChat` 流程
 
@@ -222,13 +222,13 @@ func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []Message) <-chan
 
 ### 4.4 为什么不在 `Providers` 里加 `forward`
 
-`llm.New()`（`openai_compat.go:24`）遇到 `Providers` 里的名字就构造 `OpenAICompat`。如果把 `forward` 加进表里，`New()` 会用一个空 BaseURL 建 go-openai 客户端，**保存时能过、聊天时必炸**。
+`model.New()`（`model/openai_compat.go:24`）遇到 `Providers` 里的名字就构造 `OpenAICompat`。如果把 `forward` 加进表里，`New()` 会用一个空 BaseURL 建 go-openai 客户端，**保存时能过、聊天时必炸**。
 
 所以：
 
 - `Providers` **不加** `forward`；
 - `service.Validate`（`config.go:110`）在函数开头分支：`provider == "forward"` 时走 `validateForward`，跳过后面的厂商表检查和 model/key 必填；
-- `swapActive`（`:316`）和 `Test`（`:217`）按 provider 分支到 `llm.NewForward`。
+- `swapActive`（`:316`）和 `Test`（`:217`）按 provider 分支到 `forward.NewForward`。
 
 这是本方案唯一「绕过现有约束」的地方，必须三处一起改，改漏一处就会出现「保存成功但聊天报未知厂商」。
 
@@ -357,10 +357,10 @@ provider == "forward":
 
 | # | 文件 | 改动 | 量级 |
 |---|---|---|---|
-| 1 | `server/internal/llm/forward.go` | 新增 | ~180 行 |
-| 2 | `server/internal/llm/forward_spec.go` | 新增（解析 + 默认值 + 校验） | ~120 行 |
-| 3 | `server/internal/llm/forward_template.go` | 新增 | ~90 行 |
-| 4 | `server/internal/llm/forward_extract.go` | 新增 | ~60 行 |
+| 1 | `server/internal/lovely-agent/model/forward/forward.go` | 新增 | ~180 行 |
+| 2 | `server/internal/lovely-agent/model/forward/forward_spec.go` | 新增（解析 + 默认值 + 校验） | ~120 行 |
+| 3 | `server/internal/lovely-agent/model/forward/forward_template.go` | 新增 | ~90 行 |
+| 4 | `server/internal/lovely-agent/model/forward/forward_extract.go` | 新增 | ~60 行 |
 | 5 | `server/internal/configstore/configstore.go` | `Connection` 加 `Forward json.RawMessage` | +1 行 |
 | 6 | `server/internal/service/config.go` | `TestInput`/`ConnInput` 加 `Forward`；`Validate` 分支；`Test` 分支；`swapActive` 分支 | ~40 行 |
 | 7 | `server/internal/controller/*.go` | 透传 `forward` 字段（若有字段白名单） | 视现状 |

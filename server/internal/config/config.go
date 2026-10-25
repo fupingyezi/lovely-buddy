@@ -10,7 +10,7 @@ import (
 
 // Chat 对话模型配置。
 type Chat struct {
-	Provider string // deepseek | dashscope；空 = deepseek（llm.Resolve 兜底）
+	Provider string // deepseek | dashscope；空 = deepseek（model.Resolve 兜底）
 	Model    string // 空 = 用厂商默认模型
 	BaseURL  string // 空 = 用厂商默认地址；非空覆盖（任意 OpenAI 兼容端点）
 }
