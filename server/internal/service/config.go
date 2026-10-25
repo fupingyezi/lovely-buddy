@@ -368,8 +368,8 @@ func toTestInput(in ConnInput) TestInput {
 	return TestInput{Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, APIKey: in.APIKey, MaxTokens: in.MaxTokens, Forward: in.Forward}
 }
 
-// validateForward 转发连接的保存/测试校验（spec §4.4）：配置语法 + {{model}} 依赖。
-// 不复用厂商表检查——"forward" 不在 model.Providers 里（spec §4.4：加进去会让 model.New 用空 BaseURL 建客户端）。
+// validateForward 转发连接的保存/测试校验：配置语法 + {{model}} 依赖。
+// 不复用厂商表检查——"forward" 不在 model.Providers 里（加进去会让 model.New 用空 BaseURL 建客户端）。
 func validateForward(raw json.RawMessage, model string) error {
 	if _, err := forward.ParseForwardSpec(raw); err != nil {
 		return err
@@ -380,7 +380,7 @@ func validateForward(raw json.RawMessage, model string) error {
 	return nil
 }
 
-// testForward 转发探活：有 probe 打 probe，无 probe 只做语法校验（spec §4.9）。
+// testForward 转发探活：有 probe 打 probe，无 probe 只做语法校验。
 func (s *ConfigService) testForward(input TestInput) TestResult {
 	spec, err := forward.ParseForwardSpec(input.Forward)
 	if err != nil {

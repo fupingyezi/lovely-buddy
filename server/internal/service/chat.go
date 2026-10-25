@@ -20,7 +20,7 @@ type Event struct {
 	Error     string `json:"error,omitempty"`      // error
 }
 
-// historyLimit 每次请求注入的历史条数（design.md §4 prompt 顺序中的「历史」段）。
+// historyLimit 每次请求注入的历史条数（prompt 顺序中的「历史」段）。
 const historyLimit = 20
 
 type ChatService struct {

@@ -11,7 +11,7 @@ import (
 var segRe = regexp.MustCompile(`^([^\[\]]+)((?:\[\d+\])*)$`)
 var idxRe = regexp.MustCompile(`\[\d+\]`)
 
-// ExtractPath 按点路径从解析后的 JSON 取值（spec §4.6）：
+// ExtractPath 按点路径从解析后的 JSON 取值：
 //
 //	reply / data.text / choices[0].message.content / data.items[0].content
 //

@@ -1,4 +1,4 @@
-// Package model 模型层：换脑插槽（harness 设计 docs/superpowers/specs/2026-10-25-harness-layering-design.md）。
+// Package model 模型层：换脑插槽。
 // 拿消息流，还流式文本；无状态、无记忆。M2 只有对话；EmbeddingProvider 留给 M5。
 package model
 
@@ -33,7 +33,7 @@ type ProviderSpec struct {
 	APIKeyEnv    string
 }
 
-// Providers 内置厂商（spec §4：DeepSeek/GLM/Qwen/Kimi，全部 OpenAI 兼容端点）。
+// Providers 内置厂商（DeepSeek/GLM/Qwen/Kimi，全部 OpenAI 兼容端点）。
 var Providers = map[string]ProviderSpec{
 	"deepseek":  {BaseURL: "https://api.deepseek.com", DefaultModel: "deepseek-chat", APIKeyEnv: "DEEPSEEK_API_KEY"},
 	"dashscope": {BaseURL: "https://dashscope.aliyuncs.com/compatible-mode/v1", DefaultModel: "qwen-plus", APIKeyEnv: "DASHSCOPE_API_KEY"},

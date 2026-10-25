@@ -16,10 +16,10 @@ import (
 	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
-const maxForwardBody = 8 << 20 // 8 MB：响应体上限（spec §4.8）
+const maxForwardBody = 8 << 20 // 8 MB：响应体上限
 
 // ForwardProvider 声明式 HTTP 转发：OpenAI 形状消息 → 裁剪 → 模板渲染 → HTTP → 路径提取 → 流式事件。
-// 不存任何状态——转发层一旦存东西就变成第二个脑（spec §1.2）。
+// 不存任何状态——转发层一旦存东西就变成第二个脑。
 type ForwardProvider struct {
 	spec   *ForwardSpec
 	client *http.Client
@@ -42,7 +42,7 @@ func NewForward(raw json.RawMessage, model string) (*ForwardProvider, error) {
 func (p *ForwardProvider) Configured() bool { return p.spec != nil }
 func (p *ForwardProvider) KeyEnv() string   { return "" }
 
-// StreamChat 一次转发对话（spec §4.3）：裁剪 → 拆分 → 渲染 → 请求 → 按 type 读响应 → 推事件。
+// StreamChat 一次转发对话：裁剪 → 拆分 → 渲染 → 请求 → 按 type 读响应 → 推事件。
 // ctx 取消时静默关通道（与 OpenAICompat 一致：ctx.Err() == nil 才推 Err）。
 func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []model.Message) <-chan model.StreamEvent {
 	ch := make(chan model.StreamEvent)
@@ -74,7 +74,7 @@ func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []model.Message) 
 }
 
 // applyOptions 按 include_system / include_history 裁剪消息。
-// 裁剪必须作用在 msgs 上而不是各占位符上（spec §4.3），否则 {{system}} 与 {{messages}} 语义打架。
+// 裁剪必须作用在 msgs 上而不是各占位符上，否则 {{system}} 与 {{messages}} 语义打架。
 func applyOptions(msgs []model.Message, o ForwardOpts) []model.Message {
 	eff := make([]model.Message, 0, len(msgs))
 	for _, m := range msgs {
@@ -109,7 +109,7 @@ func lastUserOf(msgs []model.Message) *model.Message {
 }
 
 // split 拆分 eff：system = 第一条 system 的 Content（无则 ""）；lastUser = 最后一条 user 的 Content；
-// history = eff 去掉第一条 system 与最后一条 user 后的剩余（spec §4.3）。
+// history = eff 去掉第一条 system 与最后一条 user 后的剩余。
 // 实现：先定位 lastUser 下标，再单次遍历跳过首条 system 与 lastUser。
 func split(eff []model.Message) (system, lastUser string, history []model.Message) {
 	// 空历史也必须是空数组：nil slice 经 json.Marshal 会变 null，{{history}} 契约是数组。
@@ -142,7 +142,7 @@ func split(eff []model.Message) (system, lastUser string, history []model.Messag
 	return system, lastUser, history
 }
 
-// do 组装并发出请求：URL + query + headers + body（渲染后）。非 2xx 尝试 error_path（spec §4.8）。
+// do 组装并发出请求：URL + query + headers + body（渲染后）。非 2xx 尝试 error_path。
 func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any) (*http.Response, error) {
 	req := p.spec.Request
 	u, err := url.Parse(req.URL)
@@ -221,7 +221,7 @@ func sanitizeURLErr(err error) error {
 	return err
 }
 
-// strVal 要求渲染结果是字符串——{{messages}}/{{history}} 是数组，整串占位符只允许出现在 body（spec §4.5），
+// strVal 要求渲染结果是字符串——{{messages}}/{{history}} 是数组，整串占位符只允许出现在 body，
 // 放进 query/headers 时这里报错而不是 panic。
 func strVal(where, k string, v any) (string, error) {
 	s, ok := v.(string)
@@ -247,7 +247,7 @@ func errText(raw []byte, path string) (string, bool) {
 	return s, true
 }
 
-// emit 按 response.type 读响应并推事件（spec §4.7 四种类型）。
+// emit 按 response.type 读响应并推事件（四种类型）。
 func (p *ForwardProvider) emit(ctx context.Context, resp *http.Response, ch chan<- model.StreamEvent) error {
 	typ := p.spec.Response.Type
 	switch typ {
@@ -329,8 +329,8 @@ func (p *ForwardProvider) extractText(typ string, raw []byte) (string, error) {
 	return ExtractPath(root, p.spec.Response.TextPath)
 }
 
-// emitChunked 按 rune 切块模拟流式（spec §4.7：按 rune 不按 byte，中文不乱码）；
-// sleepCtx 保证「停止」即时生效（spec §4.7）。
+// emitChunked 按 rune 切块模拟流式（按 rune 不按 byte，中文不乱码）；
+// sleepCtx 保证「停止」即时生效。
 func (p *ForwardProvider) emitChunked(ctx context.Context, text string, ch chan<- model.StreamEvent) error {
 	runes := []rune(text)
 	n := p.spec.Options.MockStreamChunk

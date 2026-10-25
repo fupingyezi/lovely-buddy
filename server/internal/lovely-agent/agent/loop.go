@@ -8,7 +8,7 @@ import (
 )
 
 // Loop 一次对话的编排（单轮直通版）：构建上下文 → 一次 StreamChat → 事件流。
-// 工具循环随扩展层功能加入（harness 设计 §4.3）；本版与迁移前行为逐字节一致。
+// 工具循环随扩展层功能加入；本版与迁移前行为逐字节一致。
 type Loop struct {
 	provider model.ChatProvider
 	cfg      ContextConfig

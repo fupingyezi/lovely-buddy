@@ -9,7 +9,7 @@ import (
 
 const defaultPersona = "你是用户的桌面宠物，性格活泼友善，喜欢陪伴用户。"
 
-// SystemPrompt 人设 + 动作协议（spec §4：稳定前缀放最前，缓存友好——只有换人设才失效）。
+// SystemPrompt 人设 + 动作协议（稳定前缀放最前，缓存友好——只有换人设才失效）。
 // 动作意图集合与 renderer live2d/motionMap.ts 的 MotionIntent 保持一致。
 func SystemPrompt(persona string) string {
 	if strings.TrimSpace(persona) == "" {

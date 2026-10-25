@@ -10,7 +10,7 @@ import (
 	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
-// placeholderCtx 渲染上下文：占位符取值来源（spec §4.5）。
+// placeholderCtx 渲染上下文：占位符取值来源。
 type placeholderCtx struct {
 	LastUser  string
 	System    string
@@ -60,7 +60,7 @@ func renderBody(v any, ctx placeholderCtx) (any, error) {
 	}
 }
 
-// renderString 两条规则（spec §4.5）：
+// renderString 两条规则：
 //
 //	整串恰好是一个占位符 → 返回原始类型（数组还是数组）
 //	占位符嵌在字符串里 → 字符串拼接（值为非字符串时报错）

@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// ForwardSpec 转发连接声明式配置（configstore.Connection.Forward 的解析形状，spec §3.2）。
+// ForwardSpec 转发连接声明式配置（configstore.Connection.Forward 的解析形状）。
 type ForwardSpec struct {
 	Version  int           `json:"version"`
 	Request  ForwardReq    `json:"request"`
@@ -37,7 +37,7 @@ type ForwardResp struct {
 }
 
 // ForwardOpts 上下文与流式选项。IncludeSystem/IncludeHistory/MockStream 用 *bool：
-// Go 零值是 false，不用指针无法区分「用户写了 false」和「用户没写」（spec §3.2）。
+// Go 零值是 false，不用指针无法区分「用户写了 false」和「用户没写」。
 type ForwardOpts struct {
 	IncludeSystem     *bool  `json:"include_system"`
 	IncludeHistory    *bool  `json:"include_history"`
@@ -129,7 +129,7 @@ func (s *ForwardSpec) fillDefaults() {
 	}
 }
 
-// check 必填与范围校验；错误文案要能定位字段（spec §9：写错配置是这条路上最常见的故障）。
+// check 必填与范围校验；错误文案要能定位字段（写错配置是这条路上最常见的故障）。
 func (s *ForwardSpec) check() error {
 	u, err := url.Parse(s.Request.URL)
 	if err != nil || u.Host == "" {
