@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -185,7 +186,7 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 	}
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, sanitizeURLErr(err)
 	}
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		defer resp.Body.Close()
@@ -200,6 +201,22 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 		return nil, fmt.Errorf("后端返回 %d: %s", resp.StatusCode, trunc)
 	}
 	return resp, nil
+}
+
+// sanitizeURLErr 剔除错误串里的 query 与用户信息——query 里可能已渲染进密钥，不得出现在错误输出。
+// *url.Error.URL 是完整 URL 字符串，重新解析后清空 RawQuery/User 再拼回。
+func sanitizeURLErr(err error) error {
+	var uerr *url.Error
+	if errors.As(err, &uerr) {
+		u, perr := url.Parse(uerr.URL)
+		if perr != nil {
+			return err
+		}
+		u.RawQuery = ""
+		u.User = nil
+		return &url.Error{Op: uerr.Op, URL: u.String(), Err: uerr.Err}
+	}
+	return err
 }
 
 // strVal 要求渲染结果是字符串——{{messages}}/{{history}} 是数组，整串占位符只允许出现在 body（spec §4.5），

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -239,4 +240,42 @@ func TestForwardArrayPlaceholderInHeaderFails(t *testing.T) {
 		return
 	}
 	t.Fatal("应至少收到一个错误事件")
+}
+
+// TestForwardQuerySecretNotInError 回归：query 里 {{env:NAME}} 渲染出的密钥不得随 *url.Error
+// 的完整 URL 进入错误串（后端不可达时错误会直接进聊天气泡）。
+func TestForwardQuerySecretNotInError(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := ln.Addr().String()
+	ln.Close() // 关闭后请求快速 connection refused
+	t.Setenv("LB_TEST_SECRET", "s3cr3t-v4lue")
+	raw := fmt.Sprintf(`{
+	  "request": {"url": "http://%s/api", "method": "POST",
+	    "query": {"token": "{{env:LB_TEST_SECRET}}"},
+	    "body": {"text": "{{last_user}}"}, "timeout_ms": 5000},
+	  "response": {"type": "json", "text_path": "reply"}
+	}`, addr)
+	p, err := NewForward(json.RawMessage(raw), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var errs []string
+	for ev := range p.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}) {
+		if ev.Err != nil {
+			errs = append(errs, ev.Err.Error())
+		}
+	}
+	if len(errs) == 0 {
+		t.Fatal("应至少收到一个错误事件")
+	}
+	joined := strings.Join(errs, "\n")
+	if strings.Contains(joined, "s3cr3t-v4lue") {
+		t.Fatalf("错误串泄漏 query 中已渲染的密钥: %s", joined)
+	}
+	if !strings.Contains(joined, "转发失败") {
+		t.Fatalf("错误串应含「转发失败」: %s", joined)
+	}
 }
