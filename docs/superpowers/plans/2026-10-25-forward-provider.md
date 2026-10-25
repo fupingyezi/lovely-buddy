@@ -1172,7 +1172,9 @@ func (p *ForwardProvider) StreamChat(ctx context.Context, msgs []Message) <-chan
 		phCtx := newPlaceholderCtx(sys, lastUser, eff, history, p.model, p.spec.Options.SessionID)
 		body, err := renderBody(p.spec.Request.Body, phCtx)
 		if err != nil {
-			ch <- StreamEvent{Err: err}
+			if ctx.Err() == nil {
+				ch <- StreamEvent{Err: err}
+			}
 			return
 		}
 		resp, err := p.do(ctx, phCtx, body)
@@ -1229,6 +1231,8 @@ func lastUserOf(msgs []Message) *Message {
 // history = eff 去掉第一条 system 与最后一条 user 后的剩余（spec §4.3）。
 // 实现：先定位 lastUser 下标，再单次遍历跳过首条 system 与 lastUser。
 func split(eff []Message) (system, lastUser string, history []Message) {
+	// 空历史也必须是空数组：nil slice 经 json.Marshal 会变 null，{{history}} 契约是数组。
+	history = make([]Message, 0, len(eff))
 	for _, m := range eff {
 		if m.Role == "system" {
 			system = m.Content
@@ -1312,7 +1316,7 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
 		defer resp.Body.Close()
 		raw, _ := io.ReadAll(io.LimitReader(resp.Body, maxForwardBody))
-		if msg, ok := errText(raw, req.Response.ErrorPath); ok {
+		if msg, ok := errText(raw, p.spec.Response.ErrorPath); ok {
 			return nil, fmt.Errorf("后端返回 %d: %s", resp.StatusCode, msg)
 		}
 		trunc := raw
