@@ -863,7 +863,7 @@ git commit -m "feat(llm): 新增转发响应路径提取（ExtractPath）"
 - Produces:
   - `func NewForward(raw json.RawMessage, model string) (*ForwardProvider, error)`
   - `(*ForwardProvider) Configured() bool`（spec != nil，绕过 chat.go 的未配置拦截）、`KeyEnv() string`（""）、`StreamChat(ctx, msgs) <-chan StreamEvent`
-  - 包内：`applyOptions(msgs, opts) []Message`、`split(eff) (system, lastUser string, history []Message)`、`emitChunked`、`sleepCtx`、`send`、`errText`
+  - 包内：`applyOptions(msgs, opts) []Message`、`split(eff) (system, lastUser string, history []Message)`、`emitChunked`、`sleepCtx`、`send`、`errText`、`strVal(where, k string, v any) (string, error)`
 
 - [ ] **Step 1: 写失败测试 `forward_test.go`**
 
@@ -1088,6 +1088,28 @@ func TestForwardCtxCancelStops(t *testing.T) {
 		t.Fatal("ctx 取消后 500ms 内应关闭通道")
 	}
 }
+
+func TestForwardArrayPlaceholderInHeaderFails(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"reply":"你好"}`)
+	}))
+	t.Cleanup(srv.Close)
+	raw := fmt.Sprintf(`{"request": {"url": "%s", "method": "POST",
+	  "headers": {"x-arr": "{{messages}}"}, "body": {"text": "{{last_user}}"},
+	  "timeout_ms": 5000}, "response": {"type": "json", "text_path": "reply"},
+	  "options": {"mock_stream_chunk": 2, "mock_stream_delay_ms": 0}}`, srv.URL)
+	p, err := NewForward(json.RawMessage(raw), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for ev := range p.StreamChat(context.Background(), []Message{{Role: "user", Content: "hi"}}) {
+		if ev.Err == nil || !strings.Contains(ev.Err.Error(), "不是字符串") {
+			t.Fatalf("数组占位符进 header 应报错且不 panic，收到 %v", ev)
+		}
+		return
+	}
+	t.Fatal("应至少收到一个错误事件")
+}
 ```
 
 - [ ] **Step 2: 跑测试确认失败**
@@ -1252,7 +1274,11 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 		if err != nil {
 			return nil, err
 		}
-		q.Set(k, rv.(string))
+		s, err := strVal("query", k, rv)
+		if err != nil {
+			return nil, err
+		}
+		q.Set(k, s)
 	}
 	u.RawQuery = q.Encode()
 
@@ -1273,7 +1299,11 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 		if err != nil {
 			return nil, err
 		}
-		httpReq.Header.Set(k, rv.(string))
+		s, err := strVal("请求头", k, rv)
+		if err != nil {
+			return nil, err
+		}
+		httpReq.Header.Set(k, s)
 	}
 	resp, err := p.client.Do(httpReq)
 	if err != nil {
@@ -1292,6 +1322,16 @@ func (p *ForwardProvider) do(ctx context.Context, phCtx placeholderCtx, body any
 		return nil, fmt.Errorf("后端返回 %d: %s", resp.StatusCode, trunc)
 	}
 	return resp, nil
+}
+
+// strVal 要求渲染结果是字符串——{{messages}}/{{history}} 是数组，整串占位符只允许出现在 body（spec §4.5），
+// 放进 query/headers 时这里报错而不是 panic。
+func strVal(where, k string, v any) (string, error) {
+	s, ok := v.(string)
+	if !ok {
+		return "", fmt.Errorf("%s %q 渲染后不是字符串（{{messages}}/{{history}} 是数组，只可用于 body）", where, k)
+	}
+	return s, nil
 }
 
 // errText 非 2xx 时按 error_path 抠错误文案；路径未命中/非 JSON 返回 ok=false。
@@ -1436,7 +1476,7 @@ func send(ctx context.Context, ch chan<- StreamEvent, ev StreamEvent) error {
 - [ ] **Step 5: 跑测试确认通过**
 
 Run: `cd server && go test ./internal/llm/ -run TestForward -count=1`
-Expected: PASS（8 个用例全过）
+Expected: PASS（9 个用例全过）
 
 - [ ] **Step 6: 全量回归 + commit**
 
