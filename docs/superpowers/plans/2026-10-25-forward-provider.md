@@ -1780,6 +1780,11 @@ git add server/internal/configstore/configstore.go server/internal/service/confi
 git commit -m "feat(config): 连接配置支持转发 provider（保存/校验/探活/热切换）"
 ```
 
+> **Amendment（review round 1，已实施为 commit 1725ff8）：** 本任务原文件清单遗漏了启动激活路径。三处修正：
+> 1. `cmd/lovely-buddy-server/main.go` 启动块原走 `llm.New`（拒绝 forward，重启后激活连接静默丢弃，违反 spec §7.3 #6）→ 改为 `ConfigService.ApplyActive()`（导出方法，调 `swapActive` 并返回其 error；`swapActive` 签名因此改为返回 error，既有调用点 Add/Update/Remove/SetActive 仍按语句调用不受影响）。回归测试 `TestApplyActiveRestoresForward`（config_test.go：预置 File 激活 forward 连接 → ApplyActive → 断言 reg.Current() 是 *llm.ForwardProvider）。
+> 2. `TestResult.LatencyMS` 由 `int64` 改为 `*int64`（nil=未配置探活，非 nil 0 也序列化为 `"latency_ms":0`）——原 0 哨兵与 omitempty 碰撞，亚毫秒探活成功在前端被误判为「未配置探活地址」。两个赋值点（OpenAICompat 路径与 forward probe 路径）同步改。
+> 3. 探活测试去掉人为 2ms sleep，断言改 nil/非 nil。
+
 ---
 
 ### Task 6: 前端表单
