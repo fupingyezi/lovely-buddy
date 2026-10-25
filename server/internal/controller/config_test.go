@@ -111,3 +111,17 @@ func TestDeleteActiveFallsBackAndTestEndpoint(t *testing.T) {
 		t.Fatalf("Test 校验失败应 422，得 %d", w3.Code)
 	}
 }
+
+func TestForwardAddViaHTTP(t *testing.T) {
+	r := newConfigRouter(t)
+	body := `{"provider":"forward","forward":{"request":{"url":"http://127.0.0.1:1/x","method":"GET"},"response":{"type":"text"}}}`
+	w := doConfigJSON(t, r, http.MethodPost, "/config/connections", body)
+	if w.Code != http.StatusOK {
+		t.Fatalf("forward 保存 = %d %s", w.Code, w.Body.String())
+	}
+	var st service.ConfigState
+	_ = json.Unmarshal(w.Body.Bytes(), &st)
+	if len(st.Connections) != 1 || len(st.Connections[0].Forward) == 0 {
+		t.Fatalf("forward 应落盘并回传: %+v", st)
+	}
+}

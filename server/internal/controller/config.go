@@ -29,7 +29,7 @@ func (h *Config) Add(c *gin.Context) {
 	}
 	// 先校验（与 service 内部校验同源）：422 不落盘；service 内部仍会再校验一次兜底
 	if err := service.Validate(service.TestInput{
-		Provider: req.Provider, BaseURL: req.BaseURL, Model: req.Model, APIKey: req.APIKey, MaxTokens: req.MaxTokens,
+		Provider: req.Provider, BaseURL: req.BaseURL, Model: req.Model, APIKey: req.APIKey, MaxTokens: req.MaxTokens, Forward: req.Forward,
 	}); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return
@@ -46,7 +46,7 @@ func (h *Config) Update(c *gin.Context) {
 		return
 	}
 	if err := service.Validate(service.TestInput{
-		Provider: req.Provider, BaseURL: req.BaseURL, Model: req.Model, APIKey: req.APIKey, MaxTokens: req.MaxTokens,
+		Provider: req.Provider, BaseURL: req.BaseURL, Model: req.Model, APIKey: req.APIKey, MaxTokens: req.MaxTokens, Forward: req.Forward,
 	}); err != nil {
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
 		return

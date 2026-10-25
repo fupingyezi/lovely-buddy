@@ -1,10 +1,13 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -237,5 +240,82 @@ func TestStateMasksKey(t *testing.T) {
 	}
 	if !st.Connections[0].HasKey {
 		t.Fatal("HasKey 应为 true")
+	}
+}
+
+const fwdSpec = `{"request":{"url":"http://127.0.0.1:1/x","method":"GET"},"response":{"type":"text"}}`
+
+func TestForwardAddSwapAndState(t *testing.T) {
+	svc, _ := newSvc(t)
+	state, err := svc.Add(ConnInput{Provider: "forward", Forward: json.RawMessage(fwdSpec)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Connections) != 1 || len(state.Connections[0].Forward) == 0 {
+		t.Fatalf("forward 应落盘并回传: %+v", state.Connections)
+	}
+	if _, ok := svc.reg.Current().(*llm.ForwardProvider); !ok {
+		t.Fatalf("激活连接应为 ForwardProvider: %T", svc.reg.Current())
+	}
+}
+
+func TestForwardDedupByConfig(t *testing.T) {
+	svc, _ := newSvc(t)
+	rawA := json.RawMessage(`{"request":{"url":"http://127.0.0.1:1/a","method":"GET"},"response":{"type":"text"}}`)
+	rawB := json.RawMessage(`{"request":{"url":"http://127.0.0.1:1/b","method":"GET"},"response":{"type":"text"}}`)
+	if _, err := svc.Add(ConnInput{Provider: "forward", Forward: rawA}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Add(ConnInput{Provider: "forward", Forward: rawB}); err != nil {
+		t.Fatalf("不同转发配置不应判重: %v", err)
+	}
+	if _, err := svc.Add(ConnInput{Provider: "forward", Forward: rawA}); !errors.Is(err, ErrDuplicate) {
+		t.Fatalf("相同转发配置应判重: %v", err)
+	}
+}
+
+func TestForwardValidateErrors(t *testing.T) {
+	cases := map[string]TestInput{
+		"空配置": {Provider: "forward"},
+		"用 model 无模型名": {Provider: "forward", Forward: json.RawMessage(
+			`{"request":{"url":"http://127.0.0.1:1/x","method":"GET","body":{"m":"{{model}}"}},"response":{"type":"text"}}`)},
+	}
+	for name, in := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := Validate(in); err == nil {
+				t.Fatalf("%s 应报错", name)
+			}
+		})
+	}
+}
+
+func TestForwardTestProbe(t *testing.T) {
+	svc, _ := newSvc(t)
+	probe := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/status" {
+			// 本地回环往返常 <1ms，Milliseconds() 会截断为 0——加少量延迟让「探活成功带正延迟」可确定断言。
+			time.Sleep(2 * time.Millisecond)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	t.Cleanup(probe.Close)
+
+	ok := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fmt.Sprintf(
+		`{"request":{"url":"%s/x","method":"GET"},"response":{"type":"text"},"probe":{"url":"%s/status"}}`,
+		probe.URL, probe.URL))})
+	if !ok.OK || ok.LatencyMS <= 0 {
+		t.Fatalf("探活应成功: %+v", ok)
+	}
+	bad := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fmt.Sprintf(
+		`{"request":{"url":"%s/x","method":"GET"},"response":{"type":"text"},"probe":{"url":"%s/status","expect_status":201}}`,
+		probe.URL, probe.URL))})
+	if bad.OK || !strings.Contains(bad.Error, "201") {
+		t.Fatalf("期望 201 应失败: %+v", bad)
+	}
+	nop := svc.Test(TestInput{Provider: "forward", Forward: json.RawMessage(fwdSpec)})
+	if !nop.OK || nop.LatencyMS != 0 {
+		t.Fatalf("无 probe 应直接 OK: %+v", nop)
 	}
 }

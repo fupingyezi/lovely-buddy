@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -25,38 +28,41 @@ var ErrNotFound = errors.New("连接不存在")
 // ConnInput 新增/更新连接请求（POST /api/v1/config/connections、PUT …/:id）。
 // Tested/TestOK = 保存前「测试连接」的结果（Tested=false = 从未测试，不落 LastCheck/CheckFail）。
 type ConnInput struct {
-	Provider  string `json:"provider"`
-	BaseURL   string `json:"base_url"`
-	Model     string `json:"model"`
-	APIKey    string `json:"api_key"` // 更新时为空 = 保留原 key
-	MaxTokens int    `json:"max_tokens"`
-	Tested    bool   `json:"tested"`
-	TestOK    bool   `json:"test_ok"`
+	Provider  string          `json:"provider"`
+	BaseURL   string          `json:"base_url"`
+	Model     string          `json:"model"`
+	APIKey    string          `json:"api_key"` // 更新时为空 = 保留原 key
+	MaxTokens int             `json:"max_tokens"`
+	Forward   json.RawMessage `json:"forward"` // provider=="forward" 时的声明式配置
+	Tested    bool            `json:"tested"`
+	TestOK    bool            `json:"test_ok"`
 }
 
 // TestInput 「测试连接」请求（POST /api/v1/config/test，不落盘）。
 // ID 可选：编辑表单测试时带上正在编辑的连接 id，api_key 为空则回退该连接的存储 key。
 type TestInput struct {
-	Provider  string `json:"provider"`
-	BaseURL   string `json:"base_url"`
-	Model     string `json:"model"`
-	APIKey    string `json:"api_key"`
-	MaxTokens int    `json:"max_tokens"`
-	ID        string `json:"id"`
+	Provider  string          `json:"provider"`
+	BaseURL   string          `json:"base_url"`
+	Model     string          `json:"model"`
+	APIKey    string          `json:"api_key"`
+	MaxTokens int             `json:"max_tokens"`
+	Forward   json.RawMessage `json:"forward"` // provider=="forward" 时的声明式配置
+	ID        string          `json:"id"`
 }
 
 // ConnectionOut 出参：APIKey 永不携带，只给掩码。
 type ConnectionOut struct {
-	ID        string     `json:"id"`
-	Provider  string     `json:"provider"`
-	BaseURL   string     `json:"base_url"`
-	Model     string     `json:"model"`
-	MaxTokens int        `json:"max_tokens"`
-	KeyMasked string     `json:"key_masked"`
-	HasKey    bool       `json:"has_key"`
-	LastCheck *time.Time `json:"last_check"`
-	CheckFail bool       `json:"check_fail"`
-	Active    bool       `json:"active"`
+	ID        string          `json:"id"`
+	Provider  string          `json:"provider"`
+	BaseURL   string          `json:"base_url"`
+	Model     string          `json:"model"`
+	MaxTokens int             `json:"max_tokens"`
+	Forward   json.RawMessage `json:"forward,omitempty"` // 回传原文供编辑回填；不含密钥（令牌走 {{env:}}）
+	KeyMasked string          `json:"key_masked"`
+	HasKey    bool            `json:"has_key"`
+	LastCheck *time.Time      `json:"last_check"`
+	CheckFail bool            `json:"check_fail"`
+	Active    bool            `json:"active"`
 }
 
 // ConfigState GET /api/v1/config 出参。
@@ -98,6 +104,7 @@ func (s *ConfigService) state() ConfigState {
 	for _, c := range s.file.Connections {
 		out.Connections = append(out.Connections, ConnectionOut{
 			ID: c.ID, Provider: c.Provider, BaseURL: c.BaseURL, Model: c.Model, MaxTokens: c.MaxTokens,
+			Forward:   c.Forward,
 			KeyMasked: configstore.MaskKey(c.APIKey), HasKey: c.APIKey != "",
 			LastCheck: c.LastCheck, CheckFail: c.CheckFail, Active: c.ID == s.file.ActiveID,
 		})
@@ -108,6 +115,9 @@ func (s *ConfigService) state() ConfigState {
 // Validate 校验连接输入（M3「非法配置拒绝不落盘」的格式层）。
 // BaseURL 空 = 厂商默认；http 仅允许本地端点（设计图「本地 Ollama · 127.0.0.1:11434」）。
 func Validate(in TestInput) error {
+	if in.Provider == "forward" {
+		return validateForward(in.Forward, in.Model)
+	}
 	if _, ok := llm.Providers[in.Provider]; !ok {
 		return errors.New("未知服务商: " + in.Provider + "（可选: deepseek, dashscope, zhipu, moonshot）")
 	}
@@ -147,7 +157,8 @@ func (s *ConfigService) Add(input ConnInput) (ConfigState, error) {
 	}
 	for _, c := range s.file.Connections {
 		if c.Provider == input.Provider && c.BaseURL == input.BaseURL &&
-			c.Model == input.Model && c.APIKey == input.APIKey {
+			c.Model == input.Model && c.APIKey == input.APIKey &&
+			string(c.Forward) == string(input.Forward) {
 			return s.state(), ErrDuplicate
 		}
 	}
@@ -171,7 +182,7 @@ func (s *ConfigService) Update(id string, input ConnInput) (ConfigState, error) 
 	if err := Validate(toTestInput(input)); err != nil {
 		return s.state(), err
 	}
-	c.Provider, c.BaseURL, c.Model, c.MaxTokens = input.Provider, input.BaseURL, input.Model, input.MaxTokens
+	c.Provider, c.BaseURL, c.Model, c.MaxTokens, c.Forward = input.Provider, input.BaseURL, input.Model, input.MaxTokens, input.Forward
 	if input.APIKey != "" {
 		c.APIKey = input.APIKey
 	}
@@ -217,6 +228,9 @@ func (s *ConfigService) SetActive(id string) (ConfigState, error) {
 func (s *ConfigService) Test(input TestInput) TestResult {
 	if err := Validate(input); err != nil {
 		return TestResult{OK: false, Error: err.Error()}
+	}
+	if input.Provider == "forward" {
+		return s.testForward(input)
 	}
 	key := input.APIKey
 	if key == "" && input.ID != "" {
@@ -292,7 +306,7 @@ func classifyTestErr(err error, timedOut bool) string {
 func (s *ConfigService) newConn(input ConnInput) *configstore.Connection {
 	c := &configstore.Connection{
 		Provider: input.Provider, BaseURL: input.BaseURL, Model: input.Model,
-		MaxTokens: input.MaxTokens, APIKey: input.APIKey,
+		MaxTokens: input.MaxTokens, APIKey: input.APIKey, Forward: input.Forward,
 	}
 	s.applyTest(c, input)
 	return c
@@ -319,6 +333,16 @@ func (s *ConfigService) swapActive() {
 		s.reg.Swap(s.fallback)
 		return
 	}
+	if active.Provider == "forward" {
+		p, err := llm.NewForward(active.Forward, active.Model)
+		if err != nil {
+			slog.Warn("激活连接无效，回退默认", "err", err)
+			s.reg.Swap(s.fallback)
+			return
+		}
+		s.reg.Swap(p)
+		return
+	}
 	p, err := llm.New(active.Provider, active.Model, active.BaseURL, active.APIKey, active.MaxTokens)
 	if err != nil {
 		slog.Warn("激活连接无效，回退默认", "err", err)
@@ -329,5 +353,44 @@ func (s *ConfigService) swapActive() {
 }
 
 func toTestInput(in ConnInput) TestInput {
-	return TestInput{Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, APIKey: in.APIKey, MaxTokens: in.MaxTokens}
+	return TestInput{Provider: in.Provider, BaseURL: in.BaseURL, Model: in.Model, APIKey: in.APIKey, MaxTokens: in.MaxTokens, Forward: in.Forward}
+}
+
+// validateForward 转发连接的保存/测试校验（spec §4.4）：配置语法 + {{model}} 依赖。
+// 不复用厂商表检查——"forward" 不在 llm.Providers 里（spec §4.4：加进去会让 llm.New 用空 BaseURL 建客户端）。
+func validateForward(raw json.RawMessage, model string) error {
+	if _, err := llm.ParseForwardSpec(raw); err != nil {
+		return err
+	}
+	if model == "" && llm.UsesPlaceholder(raw, "model") {
+		return errors.New("转发配置用到了 {{model}} 但模型名为空")
+	}
+	return nil
+}
+
+// testForward 转发探活：有 probe 打 probe，无 probe 只做语法校验（spec §4.9）。
+func (s *ConfigService) testForward(input TestInput) TestResult {
+	spec, err := llm.ParseForwardSpec(input.Forward)
+	if err != nil {
+		return TestResult{OK: false, Error: err.Error()}
+	}
+	if spec.Probe == nil {
+		return TestResult{OK: true} // LatencyMS 0 → 前端显示「配置合法（未配置探活地址）」
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), s.testTimeout)
+	defer cancel()
+	start := time.Now()
+	req, err := http.NewRequestWithContext(ctx, spec.Probe.Method, spec.Probe.URL, nil)
+	if err != nil {
+		return TestResult{OK: false, Error: "探活地址无效: " + err.Error()}
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return TestResult{OK: false, Error: "探活失败: " + err.Error()}
+	}
+	resp.Body.Close()
+	if resp.StatusCode != spec.Probe.ExpectStatus {
+		return TestResult{OK: false, Error: fmt.Sprintf("探活失败: HTTP %d（期望 %d）", resp.StatusCode, spec.Probe.ExpectStatus)}
+	}
+	return TestResult{OK: true, LatencyMS: time.Since(start).Milliseconds()}
 }
