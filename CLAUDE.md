@@ -4,7 +4,7 @@
 
 **AI桌宠**（repo: lovely-buddy）：可换形象的本地 AI 桌宠——Electron + Live2D 桌面宠物，Go 后端（形象库 API 已实现，LLM 对话与 MCP 宿主接入规划中）。
 
-- 产品规格：`docs/design.md`（v2，含里程碑）；开发指南：`docs/development.md`；模型放置：`docs/model-setup.md`；历史计划：`docs/superpowers/plans/`
+- 产品规格：`docs/design.md`（v2，含里程碑）；开发指南：`docs/development.md`；模型放置：`docs/model-setup.md`
 - 产品显示名 **AI桌宠**——用户可见文案禁用具体角色名（天依/洛天依），测试夹具用中性素材名（haru/shizuku）。内部标识不变：`lovely-buddy`、`lovelybuddy:*` IPC、`window.lovelybuddy`、`LOVELYBUDDY_*` env、`l2d://` 协议。
 
 ## 常用命令
