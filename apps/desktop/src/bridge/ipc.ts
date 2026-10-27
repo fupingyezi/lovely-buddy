@@ -1,6 +1,7 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BrowserWindow, app, dialog, ipcMain } from 'electron'
+import { CHANNELS } from './channels'
 import type { PetWindowManager } from '../window/manager'
 import type { createSettingsWindow } from '../window/settings'
 
@@ -10,41 +11,41 @@ const DEV_TOKEN = process.env.LOVELYBUDDY_DEV_TOKEN ?? 'dev'
 
 /** 注册全部 lovelybuddy:* 频道：只做转发，窗口/设置操作落在 window/manager 与 window/settings。 */
 export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof createSettingsWindow>): void {
-  ipcMain.handle('lovelybuddy:get-runtime', () => ({
+  ipcMain.handle(CHANNELS.getRuntime, () => ({
     baseUrl: `http://${DEV_ADDR}`,
     token: DEV_TOKEN,
     dev: !app.isPackaged
   }))
-  ipcMain.on('lovelybuddy:set-passthrough', (_e, on: boolean) => win.setPassthrough(on))
+  ipcMain.on(CHANNELS.setPassthrough, (_e, on: boolean) => win.setPassthrough(on))
   // 拖拽 = 移动窗口（增量），夹紧与持久化都在 manager
-  ipcMain.on('lovelybuddy:move-window', (_e, dx: number, dy: number) => win.moveBy(dx, dy))
-  ipcMain.on('lovelybuddy:move-window-end', () => win.endMove())
+  ipcMain.on(CHANNELS.moveWindow, (_e, dx: number, dy: number) => win.moveBy(dx, dy))
+  ipcMain.on(CHANNELS.moveWindowEnd, () => win.endMove())
   // 模型加载后按模型显示尺寸调整窗口
-  ipcMain.on('lovelybuddy:resize-window', (_e, width: number, height: number) => win.resizeToModel(width, height))
+  ipcMain.on(CHANNELS.resizeWindow, (_e, width: number, height: number) => win.resizeToModel(width, height))
   // 面板打开/关闭：expand 向左上扩、collapse 去掉该面板扩展量（右下角固定，多面板共存）
-  ipcMain.handle('lovelybuddy:expand-window', (_e, key: string, extraWidth: number, extraHeight: number) =>
+  ipcMain.handle(CHANNELS.expandWindow, (_e, key: string, extraWidth: number, extraHeight: number) =>
     win.expandFor(key, extraWidth, extraHeight)
   )
-  ipcMain.on('lovelybuddy:collapse-window', (_e, key: string) => win.collapseFor(key))
+  ipcMain.on(CHANNELS.collapseWindow, (_e, key: string) => win.collapseFor(key))
   // 菜单展开：主进程按真实 bounds 计算扩展量（渲染进程 innerWidth 落后 resize 事件，
   // 连续 Cmd+点击会读到过期宽度导致菜单被截断）
-  ipcMain.handle('lovelybuddy:expand-menu', (_e, requiredW: number, requiredH: number) =>
+  ipcMain.handle(CHANNELS.expandMenu, (_e, requiredW: number, requiredH: number) =>
     win.expandForMenu(requiredW, requiredH)
   )
-  ipcMain.on('lovelybuddy:quit', () => app.quit())
+  ipcMain.on(CHANNELS.quit, () => app.quit())
   // 设置窗口：独立无边框窗口（复用同一渲染进程 ?settings=1），已开则聚焦
-  ipcMain.handle('lovelybuddy:open-settings', () => settingsWin.open())
-  ipcMain.on('lovelybuddy:close-settings', (e) => BrowserWindow.fromWebContents(e.sender)?.close())
+  ipcMain.handle(CHANNELS.openSettings, () => settingsWin.open())
+  ipcMain.on(CHANNELS.closeSettings, (e) => BrowserWindow.fromWebContents(e.sender)?.close())
   // 设置窗口清空对话 → 广播给桌宠窗口刷新历史（首个 main→renderer 推送）
-  ipcMain.on('lovelybuddy:notify-chat-cleared', () => {
-    win.window?.webContents.send('lovelybuddy:chat-cleared')
+  ipcMain.on(CHANNELS.notifyChatCleared, () => {
+    win.window?.webContents.send(CHANNELS.chatCleared)
   })
   // 设置窗口导入/删除形象 → 广播给桌宠窗口刷新形象列表（同 chat-cleared 跨窗同步模式）
-  ipcMain.on('lovelybuddy:notify-models-changed', () => {
-    win.window?.webContents.send('lovelybuddy:models-changed')
+  ipcMain.on(CHANNELS.notifyModelsChanged, () => {
+    win.window?.webContents.send(CHANNELS.modelsChanged)
   })
   // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
-  ipcMain.handle('lovelybuddy:pick-import-path', async (e, mode: 'zip' | 'dir') => {
+  ipcMain.handle(CHANNELS.pickImportPath, async (e, mode: 'zip' | 'dir') => {
     const opts: Electron.OpenDialogOptions =
       mode === 'dir'
         ? { title: '选择形象目录', properties: ['openDirectory'] }
@@ -57,7 +58,7 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
     return { canceled: false, path: filePaths[0] }
   })
   // 导出文本文件（对话记录 Markdown）：保存对话框默认 Downloads/<name>，用户取消不写
-  ipcMain.handle('lovelybuddy:export-file', async (e, defaultName: string, content: string) => {
+  ipcMain.handle(CHANNELS.exportFile, async (e, defaultName: string, content: string) => {
     const parent = BrowserWindow.fromWebContents(e.sender) ?? win.window
     if (!parent) return { saved: false, path: null }
     const { canceled, filePath } = await dialog.showSaveDialog(parent, {

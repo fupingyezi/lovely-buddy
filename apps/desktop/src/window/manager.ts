@@ -12,7 +12,7 @@ import {
   shiftRect,
   type Rect
 } from './bounds'
-import type { SettingsStore } from '../main/store'
+import type { SettingsStore } from '../main/settings-store'
 
 /**
  * 桌宠窗口生命周期与 bounds 状态机：唯一持有窗口引用和展开基准 expandedBase 的地方。

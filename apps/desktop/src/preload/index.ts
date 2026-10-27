@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
+import { CHANNELS } from '../bridge/channels'
 
 export interface Runtime {
   baseUrl: string
@@ -45,33 +46,33 @@ export interface LovelybuddyApi {
 }
 
 const lovelybuddy: LovelybuddyApi = {
-  getRuntime: () => ipcRenderer.invoke('lovelybuddy:get-runtime'),
-  setPassthrough: (on) => ipcRenderer.send('lovelybuddy:set-passthrough', on),
-  pickImportPath: (mode) => ipcRenderer.invoke('lovelybuddy:pick-import-path', mode),
-  exportFile: (defaultName, content) => ipcRenderer.invoke('lovelybuddy:export-file', defaultName, content),
-  moveWindow: (dx, dy) => ipcRenderer.send('lovelybuddy:move-window', dx, dy),
-  moveWindowEnd: () => ipcRenderer.send('lovelybuddy:move-window-end'),
-  resizeWindow: (width, height) => ipcRenderer.send('lovelybuddy:resize-window', width, height),
+  getRuntime: () => ipcRenderer.invoke(CHANNELS.getRuntime),
+  setPassthrough: (on) => ipcRenderer.send(CHANNELS.setPassthrough, on),
+  pickImportPath: (mode) => ipcRenderer.invoke(CHANNELS.pickImportPath, mode),
+  exportFile: (defaultName, content) => ipcRenderer.invoke(CHANNELS.exportFile, defaultName, content),
+  moveWindow: (dx, dy) => ipcRenderer.send(CHANNELS.moveWindow, dx, dy),
+  moveWindowEnd: () => ipcRenderer.send(CHANNELS.moveWindowEnd),
+  resizeWindow: (width, height) => ipcRenderer.send(CHANNELS.resizeWindow, width, height),
   expandWindow: (key, extraWidth, extraHeight) =>
-    ipcRenderer.invoke('lovelybuddy:expand-window', key, extraWidth, extraHeight),
-  expandMenu: (requiredW, requiredH) => ipcRenderer.invoke('lovelybuddy:expand-menu', requiredW, requiredH),
-  collapseWindow: (key) => ipcRenderer.send('lovelybuddy:collapse-window', key),
-  openSettings: () => ipcRenderer.invoke('lovelybuddy:open-settings'),
-  closeSettings: () => ipcRenderer.send('lovelybuddy:close-settings'),
-  notifyChatCleared: () => ipcRenderer.send('lovelybuddy:notify-chat-cleared'),
+    ipcRenderer.invoke(CHANNELS.expandWindow, key, extraWidth, extraHeight),
+  expandMenu: (requiredW, requiredH) => ipcRenderer.invoke(CHANNELS.expandMenu, requiredW, requiredH),
+  collapseWindow: (key) => ipcRenderer.send(CHANNELS.collapseWindow, key),
+  openSettings: () => ipcRenderer.invoke(CHANNELS.openSettings),
+  closeSettings: () => ipcRenderer.send(CHANNELS.closeSettings),
+  notifyChatCleared: () => ipcRenderer.send(CHANNELS.notifyChatCleared),
   onChatCleared: (cb) => {
     const listener = (): void => cb()
-    ipcRenderer.on('lovelybuddy:chat-cleared', listener)
-    return () => ipcRenderer.removeListener('lovelybuddy:chat-cleared', listener)
+    ipcRenderer.on(CHANNELS.chatCleared, listener)
+    return () => ipcRenderer.removeListener(CHANNELS.chatCleared, listener)
   },
   getPathForFile: (file) => webUtils.getPathForFile(file),
-  notifyModelsChanged: () => ipcRenderer.send('lovelybuddy:notify-models-changed'),
+  notifyModelsChanged: () => ipcRenderer.send(CHANNELS.notifyModelsChanged),
   onModelsChanged: (cb) => {
     const listener = (): void => cb()
-    ipcRenderer.on('lovelybuddy:models-changed', listener)
-    return () => ipcRenderer.removeListener('lovelybuddy:models-changed', listener)
+    ipcRenderer.on(CHANNELS.modelsChanged, listener)
+    return () => ipcRenderer.removeListener(CHANNELS.modelsChanged, listener)
   },
-  quit: () => ipcRenderer.send('lovelybuddy:quit')
+  quit: () => ipcRenderer.send(CHANNELS.quit)
 }
 
 contextBridge.exposeInMainWorld('lovelybuddy', lovelybuddy)

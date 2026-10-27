@@ -1,6 +1,6 @@
 import { app, BrowserWindow } from 'electron'
 import { registerScheme, registerL2DProtocol } from '../bridge/protocol'
-import { SettingsStore } from './store'
+import { SettingsStore } from './settings-store'
 import { setupCSP } from './csp'
 import { setupIPC } from '../bridge/ipc'
 import { createTray } from './tray'

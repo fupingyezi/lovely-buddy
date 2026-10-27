@@ -15,7 +15,8 @@
     "forceConsistentCasingInFileNames": true,
     "useDefineForClassFields": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+    "paths": { "@/*": ["./src/renderer/*"] }
   },
   "include": ["electron.vite.config.ts", "src"]
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI桌宠</title>
     <!--
-      Cubism core（UMD 全局脚本）由 live2d/loader.ts 在运行时动态注入：
+      Cubism core（UMD 全局脚本）由 live2d/engine/loader.ts 在运行时动态注入：
       new URL('live2d/...', document.baseURI) 同时兼容 dev(5173) 与打包后 file://，
       避免 <script> 标签路径在两种模式下不一致。cores 不进 Vite 打包。
       下载：scripts/fetch-assets.sh → public/live2d/
@@ -13,6 +13,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <script type="module" src="./main.tsx"></script>
   </body>
 </html>

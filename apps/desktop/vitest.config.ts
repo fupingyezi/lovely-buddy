@@ -1,8 +1,10 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig({
   plugins: [react()],
+  resolve: { alias: { '@': fileURLToPath(new URL('./src/renderer', import.meta.url)) } },
   test: {
     // 默认 jsdom（renderer 组件测试）；main/preload 的纯逻辑测试在文件顶部
     // 用 `// @vitest-environment node` 切换环境

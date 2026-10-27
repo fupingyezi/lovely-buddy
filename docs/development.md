@@ -23,7 +23,7 @@
 单测：
 
 ```bash
-cd apps/desktop && pnpm vitest run src/renderer/src/pet/__test__/usePetMenu.test.ts  # 前端单文件
+cd apps/desktop && pnpm vitest run src/renderer/pet/__test__/usePetMenu.test.ts  # 前端单文件
 cd server && go test ./...                                                          # Go 全量
 ```
 
@@ -35,12 +35,14 @@ apps/desktop/                Electron
 ├── src/bridge/              渲染进程 ↔ 主进程通信：lovelybuddy:* IPC、l2d:// 协议
 ├── src/window/              窗口服务：桌宠窗口（穿透/移动/扩展/缩回）、bounds 数学（__test__）、设置窗口
 ├── src/preload/             contextBridge 暴露 window.lovelybuddy（IPC 前缀 lovelybuddy:*）
-└── src/renderer/            React 18 + zustand + pixi.js v7 + pixi-live2d-display + Tailwind v4
-    ├── live2d/              模型加载；interact（screenX/screenY 拖拽/tap，屏幕坐标防漂移）；
-    │                        windowAnchor（窗口 resize 时模型位稳平移）
-    ├── hooks/               usePassthrough（穿透状态机）、usePetMenu、useChatPanel、useTypewriter
-    ├── pet/                 menuLayout/PetMenu（形象菜单）、chat/（输入条、气泡）、
-    │                        settings/（独立无边框设置窗口·对话记录）
+└── src/renderer/            React 18 + zustand + pixi.js v7 + pixi-live2d-display + Tailwind v4（index.html 与源码同级）
+    ├── （根）               main.tsx/App.tsx 组合根、useBackendHealth/useChatSync、env.d.ts/css.d.ts；renderer 内 import 一律 @/
+    ├── live2d/              模型引擎与窗口几何（不依赖 pet/settings/store）：engine/（model/loader/stage/modelBus/capabilities）、
+    │                        motion/（motionMap/motionScheduler/actions）、window/（windowGeometry/windowAnchor/waitForResize）、
+    │                        interaction/（interact screenX/screenY 拖拽/tap、hitbox）
+    ├── pet/                 桌宠悬浮层（hook 随功能就近）：menuLayout/PetMenu（形象菜单）、chat/（输入条、气泡、useChatPanel/useTypewriter）、
+    │                        PetCanvas/ImportPanel/PlaceholderCard、usePetMenu/usePassthrough（穿透状态机）
+    ├── settings/            独立设置窗口应用（?settings=1 复用 renderer，不依赖 pet/live2d）
     ├── styles/tokens.css    设计 token（design-v1 单一来源，Tailwind v4 @theme 生成工具类）；
     │                        index.css 仅透明窗壳/气泡相位变体/app-region
     ├── store/petStore.ts    全局状态（模型列表/当前形象/后端状态）
@@ -60,9 +62,9 @@ docker-compose.yml           lovelybuddy-postgres（pgvector），仅绑 127.0.0
 
 ## 关键机制与坑
 
-1. **点击穿透状态机**（`hooks/usePassthrough.ts` + 主进程 `set-passthrough`）：窗口默认穿透，主进程用 `setIgnoreMouseEvents(on, {forward: true})`——穿透时 mousemove 仍会到达渲染进程（否则窗口会永久卡死），但**点击会穿到桌面**。悬停模型或带 `data-interactive` 的面板时关穿透，移出恢复；菜单打开时整窗不穿透（菜单外的点击用于关菜单）。
-   ⚠️ effect 的 cleanup 会无条件把穿透置回 true；新 effect 的立即同步**必须无条件发 IPC**（走本地去重会被跳过 → 窗口卡死在穿透态：移动有反应、点击全穿透、菜单关不掉）。回归用例见 `hooks/__test__/usePassthrough.test.ts`。
-2. **窗口扩展与模型位稳**：`expand-window` 向左上扩展（右下角锚定，按屏幕工作区夹紧）。渲染进程在 window resize 时按窗口尺寸增量平移模型（`live2d/windowAnchor.ts` 的 `shiftToKeepScreenPosition`）保持屏幕位置不动——改窗口尺寸逻辑时这两处必须同步改，否则角色会「瞬移」。
+1. **点击穿透状态机**（`pet/usePassthrough.ts` + 主进程 `set-passthrough`）：窗口默认穿透，主进程用 `setIgnoreMouseEvents(on, {forward: true})`——穿透时 mousemove 仍会到达渲染进程（否则窗口会永久卡死），但**点击会穿到桌面**。悬停模型或带 `data-interactive` 的面板时关穿透，移出恢复；菜单打开时整窗不穿透（菜单外的点击用于关菜单）。
+   ⚠️ effect 的 cleanup 会无条件把穿透置回 true；新 effect 的立即同步**必须无条件发 IPC**（走本地去重会被跳过 → 窗口卡死在穿透态：移动有反应、点击全穿透、菜单关不掉）。回归用例见 `pet/__test__/usePassthrough.test.ts`。
+2. **窗口扩展与模型位稳**：`expand-window` 向左上扩展（右下角锚定，按屏幕工作区夹紧）。渲染进程在 window resize 时按窗口尺寸增量平移模型（`live2d/window/windowAnchor.ts` 的 `shiftToKeepScreenPosition`）保持屏幕位置不动——改窗口尺寸逻辑时这两处必须同步改，否则角色会「瞬移」。
 3. **重启 make dev 前先查内存**：系统内存吃紧会 SIGTERM 整个 make dev（`memory_pressure -Q` 看 free percentage，低于 ~30% 慎启）。
 4. **临时诊断用完即删**：曾用 Go 端点 `/api/v1/debug-log` + 渲染进程 `lib/dbg.ts` 排查穿透问题，定位后必须整体移除，不留残余。
 5. **设置窗口**：独立无边框 BrowserWindow（960×600，`?settings=1` 复用同一 renderer 分支 `SettingsApp`，不加载 PIXI/健康轮询）；无边框拖拽靠标题条 `-webkit-app-region: drag`；清空对话经 `lovelybuddy:notify-chat-cleared` → 主进程广播 `lovelybuddy:chat-cleared` → 桌宠窗口 `chatStore.refresh()` 跨窗同步。
