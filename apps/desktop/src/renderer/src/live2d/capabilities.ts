@@ -1,5 +1,5 @@
 // 模型能力目录：加载时从模型设定读出「有什么动作组、有什么表情」，
-// 供意图解析降级链与 avatar.json 映射校验使用（见 actions.ts）。
+// 供意图解析降级链与 avatar.json 映射校验使用。
 import type { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 
 export interface ModelCapabilities {

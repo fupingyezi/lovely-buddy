@@ -56,11 +56,16 @@ export function resolveAction(
   return idle ? { group: idle, index: undefined, expression: null } : null
 }
 
-/** ① avatar.json 手工映射；引用的组/表情不存在视为「写给别的模型」，整条失效 */
+/** ① avatar.json 手工映射；引用的组/表情不存在、下标越界或空映射视为「写给别的模型」，整条失效 */
 function resolveMapped(intent: MotionIntent, caps: ModelCapabilities, actions?: AvatarActions): ResolvedAction | null {
   const spec = actions?.[intent]
   if (!spec) return null
+  if (spec.motion === undefined && spec.expression === undefined) return null
   if (spec.motion !== undefined && !Object.prototype.hasOwnProperty.call(caps.motions, spec.motion)) return null
+  if (spec.motionIndex !== undefined) {
+    if (spec.motion === undefined) return null
+    if (spec.motionIndex < 0 || spec.motionIndex >= caps.motions[spec.motion]) return null
+  }
   if (spec.expression !== undefined && !caps.expressions.includes(spec.expression)) return null
   return { group: spec.motion ?? null, index: spec.motionIndex, expression: spec.expression ?? null }
 }

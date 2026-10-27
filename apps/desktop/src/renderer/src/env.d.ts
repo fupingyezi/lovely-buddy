@@ -23,7 +23,7 @@ declare global {
     sizeBytes?: number
     /** 表情组数量（入口 json Expressions 长度） */
     expressions?: number
-    /** avatar.json 的动作映射（服务端透传，解析见 live2d/actions.ts） */
+    /** avatar.json 的动作映射（服务端透传，意图解析时按能力目录降级） */
     actions?: AvatarActions
   }
 
