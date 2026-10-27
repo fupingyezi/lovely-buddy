@@ -79,7 +79,7 @@ func makeTestZip(t *testing.T) string {
 	var buf bytes.Buffer
 	zw := zip.NewWriter(&buf)
 	for name, content := range map[string]string{
-		"m/avatar.json":   `{"name":"测试形象"}`,
+		"m/avatar.json":   `{"name":"测试形象","actions":{"sad":{"expression":"F_SAD"}}}`,
 		"m/m.model3.json": `{"Version":3}`,
 	} {
 		w, _ := zw.Create(name)
@@ -114,6 +114,10 @@ func TestAssetsImportListDelete(t *testing.T) {
 	av, _ := m["avatar"].(map[string]any)
 	if av["slug"] != "t-zip" || av["name"] != "测试形象" {
 		t.Fatalf("avatar 不符: %v", av)
+	}
+	act, _ := av["actions"].(map[string]any)
+	if act == nil || act["sad"].(map[string]any)["expression"] != "F_SAD" {
+		t.Fatalf("导入响应应透传 actions: %v", av)
 	}
 
 	// 列表含新形象

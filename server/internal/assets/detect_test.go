@@ -24,7 +24,7 @@ func TestDetect(t *testing.T) {
 	root := t.TempDir()
 	writeDir(t, root, map[string]string{
 		"haru/haru.model3.json":            `{"Version":3,"Expressions":[{"Name":"Angry"},{"Name":"Happy"}]}`,
-		"haru/avatar.json":                 `{"name":"Haru","author":"Live2D","version":"1.0","license":"free","homepage":"https://example.com","persona":"persona/haru.txt"}`,
+		"haru/avatar.json":                 `{"name":"Haru","author":"Live2D","version":"1.0","license":"free","homepage":"https://example.com","persona":"persona/haru.txt","actions":{"happy":{"motion":"Tap","motionIndex":4,"expression":"F_FUN"},"sad":{"expression":"F_SAD"}}}`,
 		"haru/persona/haru.txt":            "你是一只猫",
 		"shizuku/a/b/c/shizuku.model.json": `{"type":"Live2DModelSetting","expressions":[{"name":"smile"}]}`,
 		"broken/avatar.json":               `{not json`,
@@ -56,6 +56,13 @@ func TestDetect(t *testing.T) {
 	if got[0].Expressions != 2 {
 		t.Fatalf("haru Expressions 应为 2: %+v", got[0])
 	}
+	if got[0].Actions["happy"].Motion != "Tap" || got[0].Actions["happy"].MotionIndex == nil ||
+		*got[0].Actions["happy"].MotionIndex != 4 || got[0].Actions["happy"].Expression != "F_FUN" {
+		t.Fatalf("haru Actions.happy 不符: %+v", got[0].Actions)
+	}
+	if got[0].Actions["sad"].Expression != "F_SAD" || got[0].Actions["sad"].MotionIndex != nil {
+		t.Fatalf("haru Actions.sad 不符: %+v", got[0].Actions)
+	}
 	// shizuku：无 avatar.json → Name 回退 slug；3 层嵌套入口仍可探测（排序在 metanull 后）
 	if got[2].Slug != "shizuku" || got[2].Name != "shizuku" || got[2].Kind != "moc" ||
 		got[2].Entry != "shizuku/a/b/c/shizuku.model.json" {
@@ -63,6 +70,9 @@ func TestDetect(t *testing.T) {
 	}
 	if got[2].Expressions != 1 {
 		t.Fatalf("shizuku Expressions 应为 1（cubism2 小写 expressions 字段）: %+v", got[2])
+	}
+	if got[2].Actions != nil {
+		t.Fatalf("无 avatar.json 的 shizuku Actions 应为 nil: %+v", got[2].Actions)
 	}
 	// metanull：persona 文件缺失 → Persona 置空
 	for _, a := range got {

@@ -22,6 +22,24 @@ model/
 | `name` | 显示名（缺省用 slug） |
 | `author` / `version` / `license` / `homepage` | 展示在形象卡片上 |
 | `persona` | 人设文件相对路径（相对形象目录；文件不存在则回退全局人设，不报错） |
+| `actions` | 动作映射：`{"<意图>":{"motion":"动作组名","motionIndex":3,"expression":"表情名"}}`，字段全部可选；引用的组/表情需真实存在于模型，否则按内置规则降级 |
+
+### actions 动作映射
+
+意图可选：`tap` / `greet` / `idle` / `thinking` / `speak` / `happy` / `sad` / `angry` / `surprised` / `bye` / `sleep`。
+只配 `expression` 即纯表情（无动作、保持约 3 秒后复位）；`motionIndex` 缺省由程序随机选组内动作。
+
+```json
+{
+  "actions": {
+    "happy": { "motion": "Tap", "motionIndex": 4, "expression": "F_FUN" },
+    "sad": { "motion": "Tap", "motionIndex": 7, "expression": "F_SAD" }
+  }
+}
+```
+
+没有映射的意图按内置规则降级：动作组名匹配 → 表情名规则 → 通用动作（Tap 优先）→ idle 兜底，
+大部分模型不写 actions 也有合理反应。
 
 ## 2. 应用内导入
 

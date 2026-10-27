@@ -51,6 +51,7 @@ func inspect(dir string) (Avatar, bool) {
 		Kind:     kind,
 		Entry:    filepath.ToSlash(filepath.Join(slug, rel)),
 	}
+	av.Actions = meta.Actions
 	av.SizeBytes = dirSize(dir)
 	av.Expressions = expressionCount(filepath.Join(dir, filepath.FromSlash(rel)))
 	if av.Name == "" {

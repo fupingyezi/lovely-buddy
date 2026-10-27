@@ -18,6 +18,16 @@ type Avatar struct {
 	// 体积与表情数（探测时统计，形象管理页元信息展示用）
 	SizeBytes   int64 `json:"size_bytes,omitempty"`
 	Expressions int   `json:"expressions,omitempty"`
+
+	Actions map[string]AvatarActionSpec `json:"actions,omitempty"` // 意图 → 动作/表情映射（全部可选）
+}
+
+// AvatarActionSpec 是 avatar.json actions 里单条动作映射（全部可选）。
+// motion/expression 是否在模型里真实存在由前端按模型能力目录校验（无效走内置降级）。
+type AvatarActionSpec struct {
+	Motion      string `json:"motion,omitempty"`
+	MotionIndex *int   `json:"motionIndex,omitempty"`
+	Expression  string `json:"expression,omitempty"`
 }
 
 // avatar.json 的字段全部可选，损坏时按缺省处理。
@@ -28,6 +38,8 @@ type avatarJSON struct {
 	License  string `json:"license"`
 	Homepage string `json:"homepage"`
 	Persona  string `json:"persona"`
+
+	Actions map[string]AvatarActionSpec `json:"actions,omitempty"` // 意图 → 动作/表情映射（全部可选）
 }
 
 // sidecar 是导入管线写入的 .lovelybuddy.json（审计 + UI 展示来源）。
