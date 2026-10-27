@@ -176,7 +176,19 @@ async function createPetModel(
   const caps = deriveCapabilities(model)
   const player: MotionPlayer = {
     playMotion(group, priority, opts) {
-      return model.motion(group, opts?.index, priority).then(() => {})
+      // 类型声明未暴露 EventEmitter 的 once（运行时 MotionManager 继承 PIXI EventEmitter）
+      const mm = model.internalModel.motionManager as unknown as {
+        once(event: 'motionFinish', cb: () => void): void
+      }
+      return model.motion(group, opts?.index, priority).then((started) => {
+        // 库的 motion promise 在动作开始即 resolve（不是播完）；真实播完是 motionFinish
+        // 事件。被抢占的旧动作不触发自己的 motionFinish，其 once 监听随下一次播完
+        // 一起落地（调度器结算幂等，见 motionScheduler 头注释）。
+        if (!started) return false
+        return new Promise<boolean>((resolve) => {
+          mm.once('motionFinish', () => resolve(true))
+        })
+      })
     },
     playExpression(name) {
       return model.expression(name).then(() => {})
