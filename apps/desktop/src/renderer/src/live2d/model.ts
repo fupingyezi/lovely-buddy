@@ -176,9 +176,9 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       return model.expression(name).then(() => {})
     },
     resetExpression() {
-      // 无参 expression() = 复位默认表情（fork 语义；冒烟时验证，不符则改
-      // internalModel.expressionManager.resetExpression()）
-      return model.expression().then(() => {})
+      // 无参 expression() 在 fork 是随机表情（setRandomExpression），复位必须走 expressionManager
+      model.internalModel.motionManager.expressionManager?.resetExpression()
+      return Promise.resolve()
     }
   }
   const scheduler = createMotionScheduler(
