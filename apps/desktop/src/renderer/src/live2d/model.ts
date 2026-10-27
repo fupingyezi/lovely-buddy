@@ -3,7 +3,8 @@ import { Point, Rectangle } from 'pixi.js'
 import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
-import { INTENT_MOTIONS, pickMotion, type MotionIntent } from './motionMap'
+import { pickMotion, type MotionIntent } from './motionMap'
+import { createMotionScheduler, P_NORMAL, type MotionPlayer } from './motionScheduler'
 import { headAnchorOffset, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
 import { getActiveModel, setActiveModel } from './modelBus'
 import { setModelBase } from './windowGeometry'
@@ -160,6 +161,34 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   if (!anchorDone) app.ticker.add(tryComputeHeadAnchor)
 
   const groups = motionGroups(model)
+  const player: MotionPlayer = {
+    playMotion(group, priority, opts) {
+      return model
+        .motion(
+          group,
+          opts?.index,
+          priority,
+          opts?.expression ? { expression: opts.expression, resetExpression: true } : undefined
+        )
+        .then(() => {})
+    },
+    playExpression(name) {
+      return model.expression(name).then(() => {})
+    },
+    resetExpression() {
+      // 无参 expression() = 复位默认表情（fork 语义；冒烟时验证，不符则改
+      // internalModel.expressionManager.resetExpression()）
+      return model.expression().then(() => {})
+    }
+  }
+  const scheduler = createMotionScheduler(
+    // 临时适配器：后续换成能力目录 + resolveAction 五层降级
+    (intent) => {
+      const group = pickMotion(intent, groups)
+      return group ? { group, index: undefined, expression: null } : null
+    },
+    player
+  )
   const facade: PetModel = {
     name,
     // 销毁后 PIXI transform 已置空，读 model.position 会抛错——所有 getter 兜底。
@@ -187,19 +216,14 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       if (disposed) return
       model.position.set(x, y)
     },
-    playIntent(intent, priority = 1) {
+    playIntent(intent: MotionIntent, priority?: number) {
       if (disposed) return Promise.resolve(false)
-      const group = pickMotion(intent, groups)
-      if (!group) return Promise.resolve(false)
-      return model
-        .motion(group, undefined, priority)
-        .then(() => true)
-        .catch(() => false)
+      return scheduler.play(intent, priority ?? P_NORMAL)
     },
     destroy() {
       if (disposed) return
       disposed = true
-      window.clearTimeout(idleTimer)
+      scheduler.destroy()
       window.removeEventListener('resize', onWinResize)
       app.ticker.remove(tryComputeHeadAnchor)
       try {
@@ -212,25 +236,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
     }
   }
 
-  let idleTimer = window.setTimeout(startIdle, 2000)
-  void facade.playIntent('greet')
-
-  /** idle 循环：随机挑一个 idle 类动作，播完歇 6-14s 再续 */
-  function startIdle(): void {
-    if (disposed) return
-    const idleGroups = groups.filter((g) => INTENT_MOTIONS.idle.some((c) => c.toLowerCase() === g.toLowerCase()))
-    if (idleGroups.length > 0) {
-      const g = idleGroups[Math.floor(Math.random() * idleGroups.length)]
-      void model
-        .motion(g, undefined, 2)
-        .catch(() => {})
-        .finally(() => {
-          idleTimer = window.setTimeout(startIdle, 6000 + Math.random() * 8000)
-        })
-    } else {
-      idleTimer = window.setTimeout(startIdle, 10000)
-    }
-  }
+  void scheduler.play('greet') // 问候动作；无问候组的模型走 pickMotion 的 idle 兜底
 
   return facade
 }
