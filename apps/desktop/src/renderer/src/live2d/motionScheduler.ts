@@ -5,8 +5,8 @@
 //   false——play 的结果是「是否真的开始播放」。
 // - idle 由单一可重武装定时器驱动：任何互动（非 idle 意图的 play / notifyInteraction）
 //   都会重置它；动作播放期间定时器保持清除态，结算时重新武装。
-// - 每次派发 bump 世代号 gen，结算/表情复位回调只在自己的世代内生效（旧动作被抢占
-//   后迟到结算不会清掉新动作的优先级）。
+// - 每次动作派发 bump 世代号 gen，动作结算回调只在自己的世代内生效（旧动作被抢占后
+//   迟到结算不会清掉新动作的优先级）；表情复位不参与世代，在途 hold 由 clearExpr 取消。
 import { type MotionIntent } from './motionMap'
 
 export const P_IDLE = 1
@@ -79,28 +79,28 @@ export function createMotionScheduler(
     const last = lastPlayAt.get(intent) ?? -Infinity
     if (intent !== 'idle' && Date.now() - last < COOLDOWN_MS) return false
     const resolved = pick(intent)
-    if (!resolved) {
-      // 无匹配：idle 按重试间隔重排，其余意图武装常规空闲计时
-      if (intent === 'idle') armIdle(IDLE_RETRY_MS)
-      else armIdle()
-      return false
-    }
-    if (resolved.group === null) {
-      if (resolved.expression === null) return false
-      // 纯表情：不占动作优先级（可与 idle 动作并存），保持 EXPR_HOLD_MS 后复位
-      const myGen = ++gen
+    if (resolved && resolved.group === null && resolved.expression !== null) {
+      // 纯表情：不占动作优先级（可与 idle 动作并存），保持 EXPR_HOLD_MS 后复位；
+      // 不 bump 世代——在途动作结算只认自己的世代，表情不得使其跳过优先级清零
       lastPlayAt.set(intent, Date.now())
       armIdle()
       void player.playExpression(resolved.expression).catch(() => {})
       clearExpr()
       exprTimer = window.setTimeout(() => {
-        if (!disposed && gen === myGen) void player.resetExpression().catch(() => {})
+        if (!disposed) void player.resetExpression().catch(() => {})
       }, EXPR_HOLD_MS)
       return true
     }
+    // 无匹配或空解析（无动作无表情）：idle 按重试间隔重排，其余意图武装常规空闲计时
+    if (!resolved || resolved.group === null) {
+      if (intent === 'idle') armIdle(IDLE_RETRY_MS)
+      else armIdle()
+      return false
+    }
     if (priority < currentPriority) {
-      // 高优先级动作在播：库会静默忽略本次请求，提前拒绝返回真实结果
-      armIdle()
+      // 高优先级动作在播：库会静默忽略本次请求，提前拒绝返回真实结果；
+      // 高位动作在播时 idle 定时器保持清除态（其结算时统一重新武装）
+      if (intent !== 'idle') armIdle()
       return false
     }
     const myGen = ++gen

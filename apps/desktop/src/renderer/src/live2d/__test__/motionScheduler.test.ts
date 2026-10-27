@@ -77,6 +77,7 @@ describe('createMotionScheduler', () => {
   it('低优先级请求不打断高优先级动作，返回 false（真实结果）', async () => {
     await sched.play('tap', P_FORCE)
     expect(await sched.play('idle', P_IDLE)).toBe(false)
+    await vi.advanceTimersByTimeAsync(801) // 越过冷却，仍被优先级拒绝
     expect(await sched.play('tap', P_NORMAL)).toBe(false)
     expect(f.calls).toHaveLength(1)
   })
@@ -175,5 +176,21 @@ describe('createMotionScheduler', () => {
     expect(await sched.play('tap')).toBe(false)
     await vi.advanceTimersByTimeAsync(60000)
     expect(f.calls).toHaveLength(0)
+  })
+
+  it('动作在途时播纯表情：结算后 idle 照常恢复', async () => {
+    expect(await sched.play('tap')).toBe(true)
+    pick.mockReturnValueOnce({ group: null, index: undefined, expression: 'F_FUN' })
+    expect(await sched.play('happy')).toBe(true)
+    f.motions[0].resolve() // tap 结算：不得被纯表情的世代变化跳过
+    await vi.advanceTimersByTimeAsync(6000)
+    expect(f.calls[1]).toEqual({ group: 'Idle', priority: P_IDLE })
+  })
+
+  it('空解析（无动作无表情）按无匹配处理：idle 按重试间隔重排', async () => {
+    pick.mockReturnValueOnce({ group: null, index: undefined, expression: null })
+    expect(await sched.play('idle', P_IDLE)).toBe(false)
+    await vi.advanceTimersByTimeAsync(10000)
+    expect(f.calls[0]).toEqual({ group: 'Idle', priority: P_IDLE }) // 重试成功
   })
 })
