@@ -17,7 +17,7 @@
 | 层 | 选型 |
 |---|---|
 | 桌面壳 | Electron（透明置顶小窗 + 托盘 + 点击穿透） |
-| 前端 | React 18 + Vite + pixi.js v7 + pixi-live2d-display |
+| 前端 | React 18 + Vite + zustand + Tailwind v4 + pixi.js v7 + pixi-live2d-display |
 | 后端 | Go + gin（HTTP API；SSE 流式 / WebSocket / MCP server 规划中） |
 | 存储 | PostgreSQL + pgvector（Docker Compose，仅绑 127.0.0.1） |
 | 模型 | OpenAI 兼容 API：DeepSeek / 通义 / GLM / Kimi 等国产模型（规划中） |
@@ -38,8 +38,25 @@ make dev                # 一键启动：数据库 + Go 后端 + Electron
 ## 目录
 
 ```
-apps/desktop/   Electron 前端（主进程/preload/渲染器）
+apps/desktop/   Electron 前端
+  ├─ src/main       主进程（生命周期/托盘/CSP/设置持久化）
+  ├─ src/preload    暴露 window.lovelybuddy 桥接
+  ├─ src/bridge     渲染↔主 IPC 频道契约
+  ├─ src/window     窗口服务（点击穿透/扩展收起/设置窗口）
+  └─ src/renderer   React 渲染层
+       ├─ live2d/   模型引擎（engine/motion/window/interaction 四组）
+       ├─ pet/      桌宠悬浮层（形象菜单/聊天/穿透状态机）
+       ├─ settings/ 独立设置窗口应用
+       └─ store/ lib/ styles/ + 组合根（main.tsx/App.tsx）
 server/         Go 后端（gin + pgvector + 形象库 API；LLM 与 MCP 规划中）
+  ├─ cmd/lovely-buddy-server  入口
+  └─ internal/
+       ├─ assets/   形象探测/导入/删除
+       ├─ controller/ service/ dao/ db/  处理/业务/数据访问分层 + pgvector 迁移
+       ├─ config/ configstore/  对话 API 配置注入与持久化（key 只存本机 0600）
+       ├─ lovely-agent/  LLM harness（model/agent 已落地，memory/extension 规划中）
+       ├─ middleware/  token 鉴权/访问日志/CORS
+       └─ router/ server/  路由（/healthz 公开，/api/v1/* 鉴权）与装配
 model/          Live2D 模型目录（gitignore，用户自备）
 docs/           产品规格 / 开发指南 / 模型放置说明
 scripts/        Cubism core 下载、托盘图标生成等辅助脚本
