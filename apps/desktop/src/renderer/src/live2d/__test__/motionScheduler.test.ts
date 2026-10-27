@@ -18,14 +18,16 @@ function pending(): { promise: Promise<void>; resolve: () => void; reject: (e: E
   return { promise, resolve, reject }
 }
 
-/** 假播放器：记录每次 playMotion 的组/优先级，promise 由测试手动结算 */
+/** 假播放器：记录每次 playMotion 的组/优先级/选项，promise 由测试手动结算 */
 function fakePlayer() {
-  const calls: { group: string; priority: number }[] = []
+  const calls: { group: string; priority: number; opts?: { index?: number; expression?: string } }[] = []
   const motions: { resolve: () => void; reject: (e: Error) => void }[] = []
   const player: MotionPlayer = {
-    playMotion(group, priority) {
+    playMotion(group, priority, opts) {
       const p = pending()
-      calls.push({ group, priority })
+      // 只在 opts 带实际取值时记录：空 opts 对象不会被 toEqual 当作缺失字段忽略
+      const meaningful = opts && (opts.index !== undefined || opts.expression !== undefined)
+      calls.push(meaningful ? { group, priority, opts } : { group, priority })
       motions.push(p)
       return p.promise
     },
@@ -192,5 +194,64 @@ describe('createMotionScheduler', () => {
     expect(await sched.play('idle', P_IDLE)).toBe(false)
     await vi.advanceTimersByTimeAsync(10000)
     expect(f.calls[0]).toEqual({ group: 'Idle', priority: P_IDLE }) // 重试成功
+  })
+
+  it('动作+表情：opts 透传 expression 与 index', async () => {
+    pick.mockReturnValue({ group: 'Tap', index: 4, expression: 'F_FUN' })
+    expect(await sched.play('happy')).toBe(true)
+    expect(f.calls[0]).toEqual({ group: 'Tap', priority: P_NORMAL, opts: { index: 4, expression: 'F_FUN' } })
+  })
+
+  it('纯表情：播放表情并保持 3s 后复位', async () => {
+    pick.mockReturnValue({ group: null, index: undefined, expression: 'F_FUN' })
+    const expr = vi.fn(() => Promise.resolve())
+    const reset = vi.fn(() => Promise.resolve())
+    sched = createMotionScheduler(pick, {
+      playMotion: () => new Promise(() => {}),
+      playExpression: expr,
+      resetExpression: reset
+    })
+    expect(await sched.play('happy')).toBe(true)
+    expect(expr).toHaveBeenCalledWith('F_FUN')
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(reset).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(1)
+    expect(reset).toHaveBeenCalledTimes(1)
+  })
+
+  it('纯表情不占动作优先级：期间动作照常播放', async () => {
+    pick.mockReturnValueOnce({ group: null, index: undefined, expression: 'F_FUN' })
+    await sched.play('happy') // 纯表情
+    expect(await sched.play('tap')).toBe(true)
+    expect(f.calls[0]).toEqual({ group: 'Tap', priority: P_NORMAL })
+  })
+
+  it('hold 期间新动作触发：旧 hold 失效不复位', async () => {
+    pick.mockReturnValueOnce({ group: null, index: undefined, expression: 'F_FUN' })
+    const reset = vi.fn(() => Promise.resolve())
+    sched = createMotionScheduler(pick, {
+      playMotion: () => new Promise(() => {}),
+      playExpression: () => Promise.resolve(),
+      resetExpression: reset
+    })
+    await sched.play('happy') // 纯表情，hold 计时开始
+    pick.mockReturnValue({ group: 'Tap', index: undefined, expression: 'F_SAD' })
+    await sched.play('sad') // 新动作，旧 hold 被取消
+    await vi.advanceTimersByTimeAsync(3001)
+    expect(reset).not.toHaveBeenCalled()
+  })
+
+  it('destroy 清除 hold 定时器', async () => {
+    pick.mockReturnValue({ group: null, index: undefined, expression: 'F_FUN' })
+    const reset = vi.fn(() => Promise.resolve())
+    sched = createMotionScheduler(pick, {
+      playMotion: () => new Promise(() => {}),
+      playExpression: () => Promise.resolve(),
+      resetExpression: reset
+    })
+    await sched.play('happy')
+    sched.destroy()
+    await vi.advanceTimersByTimeAsync(3001)
+    expect(reset).not.toHaveBeenCalled()
   })
 })
