@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resolveAction, type AvatarActions } from '../actions'
 import { type ModelCapabilities } from '../capabilities'
+import { INTENT_MOTIONS, type MotionIntent } from '../motionMap'
 
 // 三套与真实模型同构的夹具：haru（官方免费，只有 Idle/Tap + 单词表情）、
 // shizuku（cubism2，tap_body/shake + 编号表情）、katou 类（语义化表情 F_*）
@@ -73,5 +74,13 @@ describe('resolveAction', () => {
   it('语义组命中时附带表情（组合播放）', () => {
     const caps: ModelCapabilities = { motions: { talk: 3 }, expressions: ['F_SMILE'] }
     expect(resolveAction('speak', caps)).toEqual({ group: 'talk', index: undefined, expression: 'F_SMILE' })
+  })
+})
+
+describe('INTENT_MOTIONS 数据不变量', () => {
+  it('所有意图都配置了候选动作组', () => {
+    for (const intent of Object.keys(INTENT_MOTIONS) as MotionIntent[]) {
+      expect(INTENT_MOTIONS[intent].length).toBeGreaterThan(0)
+    }
   })
 })

@@ -123,7 +123,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
       models,
       modelUrl: kept?.url ?? models[0]?.url ?? null,
       modelName: kept?.name ?? models[0]?.name ?? null,
-      modelActions: kept?.actions ?? models[0]?.actions ?? null,
+      modelActions: kept ? (kept.actions ?? null) : (models[0]?.actions ?? null),
       modelError: null
     })
   },
