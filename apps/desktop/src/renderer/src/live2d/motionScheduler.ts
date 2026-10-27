@@ -1,12 +1,14 @@
 // 动作调度器：模型动作的优先级、冷却与空闲循环的单一事实来源（纯逻辑，可 fake timer 测试）。
 // 设计要点：
 // - 库优先级数值 1=idle、2=normal、3=force；低优先级动作会被高优先级静默忽略
-//   （promise 照常 resolve），所以调度器自己记账 currentPriority，派发前拒绝并返回
+//   （库不保证请求实际生效），所以调度器自己记账 currentPriority，派发前拒绝并返回
 //   false——play 的结果是「是否真的开始播放」。
 // - idle 由单一可重武装定时器驱动：任何互动（非 idle 意图的 play / notifyInteraction）
-//   都会重置它；动作播放期间定时器保持清除态，结算时重新武装。
+//   都会重置它；动作派发时清除、结算时重新武装——即使定时器在动作期间触发，
+//   在途的 idle 请求也会被优先级拒绝，动作不会被待机打断。
 // - 每次动作派发 bump 世代号 gen，动作结算回调只在自己的世代内生效（旧动作被抢占后
-//   迟到结算不会清掉新动作的优先级）；表情复位不参与世代，在途 hold 由 clearExpr 取消。
+//   迟到结算不会清掉新动作的优先级）；表情不参与世代：在途 hold 由 clearExpr 取消，
+//   其复位在动作结算时兜底（见派发分支）。
 import { type MotionIntent } from './motionMap'
 
 export const P_IDLE = 1
@@ -28,7 +30,7 @@ export interface ResolvedAction {
 
 /** 播放器抽象：model.ts 用真实模型实现，测试用假桩 */
 export interface MotionPlayer {
-  playMotion(group: string, priority: number, opts?: { index?: number; expression?: string }): Promise<void>
+  playMotion(group: string, priority: number, opts?: { index?: number }): Promise<void>
   playExpression(name: string): Promise<void>
   resetExpression(): Promise<void>
 }
@@ -36,7 +38,7 @@ export interface MotionPlayer {
 export interface MotionScheduler {
   /** 按意图播动作/表情；派发即 resolve，true = 已开始播放/已设置表情 */
   play(intent: MotionIntent, priority?: number): Promise<boolean>
-  /** 用户交互（未触发动作的点击/打开面板等）重置空闲计时 */
+  /** 用户交互（未触发动作的点击）重置空闲计时 */
   notifyInteraction(): void
   destroy(): void
 }
@@ -98,25 +100,30 @@ export function createMotionScheduler(
       return false
     }
     if (priority < currentPriority) {
-      // 高优先级动作在播：库会静默忽略本次请求，提前拒绝返回真实结果；
-      // 高位动作在播时 idle 定时器保持清除态（其结算时统一重新武装）
+      // 高优先级动作在播：库会静默忽略本次请求，提前拒绝返回真实结果。
+      // idle 被拒时不武装（在途动作结算时统一武装），其余意图武装常规空闲计时
       if (intent !== 'idle') armIdle()
       return false
     }
     const myGen = ++gen
     lastPlayAt.set(intent, Date.now())
     clearIdle()
+    // 组合表情必须走显式 playExpression：fork 默认 preserveExpressionOnMotion，
+    // motion 选项里的 expression 被门控静默丢弃（resetExpression 选项同样无效）
+    const expr = resolved.expression
+    const heldFace = exprTimer !== undefined // 派发时在途的 hold 会被 clearExpr 取消
     clearExpr()
+    if (expr) void player.playExpression(expr).catch(() => {})
     currentPriority = priority
     void player
-      .playMotion(resolved.group, priority, {
-        index: resolved.index,
-        expression: resolved.expression ?? undefined
-      })
+      .playMotion(resolved.group, priority, { index: resolved.index })
       .catch(() => {})
       .finally(() => {
         if (disposed || gen !== myGen) return
         currentPriority = 0
+        // 组合表情与被打断的旧 hold 表情在结算时复位；期间有新的纯表情 hold
+        // 在途则留给 hold 回调复位（hold 拥有当前表情）
+        if ((expr || heldFace) && exprTimer === undefined) void player.resetExpression().catch(() => {})
         armIdle()
       })
     return true
@@ -129,7 +136,7 @@ export function createMotionScheduler(
     },
     destroy() {
       disposed = true
-      gen += 1 // 让在途结算/复位回调失效
+      gen += 1 // 让在途结算回调失效（复位回调仅判 disposed）
       clearIdle()
       clearExpr()
     }

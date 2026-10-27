@@ -176,14 +176,7 @@ async function createPetModel(
   const caps = deriveCapabilities(model)
   const player: MotionPlayer = {
     playMotion(group, priority, opts) {
-      return model
-        .motion(
-          group,
-          opts?.index,
-          priority,
-          opts?.expression ? { expression: opts.expression, resetExpression: true } : undefined
-        )
-        .then(() => {})
+      return model.motion(group, opts?.index, priority).then(() => {})
     },
     playExpression(name) {
       return model.expression(name).then(() => {})
