@@ -115,16 +115,29 @@ func TestAssetsImportListDelete(t *testing.T) {
 	if av["slug"] != "t-zip" || av["name"] != "测试形象" {
 		t.Fatalf("avatar 不符: %v", av)
 	}
-	act, _ := av["actions"].(map[string]any)
-	if act == nil || act["sad"].(map[string]any)["expression"] != "F_SAD" {
+	act, ok := av["actions"].(map[string]any)
+	if !ok {
+		t.Fatalf("导入响应应含 actions: %v", av)
+	}
+	sad, ok := act["sad"].(map[string]any)
+	if !ok || sad["expression"] != "F_SAD" {
 		t.Fatalf("导入响应应透传 actions: %v", av)
 	}
 
-	// 列表含新形象
+	// 列表含新形象，且 actions 一并透传
 	resp, m = doJSON(t, http.MethodGet, ts.URL+"/api/v1/assets", testToken, nil)
 	avatars, _ := m["avatars"].([]any)
 	if resp.StatusCode != http.StatusOK || len(avatars) != 1 {
 		t.Fatalf("列表不符: %d %v", resp.StatusCode, m)
+	}
+	first, _ := avatars[0].(map[string]any)
+	firstAct, ok := first["actions"].(map[string]any)
+	if !ok {
+		t.Fatalf("列表响应应透传 actions: %v", avatars[0])
+	}
+	firstSad, ok := firstAct["sad"].(map[string]any)
+	if !ok || firstSad["expression"] != "F_SAD" {
+		t.Fatalf("列表 actions 不符: %v", firstAct)
 	}
 
 	// 恶意 zip 经 API 被拒（422）

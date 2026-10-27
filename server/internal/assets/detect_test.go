@@ -24,7 +24,7 @@ func TestDetect(t *testing.T) {
 	root := t.TempDir()
 	writeDir(t, root, map[string]string{
 		"haru/haru.model3.json":            `{"Version":3,"Expressions":[{"Name":"Angry"},{"Name":"Happy"}]}`,
-		"haru/avatar.json":                 `{"name":"Haru","author":"Live2D","version":"1.0","license":"free","homepage":"https://example.com","persona":"persona/haru.txt","actions":{"happy":{"motion":"Tap","motionIndex":4,"expression":"F_FUN"},"sad":{"expression":"F_SAD"}}}`,
+		"haru/avatar.json":                 `{"name":"Haru","author":"Live2D","version":"1.0","license":"free","homepage":"https://example.com","persona":"persona/haru.txt","actions":{"happy":{"motion":"Tap","motionIndex":4,"expression":"F_FUN"},"sad":{"expression":"F_SAD"},"sleep":{"motion":"Tap","motionIndex":0}}}`,
 		"haru/persona/haru.txt":            "你是一只猫",
 		"shizuku/a/b/c/shizuku.model.json": `{"type":"Live2DModelSetting","expressions":[{"name":"smile"}]}`,
 		"broken/avatar.json":               `{not json`,
@@ -62,6 +62,9 @@ func TestDetect(t *testing.T) {
 	}
 	if got[0].Actions["sad"].Expression != "F_SAD" || got[0].Actions["sad"].MotionIndex != nil {
 		t.Fatalf("haru Actions.sad 不符: %+v", got[0].Actions)
+	}
+	if got[0].Actions["sleep"].MotionIndex == nil || *got[0].Actions["sleep"].MotionIndex != 0 {
+		t.Fatalf("haru Actions.sleep 的 motionIndex 0 应原样透传（区别于未设置）: %+v", got[0].Actions)
 	}
 	// shizuku：无 avatar.json → Name 回退 slug；3 层嵌套入口仍可探测（排序在 metanull 后）
 	if got[2].Slug != "shizuku" || got[2].Name != "shizuku" || got[2].Kind != "moc" ||
