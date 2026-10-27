@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
+import type { AvatarActions } from '../live2d/actions'
 import { loadPetModel, releasePetModel, type PetModel } from '../live2d/model'
 import { setupPetInteraction } from '../live2d/interact'
 import { getActiveModel, setActiveModel } from '../live2d/modelBus'
@@ -8,6 +9,7 @@ import { usePetStore } from '../store/petStore'
 interface Props {
   url: string | null
   name: string
+  actions: AvatarActions | null
   /** 右键命中模型时回调（窗口坐标点击处），菜单打开/关闭由 App 决定 */
   onMenu: (clientX: number, clientY: number) => void
   /** 菜单是否打开（穿透状态机：打开时整窗强制不穿透） */
@@ -20,7 +22,7 @@ interface Props {
  * 画布常驻（PIXI stage 单例依赖它），模型切换/无模型时只换内容不卸载组件，
  * 避免"卸载时模型仍在加载"的泄漏。url 为 null 时画布全透明且可穿透。
  */
-export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Props): ReactElement {
+export default function PetCanvas({ url, name, actions, onMenu, menuOpen, chatOpen }: Props): ReactElement {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const prevUrlRef = useRef<string | null>(null)
   const onMenuRef = useRef(onMenu)
@@ -44,7 +46,7 @@ export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Pro
     let alive = true
     let instance: PetModel | null = null
 
-    void loadPetModel(canvas, url, name)
+    void loadPetModel(canvas, url, name, actions ?? undefined)
       .then((p) => {
         // StrictMode 重放：同一实例由存活的效果接管，不在这里销毁
         if (!alive) return
@@ -84,6 +86,7 @@ export default function PetCanvas({ url, name, onMenu, menuOpen, chatOpen }: Pro
       pet,
       canvas,
       () => {
+        pet.notifyInteraction()
         void pet.playIntent('tap')
       },
       (x, y) => onMenuRef.current(x, y)

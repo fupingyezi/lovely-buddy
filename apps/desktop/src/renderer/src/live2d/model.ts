@@ -1,9 +1,10 @@
-import type { Live2DModel } from 'pixi-live2d-display-lipsyncpatch'
 import { Point, Rectangle } from 'pixi.js'
+import { resolveAction, type AvatarActions } from './actions'
+import { deriveCapabilities } from './capabilities'
 import { hitAnyDrawable } from './hitbox'
 import { loadCubismCores } from './loader'
 import { initStage } from './stage'
-import { pickMotion, type MotionIntent } from './motionMap'
+import { type MotionIntent } from './motionMap'
 import { createMotionScheduler, P_NORMAL, type MotionPlayer } from './motionScheduler'
 import { headAnchorOffset, shiftToKeepScreenPosition, type Pos } from './windowAnchor'
 import { getActiveModel, setActiveModel } from './modelBus'
@@ -26,6 +27,8 @@ export interface PetModel {
   moveTo(x: number, y: number): void
   /** 按意图播动作；无匹配动作时返回 false */
   playIntent(intent: MotionIntent, priority?: number): Promise<boolean>
+  /** 未派发动作的互动也重置空闲计时（点击被冷却/优先级拒时 idle 不立即触发） */
+  notifyInteraction(): void
   destroy(): void
 }
 
@@ -37,10 +40,15 @@ const hitPoint = new Point()
 const hitModelPoint = new Point()
 const hitBounds = new Rectangle()
 
-export function loadPetModel(canvas: HTMLCanvasElement, url: string, name: string): Promise<PetModel> {
+export function loadPetModel(
+  canvas: HTMLCanvasElement,
+  url: string,
+  name: string,
+  actions?: AvatarActions
+): Promise<PetModel> {
   let p = cache.get(url)
   if (!p) {
-    p = createPetModel(canvas, url, name).catch((e: unknown) => {
+    p = createPetModel(canvas, url, name, actions).catch((e: unknown) => {
       cache.delete(url) // 失败允许重试
       throw e
     })
@@ -69,7 +77,12 @@ export async function releasePetModel(url: string): Promise<void> {
   setModelBase(null) // 模型已释放：几何 store 回到无基准状态
 }
 
-async function createPetModel(canvas: HTMLCanvasElement, url: string, name: string): Promise<PetModel> {
+async function createPetModel(
+  canvas: HTMLCanvasElement,
+  url: string,
+  name: string,
+  actions?: AvatarActions
+): Promise<PetModel> {
   await loadCubismCores()
   const app = initStage(canvas) // 顺便挂 window.PIXI（fork 模块求值时需要）
 
@@ -160,7 +173,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
   tryComputeHeadAnchor()
   if (!anchorDone) app.ticker.add(tryComputeHeadAnchor)
 
-  const groups = motionGroups(model)
+  const caps = deriveCapabilities(model)
   const player: MotionPlayer = {
     playMotion(group, priority, opts) {
       return model
@@ -181,14 +194,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       return Promise.resolve()
     }
   }
-  const scheduler = createMotionScheduler(
-    // 临时适配器：后续换成能力目录 + resolveAction 五层降级
-    (intent) => {
-      const group = pickMotion(intent, groups)
-      return group ? { group, index: undefined, expression: null } : null
-    },
-    player
-  )
+  const scheduler = createMotionScheduler((intent) => resolveAction(intent, caps, actions), player)
   const facade: PetModel = {
     name,
     // 销毁后 PIXI transform 已置空，读 model.position 会抛错——所有 getter 兜底。
@@ -220,6 +226,9 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
       if (disposed) return Promise.resolve(false)
       return scheduler.play(intent, priority ?? P_NORMAL)
     },
+    notifyInteraction() {
+      scheduler.notifyInteraction()
+    },
     destroy() {
       if (disposed) return
       disposed = true
@@ -236,12 +245,7 @@ async function createPetModel(canvas: HTMLCanvasElement, url: string, name: stri
     }
   }
 
-  void scheduler.play('greet') // 问候动作；无问候组的模型走 pickMotion 的 idle 兜底
+  void scheduler.play('greet') // 问候动作；无问候组的模型走 resolveAction 的 idle 兜底
 
   return facade
-}
-
-/** 模型可用的动作组名（来自模型设定文件中的 motion 定义） */
-function motionGroups(model: Live2DModel): string[] {
-  return Object.keys(model.internalModel.motionManager.definitions)
 }

@@ -16,6 +16,7 @@ function fakePet(): PetModel {
     hitTest: (x, y) => x < 100 && y < 100,
     moveTo: vi.fn(),
     playIntent: () => Promise.resolve(true),
+    notifyInteraction: vi.fn(),
     destroy: vi.fn()
   }
 }

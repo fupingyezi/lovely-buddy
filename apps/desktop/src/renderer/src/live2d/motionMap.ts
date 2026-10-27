@@ -16,22 +16,6 @@ export const INTENT_MOTIONS: Record<MotionIntent, string[]> = {
   sleep: ['sleep', 'Sleep', 'nap', 'Nap', 'rest', 'Rest']
 }
 
-/** 从模型实际拥有的动作组里挑一个能表达意图的；无匹配时回退 idle 组。 */
-export function pickMotion(intent: MotionIntent, groups: string[]): string | null {
-  const candidates = INTENT_MOTIONS[intent] ?? []
-  for (const c of candidates) {
-    const exact = groups.find((g) => g === c)
-    if (exact) return exact
-  }
-  const lower = groups.map((g) => g.toLowerCase())
-  for (const c of candidates) {
-    const idx = lower.indexOf(c.toLowerCase())
-    if (idx >= 0) return groups[idx]
-  }
-  if (intent === 'idle') return null
-  return pickMotion('idle', groups)
-}
-
 export interface ParsedMotionTags {
   /** 文本中最后一个可识别的 [motion:xxx] 意图（无则为 null） */
   motion: MotionIntent | null

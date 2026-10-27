@@ -1,5 +1,7 @@
 // 形象 API 客户端：与 Go 后端 /api/v1/assets 通信（Bearer token）。
 // 服务端返回相对路径 entry，渲染端拼 l2d:// URL（Electron 特权协议，见 bridge/protocol.ts）。
+import type { AvatarActions } from '../live2d/actions'
+
 export interface ApiRuntime {
   baseUrl: string
   token: string
@@ -23,6 +25,7 @@ interface RawAvatar {
   source?: string
   size_bytes?: number
   expressions?: number
+  actions?: AvatarActions
 }
 
 function authHeaders(rt: ApiRuntime): Record<string, string> {
@@ -42,7 +45,8 @@ function toAvatar(a: RawAvatar): AvatarInfo {
     ...(a.homepage ? { homepage: a.homepage } : {}),
     ...(a.source === 'local' || a.source === 'url' ? { source: a.source } : {}),
     ...(a.size_bytes !== undefined ? { sizeBytes: a.size_bytes } : {}),
-    ...(a.expressions ? { expressions: a.expressions } : {})
+    ...(a.expressions ? { expressions: a.expressions } : {}),
+    ...(a.actions ? { actions: a.actions } : {})
   }
 }
 

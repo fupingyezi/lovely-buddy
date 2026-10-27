@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { AvatarActions } from '../live2d/actions'
 import { deleteAvatar, importAvatar, listAvatars, type ImportSource } from '../lib/assetsApi'
 
 export type BackendStatus = 'connecting' | 'online' | 'offline'
@@ -18,6 +19,7 @@ interface PetState {
   models: AvatarInfo[]
   modelUrl: string | null
   modelName: string | null
+  modelActions: AvatarActions | null
   modelError: string | null
   /** 用户手动关闭了「未找到模型」占位卡（扫描到模型后自动复位） */
   placeholderDismissed: boolean
@@ -45,6 +47,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
   models: [],
   modelUrl: null,
   modelName: null,
+  modelActions: null,
   modelError: null,
   placeholderDismissed: readDismissed(),
   importing: false,
@@ -64,6 +67,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
         models,
         modelUrl: next?.url ?? null,
         modelName: next?.name ?? null,
+        modelActions: next?.actions ?? null,
         modelError: null,
         placeholderDismissed: next ? false : get().placeholderDismissed
       })
@@ -74,7 +78,13 @@ export const usePetStore = create<PetState>()((set, get) => ({
 
   selectModel(info) {
     localStorage.setItem(MODEL_URL_KEY, info.url)
-    set({ modelUrl: info.url, modelName: info.name, modelError: null, placeholderDismissed: false })
+    set({
+      modelUrl: info.url,
+      modelName: info.name,
+      modelActions: info.actions ?? null,
+      modelError: null,
+      placeholderDismissed: false
+    })
   },
 
   async importModel(source) {
@@ -90,6 +100,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
         models,
         modelUrl: avatar.url,
         modelName: avatar.name,
+        modelActions: avatar.actions ?? null,
         modelError: null,
         placeholderDismissed: false,
         importing: false,
@@ -112,6 +123,7 @@ export const usePetStore = create<PetState>()((set, get) => ({
       models,
       modelUrl: kept?.url ?? models[0]?.url ?? null,
       modelName: kept?.name ?? models[0]?.name ?? null,
+      modelActions: kept?.actions ?? models[0]?.actions ?? null,
       modelError: null
     })
   },

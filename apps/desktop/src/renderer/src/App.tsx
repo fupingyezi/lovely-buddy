@@ -13,6 +13,7 @@ import { useWindowGeometrySync } from './live2d/windowGeometry'
 export default function App(): ReactElement {
   const modelUrl = usePetStore((s) => s.modelUrl)
   const modelName = usePetStore((s) => s.modelName)
+  const modelActions = usePetStore((s) => s.modelActions)
   const placeholderDismissed = usePetStore((s) => s.placeholderDismissed)
   const loadModels = usePetStore((s) => s.loadModels)
   const dismissPlaceholder = usePetStore((s) => s.dismissPlaceholder)
@@ -73,6 +74,7 @@ export default function App(): ReactElement {
       <PetCanvas
         url={modelUrl}
         name={modelName ?? ''}
+        actions={modelActions}
         menuOpen={menuOpen}
         chatOpen={chatOpen}
         onMenu={() => {

@@ -1,3 +1,5 @@
+import type { AvatarActions } from './live2d/actions'
+
 // window.lovelybuddy 由 preload 通过 contextBridge 注入（保持与 src/preload/index.ts 的 LovelybuddyApi 一致）
 declare global {
   interface ModelInfo {
@@ -21,6 +23,8 @@ declare global {
     sizeBytes?: number
     /** 表情组数量（入口 json Expressions 长度） */
     expressions?: number
+    /** avatar.json 的动作映射（服务端透传，解析见 live2d/actions.ts） */
+    actions?: AvatarActions
   }
 
   interface LovelybuddyApi {
