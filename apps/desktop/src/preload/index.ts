@@ -7,6 +7,15 @@ export interface Runtime {
   dev: boolean
 }
 
+export interface AppInfo {
+  version: string
+  electron: string
+  chrome: string
+  platform: string
+  arch: string
+  userData: string
+}
+
 export interface LovelybuddyApi {
   /** 获取后端地址与鉴权 token（打包模式由主进程随机生成） */
   getRuntime: () => Promise<Runtime>
@@ -42,6 +51,10 @@ export interface LovelybuddyApi {
   notifyModelsChanged: () => void
   /** 订阅「形象列表变更」广播，返回退订函数 */
   onModelsChanged: (cb: () => void) => () => void
+  /** 关于页：应用与运行时信息 */
+  getAppInfo: () => Promise<AppInfo>
+  /** 外部浏览器打开链接（主进程校验 http/https） */
+  openExternal: (url: string) => void
   quit: () => void
 }
 
@@ -72,6 +85,8 @@ const lovelybuddy: LovelybuddyApi = {
     ipcRenderer.on(CHANNELS.modelsChanged, listener)
     return () => ipcRenderer.removeListener(CHANNELS.modelsChanged, listener)
   },
+  getAppInfo: () => ipcRenderer.invoke(CHANNELS.getAppInfo),
+  openExternal: (url) => ipcRenderer.send(CHANNELS.openExternal, url),
   quit: () => ipcRenderer.send(CHANNELS.quit)
 }
 

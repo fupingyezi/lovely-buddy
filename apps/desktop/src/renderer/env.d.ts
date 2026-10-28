@@ -27,6 +27,15 @@ declare global {
     actions?: AvatarActions
   }
 
+  interface AppInfo {
+    version: string
+    electron: string
+    chrome: string
+    platform: string
+    arch: string
+    userData: string
+  }
+
   interface LovelybuddyApi {
     getRuntime: () => Promise<{ baseUrl: string; token: string; dev: boolean }>
     setPassthrough: (on: boolean) => void
@@ -57,6 +66,10 @@ declare global {
     notifyModelsChanged: () => void
     /** 订阅「形象列表变更」广播，返回退订函数 */
     onModelsChanged: (cb: () => void) => () => void
+    /** 关于页：应用与运行时信息 */
+    getAppInfo: () => Promise<AppInfo>
+    /** 外部浏览器打开链接（主进程校验 http/https） */
+    openExternal: (url: string) => void
     quit: () => void
   }
 

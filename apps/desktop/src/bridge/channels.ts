@@ -16,5 +16,7 @@ export const CHANNELS = {
   notifyModelsChanged: 'lovelybuddy:notify-models-changed',
   modelsChanged: 'lovelybuddy:models-changed',
   pickImportPath: 'lovelybuddy:pick-import-path',
-  exportFile: 'lovelybuddy:export-file'
+  exportFile: 'lovelybuddy:export-file',
+  getAppInfo: 'lovelybuddy:get-app-info',
+  openExternal: 'lovelybuddy:open-external'
 } as const

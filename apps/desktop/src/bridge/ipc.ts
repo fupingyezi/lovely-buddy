@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BrowserWindow, app, dialog, ipcMain } from 'electron'
+import { BrowserWindow, app, dialog, ipcMain, shell } from 'electron'
 import { CHANNELS } from './channels'
 import type { PetWindowManager } from '../window/manager'
 import type { createSettingsWindow } from '../window/settings'
@@ -76,5 +76,18 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
     if (canceled || !filePath) return { saved: false, path: null }
     await writeFile(filePath, content, 'utf-8')
     return { saved: true, path: filePath }
+  })
+  // 关于页：真实运行时信息（版本取 app.getVersion，不虚构）
+  ipcMain.handle(CHANNELS.getAppInfo, () => ({
+    version: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    platform: process.platform,
+    arch: process.arch,
+    userData: app.getPath('userData')
+  }))
+  // 外部链接（关于页）：仅 http/https 白名单
+  ipcMain.on(CHANNELS.openExternal, (_e, url: string) => {
+    if (typeof url === 'string' && /^https?:\/\//.test(url)) void shell.openExternal(url)
   })
 }
