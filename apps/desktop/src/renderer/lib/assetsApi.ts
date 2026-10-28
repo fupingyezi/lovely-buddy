@@ -26,6 +26,7 @@ interface RawAvatar {
   size_bytes?: number
   expressions?: number
   actions?: AvatarActions
+  thumbnail?: string
 }
 
 function authHeaders(rt: ApiRuntime): Record<string, string> {
@@ -46,6 +47,7 @@ function toAvatar(a: RawAvatar): AvatarInfo {
     ...(a.source === 'local' || a.source === 'url' ? { source: a.source } : {}),
     ...(a.size_bytes !== undefined ? { sizeBytes: a.size_bytes } : {}),
     ...(a.expressions ? { expressions: a.expressions } : {}),
+    ...(a.thumbnail ? { thumbUrl: `l2d://model/${a.slug}/${a.thumbnail}` } : {}),
     ...(a.actions ? { actions: a.actions } : {})
   }
 }

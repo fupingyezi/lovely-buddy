@@ -23,6 +23,8 @@ declare global {
     sizeBytes?: number
     /** 表情组数量（入口 json Expressions 长度） */
     expressions?: number
+    /** 自带预览图（服务端探测 icon / ico_ 前缀 / preview / cover / thumbnail 图片，相对形象目录；无则空） */
+    thumbUrl?: string
     /** avatar.json 的动作映射（服务端透传，意图解析时按能力目录降级） */
     actions?: AvatarActions
   }

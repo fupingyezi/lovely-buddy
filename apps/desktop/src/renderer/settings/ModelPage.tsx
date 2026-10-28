@@ -14,8 +14,18 @@ function modelMeta(m: AvatarInfo): string {
   return parts.join(' · ')
 }
 
-/** 48×48 形象缩略占位（与菜单 24px 版同款 viewBox） */
-function Thumb48(): ReactElement {
+/** 48×48 形象缩略：有自带预览图用 <img>（l2d:// 协议），否则占位小白人轮廓 */
+function Thumb48({ m }: { m: AvatarInfo }): ReactElement {
+  if (m.thumbUrl) {
+    return (
+      <img
+        src={m.thumbUrl}
+        alt=""
+        draggable={false}
+        className="size-12 shrink-0 rounded-xl object-cover bg-[#eaf7f1]"
+      />
+    )
+  }
   return (
     <div className="size-12 shrink-0 rounded-xl bg-[#eaf7f1] flex items-center justify-center">
       <svg viewBox="0 0 48 48" className="size-7" fill="none" aria-hidden="true">
@@ -164,7 +174,7 @@ export default function ModelPage(): ReactElement {
                 if (!active) selectModel(m)
               }}
             >
-              <Thumb48 />
+              <Thumb48 m={m} />
               <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                 <span className="truncate text-xs font-semibold text-ink">{m.name}</span>
                 <span className="truncate text-[10px] text-ink-3">{modelMeta(m)}</span>

@@ -25,7 +25,8 @@ function mockFetchApi(avatars: Array<Record<string, unknown>>): void {
     kind: a.kind,
     entry: a.entry,
     size_bytes: a.sizeBytes,
-    expressions: a.expressions
+    expressions: a.expressions,
+    ...(a.thumbnail ? { thumbnail: a.thumbnail } : {})
   })
   vi.stubGlobal(
     'fetch',
@@ -57,7 +58,7 @@ const haru = {
   entry: 'haru/haru.model3.json',
   sizeBytes: 4404019,
   expressions: 2
-}
+} satisfies AvatarInfo
 const shizuku = {
   slug: 'shizuku',
   name: 'shizuku-cubism2',
@@ -66,7 +67,7 @@ const shizuku = {
   entry: 'shizuku/shizuku.model.json',
   sizeBytes: 10485760,
   expressions: 0
-}
+} satisfies AvatarInfo
 
 function setStore(extra: Partial<ReturnType<typeof usePetStore.getState>> = {}): void {
   usePetStore.setState({
@@ -166,5 +167,15 @@ describe('ModelPage', () => {
     fireEvent.drop(zone, { dataTransfer: { files: [new File(['x'], 'hiyori.zip')] } })
     await waitFor(() => expect(notifyMock).toHaveBeenCalled())
     expect(pathForFileMock).toHaveBeenCalled()
+  })
+
+  it('有自带预览图的形象渲染真实图，无则占位', () => {
+    const haruWithThumb: AvatarInfo = { ...haru, thumbUrl: 'l2d://model/haru/icon.png' }
+    setStore({ models: [haruWithThumb, shizuku] })
+    // 缩略图是装饰图（alt=""），无 img role；直接断言渲染出的 img 元素
+    const { container } = render(<ModelPage />)
+    const imgs = container.querySelectorAll('img')
+    expect(imgs).toHaveLength(1)
+    expect(imgs[0].getAttribute('src')).toBe('l2d://model/haru/icon.png')
   })
 })

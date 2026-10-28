@@ -62,7 +62,7 @@ export default function PetMenu({ onClose, onChat, onSettings }: Props): ReactEl
                   }}
                   title={`${m.name}（${m.kind === 'moc3' ? 'Cubism 4' : 'Cubism 2'}）`}
                 >
-                  <Thumb />
+                  <Thumb m={m} />
                   <span className="min-w-0 flex-1 truncate">{m.name}</span>
                   {active && (
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -129,8 +129,13 @@ export default function PetMenu({ onClose, onChat, onSettings }: Props): ReactEl
   )
 }
 
-/** 24×24 形象缩略占位（无真实封面图，统一小白人轮廓；与设置·形象管理 48px 版同款 viewBox） */
-function Thumb(): ReactElement {
+/** 24×24 形象缩略：有自带预览图用 <img>（l2d:// 协议），否则占位小白人轮廓 */
+function Thumb({ m }: { m: AvatarInfo }): ReactElement {
+  if (m.thumbUrl) {
+    return (
+      <img src={m.thumbUrl} alt="" draggable={false} className="size-6 shrink-0 rounded-md object-cover bg-[#eaf7f1]" />
+    )
+  }
   return (
     <div className="size-6 shrink-0 rounded-md bg-[#eaf7f1] flex items-center justify-center">
       <svg viewBox="0 0 48 48" className="size-3.5" fill="none" aria-hidden="true">
