@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -107,5 +108,17 @@ func TestMemoryListTotals(t *testing.T) {
 	items, total, err := s.List(context.Background(), "拿铁", 10)
 	if err != nil || total != 1 || len(items) != 1 {
 		t.Fatalf("items=%d total=%d err=%v", len(items), total, err)
+	}
+}
+
+func TestMemoryItemJSON(t *testing.T) {
+	b, err := json.Marshal(memory.Item{ID: 1, Type: "偏好", Content: "喜欢喝拿铁", Source: "manual", CreatedAt: time.Unix(0, 0)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{`"id"`, `"type"`, `"content"`, `"source"`, `"created_at"`} {
+		if !strings.Contains(string(b), key) {
+			t.Fatalf("序列化缺键 %s: %s", key, b)
+		}
 	}
 }

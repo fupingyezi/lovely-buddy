@@ -12,11 +12,11 @@ import (
 
 // Item 一条记忆（接口层形态，与 dao.Memory 字段一致；harness 不 import dao）。
 type Item struct {
-	ID        int64
-	Type      string // 偏好 | 事实 | 习惯
-	Content   string
-	Source    string // manual；M5 抽取管线写 auto
-	CreatedAt time.Time
+	ID        int64     `json:"id"`
+	Type      string    `json:"type"` // 偏好 | 事实 | 习惯
+	Content   string    `json:"content"`
+	Source    string    `json:"source"` // manual；M5 抽取管线写 auto
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // Store 存储抽象：管理页 CRUD 与注入读取。
