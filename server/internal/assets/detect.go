@@ -53,6 +53,7 @@ func inspect(dir string) (Avatar, bool) {
 	}
 	av.Actions = meta.Actions
 	av.SizeBytes = dirSize(dir)
+	av.Thumbnail = probeThumbnail(dir)
 	av.Expressions = expressionCount(filepath.Join(dir, filepath.FromSlash(rel)))
 	if av.Name == "" {
 		av.Name = slug
@@ -142,4 +143,76 @@ func expressionCount(entry string) int {
 		return 0
 	}
 	return len(doc.Expressions)
+}
+
+// thumbLimit 预览图大小上限（超过视为贴图/截图，不采）。
+const thumbLimit = 2 << 20
+
+// thumbNames 候选名优先级表（下标即优先级，0 最高）；前缀匹配后接图片扩展名。
+var thumbNames = []string{"icon.", "ico_", "preview.", "cover.", "thumbnail."}
+
+// probeThumbnail 在形象目录顶层与一层子目录找自带预览图（icon.png / ico_*.png / preview.png /
+// cover.png / thumbnail.png 等，扩展名限 png/jpg/jpeg/webp），按候选名优先级取最优；
+// 找不到返回空串。纹理贴图（texture_00.png）是拆件图集，不是预览图——不探测。
+func probeThumbnail(dir string) string {
+	best, bestRank := "", len(thumbNames)
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil // 不可读的跳过
+		}
+		if d.IsDir() {
+			if p == dir {
+				return nil
+			}
+			rel := filepathRel(dir, p)
+			if strings.HasPrefix(d.Name(), ".") || strings.Count(rel, "/") >= 1 {
+				return filepath.SkipDir // 点目录或二层以上子目录
+			}
+			return nil
+		}
+		rel := filepathRel(dir, p)
+		if strings.Count(rel, "/") > 1 {
+			return nil // 只找两层
+		}
+		if info, err := d.Info(); err == nil && info.Size() > thumbLimit {
+			return nil
+		}
+		if r := rankThumb(strings.ToLower(d.Name())); r >= 0 && r < bestRank {
+			best, bestRank = rel, r
+		}
+		return nil
+	})
+	return best
+}
+
+// filepathRel 忽略错误的 Rel 并转斜杠（探测遍历，读不到不影响）。
+func filepathRel(base, p string) string {
+	r, err := filepath.Rel(base, p)
+	if err != nil {
+		return ""
+	}
+	return filepath.ToSlash(r)
+}
+
+// rankThumb 按优先级表打分；不匹配或非图片扩展名返回 -1。
+func rankThumb(lower string) int {
+	if !isThumbExt(lower) {
+		return -1
+	}
+	base := filepath.Base(lower)
+	for i, p := range thumbNames {
+		if strings.HasPrefix(base, p) {
+			return i
+		}
+	}
+	return -1
+}
+
+// isThumbExt 图片扩展名（png/jpg/jpeg/webp）。
+func isThumbExt(name string) bool {
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".png", ".jpg", ".jpeg", ".webp":
+		return true
+	}
+	return false
 }

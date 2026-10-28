@@ -16,8 +16,10 @@ type Avatar struct {
 	Kind     string `json:"kind"`              // moc | moc3
 	Entry    string `json:"entry"`             // 相对模型根目录的入口，如 "haru/haru.model3.json"
 	// 体积与表情数（探测时统计，形象管理页元信息展示用）
-	SizeBytes   int64 `json:"size_bytes,omitempty"`
-	Expressions int   `json:"expressions,omitempty"`
+	SizeBytes int64 `json:"size_bytes,omitempty"`
+	// 自带预览图（探测命中的 icon/ico_*/preview/cover/thumbnail 图片，相对形象目录）；无则空。
+	Thumbnail   string `json:"thumbnail,omitempty"`
+	Expressions int    `json:"expressions,omitempty"`
 
 	Actions map[string]AvatarActionSpec `json:"actions,omitempty"` // 意图 → 动作/表情映射（全部可选）
 }
