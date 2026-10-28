@@ -16,12 +16,12 @@ import (
 )
 
 // New 组装 HTTP 服务。pool 可为 nil（healthz 将报 db error）；chats 为聊天服务；
-// cfgSvc 为模型与连接配置服务（main 恒传非 nil）。
-func New(addr, token string, pool *pgxpool.Pool, modelDir string, chats *service.ChatService, cfgSvc *service.ConfigService) *http.Server {
+// cfgSvc 为模型与连接配置服务，personaSvc 为角色设定服务（main 恒传非 nil）。
+func New(addr, token string, pool *pgxpool.Pool, modelDir string, chats *service.ChatService, cfgSvc *service.ConfigService, personaSvc *service.PersonaService) *http.Server {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(middleware.AccessLog(), gin.Recovery(), middleware.CORS())
-	router.Register(r, pool, token, modelDir, chats, cfgSvc)
+	router.Register(r, pool, token, modelDir, chats, cfgSvc, personaSvc)
 	return &http.Server{
 		Addr:              addr,
 		Handler:           r,

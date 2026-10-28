@@ -41,8 +41,10 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 	root := t.TempDir()
 	reg := model.NewRegistry(scriptedLLM{})
 	chats := service.NewChatService(service.NewMemStore(), reg, root)
-	cfgSvc := service.NewConfigService(reg, &configstore.File{}, scriptedLLM{})
-	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc)
+	file := &configstore.File{}
+	cfgSvc := service.NewConfigService(reg, file, scriptedLLM{})
+	personaSvc := service.NewPersonaService(file)
+	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc, personaSvc)
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 	return ts, root

@@ -77,8 +77,10 @@ func main() {
 		slog.Warn("已保存的连接无效，回退环境默认", "err", err)
 	}
 
+	personaSvc := service.NewPersonaService(file)
+
 	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir)
-	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc)
+	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc, personaSvc)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
