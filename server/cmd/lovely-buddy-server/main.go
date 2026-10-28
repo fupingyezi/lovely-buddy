@@ -78,9 +78,10 @@ func main() {
 	}
 
 	personaSvc := service.NewPersonaService(file)
+	memSvc := service.NewMemoryService(service.NewDaoMemStore(dao.NewMemory(pool)))
 
-	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir, personaSvc, nil, cfgSvc.ActiveModel)
-	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc, personaSvc)
+	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir, personaSvc, memSvc, cfgSvc.ActiveModel)
+	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc, personaSvc, memSvc)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -44,7 +44,7 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 	file := &configstore.File{}
 	cfgSvc := service.NewConfigService(reg, file, scriptedLLM{})
 	personaSvc := service.NewPersonaService(file)
-	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc, personaSvc)
+	srv := New("127.0.0.1:0", testToken, nil, root, chats, cfgSvc, personaSvc, nil)
 	ts := httptest.NewServer(srv.Handler)
 	t.Cleanup(ts.Close)
 	return ts, root
