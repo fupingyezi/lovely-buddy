@@ -9,7 +9,19 @@ const exportFileMock = vi.fn()
 const notifyChatClearedMock = vi.fn()
 
 function mockLovelybuddy(): void {
-  vi.stubGlobal('lovelybuddy', { exportFile: exportFileMock, notifyChatCleared: notifyChatClearedMock })
+  vi.stubGlobal('lovelybuddy', {
+    exportFile: exportFileMock,
+    notifyChatCleared: notifyChatClearedMock,
+    getRuntime: vi.fn().mockResolvedValue({ baseUrl: 'http://127.0.0.1:8740', token: 'dev', dev: true }),
+    getAppInfo: vi.fn().mockResolvedValue({
+      version: '0.1.0',
+      electron: '31.0.0',
+      chrome: '126.0.0',
+      platform: 'darwin',
+      arch: 'arm64',
+      userData: '/tmp/x'
+    })
+  })
 }
 
 beforeEach(() => {
@@ -24,6 +36,7 @@ beforeEach(() => {
     clear: clearMock
   })
   mockLovelybuddy()
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 404 })))
 })
 
 afterEach(() => {
@@ -33,16 +46,16 @@ afterEach(() => {
 })
 
 describe('SettingsPanel', () => {
-  it('侧栏五入口渲染，形象管理/模型与连接/对话记录可用，对话记录默认选中', () => {
+  it('侧栏五入口全部可用，无外观与动作，对话记录默认选中', () => {
     render(<SettingsPanel />)
-    for (const name of ['形象管理', '模型与连接', '对话记录', '外观与动作', '关于']) {
-      expect(screen.getByRole('button', { name })).toBeTruthy()
+    for (const name of ['形象管理', '模型与连接', '对话记录', '角色设定', '关于']) {
+      const btn = screen.getByRole('button', { name }) as HTMLButtonElement
+      expect(btn).toBeTruthy()
+      expect(btn.disabled).toBe(false)
     }
+    expect(screen.queryByRole('button', { name: '外观与动作' })).toBeNull()
     const active = screen.getByRole('button', { name: '对话记录' }) as HTMLButtonElement
     expect(active.className).toContain('active')
-    expect(active.disabled).toBe(false)
-    expect((screen.getByRole('button', { name: '形象管理' }) as HTMLButtonElement).disabled).toBe(false)
-    expect((screen.getByRole('button', { name: '模型与连接' }) as HTMLButtonElement).disabled).toBe(false)
   })
 
   it('页头/会话卡与消息流渲染（桌宠奶油左、用户薄荷右）+ footer', () => {
@@ -61,6 +74,18 @@ describe('SettingsPanel', () => {
     render(<SettingsPanel />)
     fireEvent.click(screen.getByRole('button', { name: '形象管理' }))
     expect(screen.getByRole('heading', { name: '形象管理' })).toBeTruthy()
+  })
+
+  it('点击「角色设定」切到角色设定页', () => {
+    render(<SettingsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: '角色设定' }))
+    expect(screen.getByRole('heading', { name: '角色设定' })).toBeTruthy()
+  })
+
+  it('点击「关于」切到关于页', () => {
+    render(<SettingsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: '关于' }))
+    expect(screen.getByRole('heading', { name: '关于' })).toBeTruthy()
   })
 
   it('点击「模型与连接」切到连接页', () => {

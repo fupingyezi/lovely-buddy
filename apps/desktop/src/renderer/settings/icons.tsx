@@ -23,3 +23,64 @@ export function AppLogo48(): ReactElement {
     </svg>
   )
 }
+
+// —— 导航图标（16×16，stroke 随 currentColor 走选中态）——
+
+/** 形象管理：头 + 肩轮廓 */
+export function IconModel(): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="5.4" r="2.9" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M2.6 14.2c1.4-2 3.3-3 5.4-3s4 1 5.4 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** 模型与连接：互锁链环 */
+export function IconLink(): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4.5 11.5l-1 1a2.12 2.12 0 010-3l2-2a2.12 2.12 0 013 0l1 1M11.5 4.5l1-1a2.12 2.12 0 010 3l-2 2a2.12 2.12 0 01-3 0l-1-1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/** 对话记录：气泡 + 左下尾 */
+export function IconChat(): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M2.7 3.4h10.6v7.1H6.4l-3.7 3V3.4Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/** 角色设定：薄荷填充文档卡 + 行 */
+export function IconPersona(): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path
+        d="M4.2 2.5h7.6c.9 0 1.7.8 1.7 1.7v7.6c0 .9-.8 1.7-1.7 1.7H4.2c-.9 0-1.7-.8-1.7-1.7V4.2c0-.9.8-1.7 1.7-1.7Z"
+        fill="#dcf2ea"
+        stroke="#35a483"
+        strokeWidth="1.2"
+      />
+      <path d="M5.3 6.5h5.4M5.3 9.5h3.4" stroke="#35a483" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+/** 关于：圆 + i */
+export function IconInfo(): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="5.4" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M8 7.6v3.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="4.9" r="0.7" fill="currentColor" />
+    </svg>
+  )
+}
