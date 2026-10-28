@@ -12,8 +12,8 @@ export interface LovelybuddyApi {
   getRuntime: () => Promise<Runtime>
   /** 点击穿透开关（forward:true） */
   setPassthrough: (on: boolean) => void
-  /** 弹出本地文件/目录选择框（zip 或目录），返回路径或 canceled */
-  pickImportPath: (mode: 'zip' | 'dir') => Promise<{ canceled: boolean; path: string | null }>
+  /** 弹出本地文件/目录选择框（any=zip 文件或目录二选一），返回路径或 canceled */
+  pickImportPath: (mode: 'zip' | 'dir' | 'any') => Promise<{ canceled: boolean; path: string | null }>
   /** 导出文本文件：主进程弹保存对话框（默认 Downloads）并写入，返回保存结果 */
   exportFile: (defaultName: string, content: string) => Promise<{ saved: boolean; path: string | null }>
   /** 拖拽：按屏幕坐标增量移动窗口（主进程夹紧在屏幕内） */

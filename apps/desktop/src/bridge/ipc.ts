@@ -45,11 +45,18 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
     win.window?.webContents.send(CHANNELS.modelsChanged)
   })
   // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
-  ipcMain.handle(CHANNELS.pickImportPath, async (e, mode: 'zip' | 'dir') => {
+  // any=zip 文件或目录二选一（macOS 同框可同时选；Windows 该组合退化为目录选择）
+  ipcMain.handle(CHANNELS.pickImportPath, async (e, mode: 'zip' | 'dir' | 'any') => {
     const opts: Electron.OpenDialogOptions =
       mode === 'dir'
         ? { title: '选择形象目录', properties: ['openDirectory'] }
-        : { title: '选择形象 zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] }
+        : mode === 'any'
+          ? {
+              title: '选择形象 zip 或目录',
+              properties: ['openFile', 'openDirectory'],
+              filters: [{ name: 'Zip', extensions: ['zip'] }]
+            }
+          : { title: '选择形象 zip', properties: ['openFile'], filters: [{ name: 'Zip', extensions: ['zip'] }] }
     // 对话框挂在发起窗口（设置窗口导出的场景没有桌宠窗口上下文）
     const parent = BrowserWindow.fromWebContents(e.sender) ?? win.window
     if (!parent) return { canceled: true, path: null }

@@ -31,7 +31,8 @@ function Thumb48(): ReactElement {
 
 /**
  * 设置·形象管理页：页头（标题+meta+导入按钮）+ 拖放区 + 形象行四态
- * （使用中/可切换/导入中/失败）+ 页脚。导入=浏览/拖放文件夹（后端校验 zip/目录内容）；
+ * （使用中/可切换/导入中/失败）+ 页脚。导入=浏览/拖放目录或 zip 压缩包
+ * （后端按路径自动识别：目录复制 / zip 解压）；
  * 导入进度无后端通道 → 导入中行用不确定态转圈，无取消。
  * 删除当前形象二次确认（回退默认）；成功后 notifyModelsChanged 广播桌宠窗口刷新。
  */
@@ -58,7 +59,7 @@ export default function ModelPage(): ReactElement {
   }
 
   const browse = async (): Promise<void> => {
-    const { canceled, path } = await window.lovelybuddy.pickImportPath('dir')
+    const { canceled, path } = await window.lovelybuddy.pickImportPath('any')
     if (!canceled && path) void importFromPath(path)
   }
 
@@ -107,7 +108,7 @@ export default function ModelPage(): ReactElement {
           <path d="M1.5 3.5h3l1.2 1.4h6.8v6H1.5v-7.4Z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
           <path d="M7 7.5v3M5.5 9h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
         </svg>
-        <span>拖入 .model3.json 所在文件夹，或点击浏览</span>
+        <span>拖入 .model3.json 所在文件夹或 zip 压缩包，或点击浏览</span>
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-2">
         {importing && (

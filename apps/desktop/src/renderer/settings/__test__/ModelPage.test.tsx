@@ -151,19 +151,19 @@ describe('ModelPage', () => {
     expect(usePetStore.getState().importName).toBeNull()
   })
 
-  it('浏览导入：pickImportPath(dir) → POST 导入 → 广播', async () => {
-    pickMock.mockResolvedValue({ canceled: false, path: '/tmp/hiyori' })
+  it('浏览导入：pickImportPath(any) → POST 导入 → 广播（zip 与目录同路，后端自动识别）', async () => {
+    pickMock.mockResolvedValue({ canceled: false, path: '/tmp/hiyori.zip' })
     render(<ModelPage />)
     fireEvent.click(screen.getByRole('button', { name: '导入模型' }))
     await waitFor(() => expect(notifyMock).toHaveBeenCalled())
-    expect(pickMock).toHaveBeenCalledWith('dir')
+    expect(pickMock).toHaveBeenCalledWith('any')
   })
 
-  it('拖放导入：getPathForFile 解析绝对路径 → 导入', async () => {
-    pathForFileMock.mockReturnValue('/tmp/hiyori')
+  it('拖放导入：zip 文件 getPathForFile 解析绝对路径 → 导入', async () => {
+    pathForFileMock.mockReturnValue('/tmp/hiyori.zip')
     render(<ModelPage />)
-    const zone = screen.getByText('拖入 .model3.json 所在文件夹，或点击浏览').closest('div') as HTMLElement
-    fireEvent.drop(zone, { dataTransfer: { files: [new File(['x'], 'hiyori.model3.json')] } })
+    const zone = screen.getByText('拖入 .model3.json 所在文件夹或 zip 压缩包，或点击浏览').closest('div') as HTMLElement
+    fireEvent.drop(zone, { dataTransfer: { files: [new File(['x'], 'hiyori.zip')] } })
     await waitFor(() => expect(notifyMock).toHaveBeenCalled())
     expect(pathForFileMock).toHaveBeenCalled()
   })
