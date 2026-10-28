@@ -1,6 +1,8 @@
 package service
 
 import (
+	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -28,11 +30,28 @@ func TestPersonaUpdateTooLongRejected(t *testing.T) {
 	t.Setenv("LOVELYBUDDY_CONFIG_FILE", filepath.Join(t.TempDir(), "config.json"))
 	f := &configstore.File{}
 	s := NewPersonaService(f)
-	if _, err := s.Update(strings.Repeat("喵", 2001), false); err == nil {
-		t.Fatal("超长应报错")
+	if _, err := s.Update(strings.Repeat("喵", 2001), false); !errors.Is(err, ErrPersonaTooLong) {
+		t.Fatalf("超长应返回 ErrPersonaTooLong，得 %v", err)
 	}
 	if f.Persona.Text != "" {
 		t.Fatal("非法输入不应落盘")
+	}
+}
+
+// Save 失败（配置文件路径指向目录）→ 返回错误且内存态回滚到保存前的值。
+func TestPersonaSaveFailureRollsBack(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "config-dir")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("LOVELYBUDDY_CONFIG_FILE", dir)
+	f := &configstore.File{Persona: configstore.Persona{Text: "旧人设", Enabled: true}}
+	s := NewPersonaService(f)
+	if _, err := s.Update("新人设", false); err == nil {
+		t.Fatal("Save 失败应报错")
+	}
+	if got := s.State(); got.Text != "旧人设" || !got.Enabled {
+		t.Fatalf("Save 失败应回滚内存态: %+v", got)
 	}
 }
 

@@ -8,6 +8,9 @@ import (
 	"lovelybuddy/server/internal/configstore"
 )
 
+// ErrPersonaTooLong 人设提示词超过 2000 字上限（校验失败，不落盘）。
+var ErrPersonaTooLong = errors.New("人设提示词过长（≤2000 字）")
+
 // PersonaService 角色设定配置编排：内存态 + 落盘。写操作持锁串行，写成功后立即落盘。
 type PersonaService struct {
 	mu   sync.Mutex
@@ -23,16 +26,19 @@ func (s *PersonaService) State() configstore.Persona {
 	return s.file.Persona
 }
 
-// Update 校验（trim 后 ≤2000 字）→ 落盘。校验失败不落盘。
+// Update 校验（trim 后 ≤2000 字）→ 落盘。校验失败返回 ErrPersonaTooLong 且不落盘；
+// 落盘失败回滚内存态，保证内存与磁盘一致。
 func (s *PersonaService) Update(text string, enabled bool) (configstore.Persona, error) {
 	text = strings.TrimSpace(text)
 	if len([]rune(text)) > 2000 {
-		return s.State(), errors.New("人设提示词过长（≤2000 字）")
+		return s.State(), ErrPersonaTooLong
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	prev := s.file.Persona
 	s.file.Persona = configstore.Persona{Text: text, Enabled: enabled}
 	if err := s.file.Save(); err != nil {
+		s.file.Persona = prev
 		return s.file.Persona, err
 	}
 	return s.file.Persona, nil

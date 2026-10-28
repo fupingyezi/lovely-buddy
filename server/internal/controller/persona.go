@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,7 +18,8 @@ func NewPersona(svc *service.PersonaService) *Persona { return &Persona{svc: svc
 // State GET /api/v1/persona → {text, enabled}。
 func (h *Persona) State(c *gin.Context) { c.JSON(http.StatusOK, h.svc.State()) }
 
-// Update PUT /api/v1/persona body {text, enabled} → 保存；422 校验失败不落盘。
+// Update PUT /api/v1/persona body {text, enabled} → 保存。
+// 校验失败 422 不落盘；保存失败 500（详情只记日志，不回传渲染进程）。
 func (h *Persona) Update(c *gin.Context) {
 	var req struct {
 		Text    string `json:"text"`
@@ -27,9 +30,13 @@ func (h *Persona) Update(c *gin.Context) {
 		return
 	}
 	state, err := h.svc.Update(req.Text, req.Enabled)
-	if err != nil {
+	switch {
+	case err == nil:
+		c.JSON(http.StatusOK, state)
+	case errors.Is(err, service.ErrPersonaTooLong):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-		return
+	default:
+		slog.Error("persona: 人设保存失败", "err", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "人设保存失败"})
 	}
-	c.JSON(http.StatusOK, state)
 }
