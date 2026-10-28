@@ -40,7 +40,7 @@ func newTestServer(t *testing.T) (*httptest.Server, string) {
 	t.Helper()
 	root := t.TempDir()
 	reg := model.NewRegistry(scriptedLLM{})
-	chats := service.NewChatService(service.NewMemStore(), reg, root)
+	chats := service.NewChatService(service.NewMemStore(), reg, root, nil, nil, nil)
 	file := &configstore.File{}
 	cfgSvc := service.NewConfigService(reg, file, scriptedLLM{})
 	personaSvc := service.NewPersonaService(file)

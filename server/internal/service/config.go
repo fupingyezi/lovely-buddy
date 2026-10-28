@@ -101,6 +101,16 @@ func (s *ConfigService) State() ConfigState {
 	return s.state()
 }
 
+// ActiveModel 当前激活连接的模型名（{model} 人设变量替换用；无激活连接返回空串）。
+func (s *ConfigService) ActiveModel() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if c := s.file.Active(); c != nil {
+		return c.Model
+	}
+	return ""
+}
+
 func (s *ConfigService) state() ConfigState {
 	out := ConfigState{ActiveID: s.file.ActiveID}
 	for _, c := range s.file.Connections {

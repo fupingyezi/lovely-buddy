@@ -79,7 +79,7 @@ func main() {
 
 	personaSvc := service.NewPersonaService(file)
 
-	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir)
+	chats := service.NewChatService(dao.NewChat(pool), reg, *modelDir, personaSvc, nil, cfgSvc.ActiveModel)
 	srv := server.New(*addr, *token, pool, *modelDir, chats, cfgSvc, personaSvc)
 	go func() {
 		slog.Info("lovely-buddy-server 已启动", "addr", *addr, "version", controller.Version)

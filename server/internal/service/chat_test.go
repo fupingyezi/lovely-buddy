@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
@@ -53,7 +54,7 @@ func types(evs []Event) string {
 
 func TestStreamNoKey(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir(), nil, nil, nil)
 	evs := collect(s.Stream(context.Background(), "", "你好"))
 	if len(evs) != 1 || evs[0].Type != "error" || !strings.Contains(evs[0].Error, "DEEPSEEK_API_KEY") {
 		t.Fatalf("evs=%+v", evs)
@@ -77,7 +78,7 @@ func TestStreamHappyPath(t *testing.T) {
 	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {
 		send(out, "你好", "[motion:hap", "py]呀")
 	}}
-	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir(), nil, nil, nil)
 
 	evs := collect(s.Stream(context.Background(), "", "嗨"))
 	if got := types(evs); got != "meta,delta,motion,delta,done," {
@@ -118,7 +119,7 @@ func TestStreamPersonaFromAvatar(t *testing.T) {
 	}
 	store := NewMemStore()
 	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {}}
-	s := NewChatService(store, model.NewRegistry(p), dir)
+	s := NewChatService(store, model.NewRegistry(p), dir, nil, nil, nil)
 	collect(s.Stream(context.Background(), "haru", "喵"))
 	if !strings.HasPrefix(p.calls[0][0].Content, "你是猫。") {
 		t.Fatalf("avatar persona 应注入 system 开头: %q", p.calls[0][0].Content)
@@ -131,7 +132,7 @@ func TestStreamStopPersistsPartial(t *testing.T) {
 		send(out, "已经说到一半")
 		<-ctx.Done() // 用户停止后上游才断
 	}}
-	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir(), nil, nil, nil)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -159,7 +160,7 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 		send(out, "半截")
 		out <- model.StreamEvent{Err: context.DeadlineExceeded}
 	}}
-	s := NewChatService(store, model.NewRegistry(p), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir(), nil, nil, nil)
 
 	evs := collect(s.Stream(context.Background(), "", "hi"))
 	if types(evs) != "meta,delta,error," {
@@ -173,7 +174,7 @@ func TestStreamUpstreamErrorPersistsPartial(t *testing.T) {
 
 func TestClearHistory(t *testing.T) {
 	store := NewMemStore()
-	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir())
+	s := NewChatService(store, model.NewRegistry(&scriptedProvider{}), t.TempDir(), nil, nil, nil)
 	id := mustSession(t, store)
 	if err := store.Append(context.Background(), id, "user", "嗨", ""); err != nil {
 		t.Fatal(err)
@@ -203,4 +204,23 @@ func osWriteFiles(root string, files map[string]string) error {
 		}
 	}
 	return nil
+}
+
+func TestStreamPersonaComposeAndVars(t *testing.T) {
+	dir := t.TempDir()
+	if err := osWriteFiles(dir, map[string]string{
+		"haru/avatar.json": `{"persona":"p.txt"}`,
+		"haru/p.txt":       "你是猫。",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	store := NewMemStore()
+	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {}}
+	file := &configstore.File{Persona: configstore.Persona{Text: "记住用户叫{user_name}", Enabled: false}}
+	s := NewChatService(store, model.NewRegistry(p), dir, NewPersonaService(file), nil, func() string { return "deepseek-chat" })
+	collect(s.Stream(context.Background(), "haru", "喵"))
+	sys := p.calls[0][0].Content
+	if !strings.HasPrefix(sys, "你是猫。") || !strings.Contains(sys, "记住用户叫") || strings.Contains(sys, "{user_name}") {
+		t.Fatalf("人设组合与变量替换不符: %q", sys)
+	}
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"lovelybuddy/server/internal/assets"
+	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/dao"
 	"lovelybuddy/server/internal/lovely-agent/agent"
 	"lovelybuddy/server/internal/lovely-agent/model"
@@ -24,14 +25,18 @@ type Event struct {
 const historyLimit = 20
 
 type ChatService struct {
-	store    ChatStore
-	reg      *model.Registry
-	modelDir string
+	store     ChatStore
+	reg       *model.Registry
+	modelDir  string
+	persona   *PersonaService // 可空：nil = 无自定义人设（内置/默认兜底）
+	mem       *MemoryService  // 可空：nil = 不注入记忆段
+	modelName func() string   // 可空：nil = {model} 替换为空串
 }
 
 // NewChatService 以厂商注册表组装：每次对话从 reg 取当前厂商（M3 设置界面热切换）。
-func NewChatService(store ChatStore, reg *model.Registry, modelDir string) *ChatService {
-	return &ChatService{store: store, reg: reg, modelDir: modelDir}
+// persona/mem/modelName 为可选接线项，未接时传 nil。
+func NewChatService(store ChatStore, reg *model.Registry, modelDir string, persona *PersonaService, mem *MemoryService, modelName func() string) *ChatService {
+	return &ChatService{store: store, reg: reg, modelDir: modelDir, persona: persona, mem: mem, modelName: modelName}
 }
 
 // History 供 /api/v1/history：默认会话最近 limit 条（升序）。
@@ -90,10 +95,25 @@ func (s *ChatService) Stream(ctx context.Context, avatarSlug, userText string) <
 
 		// 组装 harness：历史在落用户消息前已读好并捕获；Loop 不接触 store（记录语义归 service）。
 		loop := agent.NewLoop(provider, agent.ContextConfig{
-			SystemPrompt:  SystemPrompt,
-			PersonaLoader: func(slug string) (string, bool) { return assets.PersonaText(s.modelDir, slug) },
-			History:       func() []model.Message { return toModel(history) },
-			HistoryLimit:  historyLimit,
+			SystemPrompt: SystemPrompt,
+			PersonaLoader: func(slug string) (string, bool) {
+				builtin, ok := assets.PersonaText(s.modelDir, slug)
+				custom := configstore.Persona{}
+				if s.persona != nil {
+					custom = s.persona.Custom()
+				}
+				composed := ComposePersona(builtin, custom)
+				if composed == "" {
+					return builtin, ok
+				}
+				var mn string
+				if s.modelName != nil {
+					mn = s.modelName()
+				}
+				return expandPersonaVars(composed, mn), true
+			},
+			History:      func() []model.Message { return toModel(history) },
+			HistoryLimit: historyLimit,
 		})
 
 		filter := NewMotionFilter()

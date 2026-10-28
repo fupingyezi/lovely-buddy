@@ -61,3 +61,38 @@ func TestPersonaCustomEmptyDisables(t *testing.T) {
 		t.Fatal("空文案应视为关闭")
 	}
 }
+
+func TestComposePersona(t *testing.T) {
+	cases := []struct {
+		name    string
+		builtin string
+		custom  configstore.Persona
+		want    string
+	}{
+		{"自定义空只用内置", "内置人设", configstore.Persona{Text: "  ", Enabled: true}, "内置人设"},
+		{"内置空只用自定义", "", configstore.Persona{Text: "自定义人设", Enabled: false}, "自定义人设"},
+		{"启用覆盖", "内置人设", configstore.Persona{Text: "自定义人设", Enabled: true}, "自定义人设"},
+		{"关闭追加", "内置人设", configstore.Persona{Text: "自定义人设", Enabled: false}, "内置人设\n\n自定义人设"},
+		{"两侧空为空串", "", configstore.Persona{}, ""},
+	}
+	for _, c := range cases {
+		if got := ComposePersona(c.builtin, c.custom); got != c.want {
+			t.Errorf("%s: got %q want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestExpandPersonaVars(t *testing.T) {
+	got := expandPersonaVars("你好 {user_name}，现在是 {time}，模型 {model}", "deepseek-chat")
+	for _, left := range []string{"{user_name}", "{time}", "{model}"} {
+		if strings.Contains(got, left) {
+			t.Fatalf("变量未替换: %q", got)
+		}
+	}
+	if !strings.Contains(got, "模型 deepseek-chat") {
+		t.Fatalf("模型名未替换: %q", got)
+	}
+	if expandPersonaVars("", "x") != "" {
+		t.Fatal("空输入应返回空")
+	}
+}
