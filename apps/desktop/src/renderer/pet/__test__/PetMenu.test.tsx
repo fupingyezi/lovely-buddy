@@ -142,12 +142,15 @@ describe('PetMenu', () => {
     expect(screen.queryByText('删除当前形象')).toBeNull()
   })
 
-  it('有自带预览图的形象渲染真实图缩略，无则占位', () => {
+  it('有自带预览图的形象渲染真实图缩略，无则 zwt.webp 占位；真实图加载失败换占位', () => {
     usePetStore.setState({ models: [{ ...haruAvatar, thumbUrl: 'l2d://model/haru/icon.png' }, shizukuAvatar] })
     // 缩略图是装饰图（alt=""），无 img role；直接断言渲染出的 img 元素
     renderMenu()
     const imgs = document.querySelectorAll('img')
-    expect(imgs).toHaveLength(1)
+    expect(imgs).toHaveLength(2)
     expect(imgs[0].getAttribute('src')).toBe('l2d://model/haru/icon.png')
+    expect(imgs[1].getAttribute('src')).toBe('zwt.webp')
+    fireEvent.error(imgs[0])
+    expect(imgs[0].getAttribute('src')).toBe('zwt.webp')
   })
 })

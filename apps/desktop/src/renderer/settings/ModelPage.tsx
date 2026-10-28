@@ -1,4 +1,4 @@
-import type { DragEvent, ReactElement } from 'react'
+import { useState, type DragEvent, type ReactElement } from 'react'
 import { usePetStore } from '@/store/petStore'
 
 /** 体积 → 「4.2 MB」 */
@@ -14,28 +14,17 @@ function modelMeta(m: AvatarInfo): string {
   return parts.join(' · ')
 }
 
-/** 48×48 形象缩略：有自带预览图用 <img>（l2d:// 协议），否则占位小白人轮廓 */
+/** 48×48 形象缩略：有自带预览图用 <img>（l2d:// 协议），无则或加载失败用 public/zwt.webp 占位 */
 function Thumb48({ m }: { m: AvatarInfo }): ReactElement {
-  if (m.thumbUrl) {
-    return (
-      <img
-        src={m.thumbUrl}
-        alt=""
-        draggable={false}
-        className="size-12 shrink-0 rounded-xl object-cover bg-[#eaf7f1]"
-      />
-    )
-  }
+  const [broken, setBroken] = useState(false)
   return (
-    <div className="size-12 shrink-0 rounded-xl bg-[#eaf7f1] flex items-center justify-center">
-      <svg viewBox="0 0 48 48" className="size-7" fill="none" aria-hidden="true">
-        <circle cx="24" cy="27" r="10" fill="#fff" />
-        <circle cx="24" cy="13" r="5.5" fill="#fff" />
-        <circle cx="21.5" cy="13.5" r="1" fill="#33403b" />
-        <circle cx="26.5" cy="13.5" r="1" fill="#33403b" />
-        <path d="M19.5 29.5c3 2 6 2 9 0" stroke="#33403b" strokeWidth="1.5" strokeLinecap="round" />
-      </svg>
-    </div>
+    <img
+      src={broken || !m.thumbUrl ? 'zwt.webp' : m.thumbUrl}
+      alt=""
+      draggable={false}
+      onError={() => setBroken(true)}
+      className="size-12 shrink-0 rounded-xl object-cover bg-[#eaf7f1]"
+    />
   )
 }
 
