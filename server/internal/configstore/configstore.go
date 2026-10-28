@@ -28,10 +28,19 @@ type Connection struct {
 	CheckFail bool            `json:"check_fail"`
 }
 
+// Persona 角色设定（设置·角色设定页）的自定义人设。
+// Enabled=true 时自定义覆盖内置人设；false 时追加在内置人设末尾；
+// Text 空 = 未填写（不参与组合）。
+type Persona struct {
+	Text    string `json:"text"`
+	Enabled bool   `json:"enabled"`
+}
+
 // File 磁盘文件的内存态。读写都经 Save/Load。
 type File struct {
 	ActiveID    string       `json:"active_id"`
 	Connections []Connection `json:"connections"`
+	Persona     Persona      `json:"persona"`
 }
 
 // Path 配置文件路径：LOVELYBUDDY_CONFIG_FILE 优先，

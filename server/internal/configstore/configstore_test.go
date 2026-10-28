@@ -121,3 +121,24 @@ func TestSetActiveAndFind(t *testing.T) {
 		t.Fatal("Find 未知 id 应为 nil")
 	}
 }
+
+func TestPersonaRoundtripAndLegacy(t *testing.T) {
+	p := tmpPath(t)
+	f := &File{Persona: Persona{Text: "你是一只猫。", Enabled: true}}
+	if err := f.Save(); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	got, err := Load()
+	if err != nil || got.Persona.Text != "你是一只猫。" || !got.Persona.Enabled {
+		t.Fatalf("roundtrip 不一致: %+v err=%v", got.Persona, err)
+	}
+
+	// 旧版配置（无 persona 键）读取为零值，不报错
+	if err := os.WriteFile(p, []byte(`{"active_id":"c1","connections":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := Load()
+	if err != nil || legacy.Persona.Text != "" || legacy.Persona.Enabled {
+		t.Fatalf("旧配置应得零值 persona: %+v err=%v", legacy.Persona, err)
+	}
+}
