@@ -47,3 +47,35 @@ func TestBuildNoHistoryLimit(t *testing.T) {
 		t.Fatalf("无历史应仅 system+user: %+v", msgs)
 	}
 }
+
+func TestBuildMemorySegment(t *testing.T) {
+	cc := ContextConfig{
+		SystemPrompt:  func(string) string { return "s" },
+		PersonaLoader: func(string) (string, bool) { return "", false },
+		History:       func() []model.Message { return nil },
+		Memory:        func(string) string { return "关于用户的长期记忆：\n- [偏好] 喜欢喝拿铁" },
+	}
+	msgs := Build(context.Background(), cc, "", "hi")
+	if len(msgs) != 3 {
+		t.Fatalf("有记忆段应 3 条（system+记忆段+user）: %+v", msgs)
+	}
+	if msgs[1].Role != "system" || !strings.HasPrefix(msgs[1].Content, "关于用户的长期记忆") {
+		t.Fatalf("记忆段应插在历史后、输入前: %+v", msgs[1])
+	}
+}
+
+func TestBuildMemoryEmptyOrNil(t *testing.T) {
+	base := ContextConfig{
+		SystemPrompt:  func(string) string { return "s" },
+		PersonaLoader: func(string) (string, bool) { return "", false },
+		History:       func() []model.Message { return nil },
+		Memory:        func(string) string { return "" },
+	}
+	if got := Build(context.Background(), base, "", "hi"); len(got) != 2 {
+		t.Fatalf("空记忆段不追加消息: %+v", got)
+	}
+	base.Memory = nil
+	if got := Build(context.Background(), base, "", "hi"); len(got) != 2 {
+		t.Fatalf("nil Memory 不追加消息: %+v", got)
+	}
+}

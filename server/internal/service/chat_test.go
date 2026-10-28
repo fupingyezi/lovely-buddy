@@ -224,3 +224,22 @@ func TestStreamPersonaComposeAndVars(t *testing.T) {
 		t.Fatalf("人设组合与变量替换不符: %q", sys)
 	}
 }
+
+func TestStreamMemorySegmentInjected(t *testing.T) {
+	store := NewMemStore()
+	p := &scriptedProvider{key: true, run: func(_ context.Context, out chan<- model.StreamEvent) {}}
+	fs := &fakeMemStore{}
+	if _, err := fs.Add(context.Background(), "偏好", "喜欢喝拿铁", "manual"); err != nil {
+		t.Fatal(err)
+	}
+	s := NewChatService(store, model.NewRegistry(p), t.TempDir(), nil, NewMemoryService(fs), nil)
+	collect(s.Stream(context.Background(), "", "我渴了"))
+	call := p.calls[0]
+	// 顺序：system（人设+协议）→ system（记忆段）→ user
+	if len(call) != 3 || call[0].Role != "system" || call[1].Role != "system" || call[2].Role != "user" {
+		t.Fatalf("消息序不符: %+v", call)
+	}
+	if !strings.Contains(call[1].Content, "喜欢喝拿铁") || !strings.HasPrefix(call[1].Content, "关于用户的长期记忆") {
+		t.Fatalf("记忆段不符: %q", call[1].Content)
+	}
+}

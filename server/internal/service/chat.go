@@ -8,6 +8,7 @@ import (
 	"lovelybuddy/server/internal/configstore"
 	"lovelybuddy/server/internal/dao"
 	"lovelybuddy/server/internal/lovely-agent/agent"
+	"lovelybuddy/server/internal/lovely-agent/memory"
 	"lovelybuddy/server/internal/lovely-agent/model"
 )
 
@@ -114,6 +115,16 @@ func (s *ChatService) Stream(ctx context.Context, avatarSlug, userText string) <
 			},
 			History:      func() []model.Message { return toModel(history) },
 			HistoryLimit: historyLimit,
+			Memory: func(userText string) string {
+				if s.mem == nil {
+					return ""
+				}
+				items, err := s.mem.Retrieve(ctx, userText, MemoryInjectLimit)
+				if err != nil {
+					return "" // 记忆读取失败不阻断对话
+				}
+				return memory.BuildSegment(items)
+			},
 		})
 
 		filter := NewMotionFilter()
