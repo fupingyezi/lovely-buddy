@@ -4,6 +4,14 @@ import CharacterPage from '@/settings/CharacterPage'
 import { useMemoryStore } from '@/store/memoryStore'
 import { usePersonaStore } from '@/store/personaStore'
 
+const FIRST_CREATED_AT = '2026-10-27T10:00:00Z'
+
+/** 本地时区 MM-DD：与页面展示同口径，避免断言随运行机器时区漂移 */
+function localMonthDay(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function mockLovelybuddy(): void {
   vi.stubGlobal('lovelybuddy', {
     getRuntime: vi.fn().mockResolvedValue({ baseUrl: 'http://127.0.0.1:8740', token: 'dev', dev: true })
@@ -12,7 +20,7 @@ function mockLovelybuddy(): void {
 
 /** fetch 按 URL 路由到有状态的假后端（persona 静态、memories 可增删） */
 function mockFetchApi(): void {
-  let memories = [{ id: 1, type: '偏好', content: '喜欢喝拿铁', source: 'manual', created_at: '2026-10-27T10:00:00Z' }]
+  let memories = [{ id: 1, type: '偏好', content: '喜欢喝拿铁', source: 'manual', created_at: FIRST_CREATED_AT }]
   let nextId = 2
   vi.stubGlobal(
     'fetch',
@@ -79,12 +87,12 @@ describe('CharacterPage 记忆卡', () => {
     vi.restoreAllMocks()
   })
 
-  it('载入列表：计数、行内容与 meta（手动添加 · 10-27）', async () => {
+  it('载入列表：计数、行内容与 meta（手动添加 · 本地日期）', async () => {
     render(<CharacterPage />)
     await waitFor(() => expect(useMemoryStore.getState().loading).toBe(false))
     expect(screen.getByText('1 / 200')).toBeTruthy()
     expect(screen.getByText('喜欢喝拿铁')).toBeTruthy()
-    expect(screen.getByText('手动添加 · 10-27')).toBeTruthy()
+    expect(screen.getByText(`手动添加 · ${localMonthDay(FIRST_CREATED_AT)}`)).toBeTruthy()
   })
 
   it('新增：类型选择 + 输入 → 添加 → 列表刷新', async () => {

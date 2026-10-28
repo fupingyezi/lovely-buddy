@@ -6,9 +6,12 @@ import type { MemoryItem } from '@/lib/memoryApi'
 const VAR_CHIPS = ['{user_name}', '{time}', '{model}'] as const
 const MAX_LEN = 2000
 
-/** 「2026-10-27T…」→「10-27」 */
+/** 「2026-10-27T…」→ 本地时区「10-27」（按 UTC 切片会让 UTC+ 用户凌晨看到前一天） */
 function memDate(iso: string): string {
-  return iso.slice(5, 10)
+  const d = new Date(iso)
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${month}-${day}`
 }
 
 /** 行 meta：来源（手动添加/自动提取）+ 日期 */
@@ -261,7 +264,7 @@ export default function CharacterPage(): ReactElement {
           ))}
         </div>
       </section>
-      <footer className="shrink-0 text-[10px] text-ink-footer">仅存于本机数据库 · 删除后不可恢复</footer>
+      <footer className="shrink-0 text-[10px] text-ink-footer">仅存于本机 · 删除后不可恢复</footer>
     </>
   )
 }

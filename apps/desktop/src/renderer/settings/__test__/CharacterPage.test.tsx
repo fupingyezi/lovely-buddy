@@ -67,6 +67,52 @@ describe('CharacterPage 人设卡', () => {
     expect((screen.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(true)
   })
 
+  it('保存飞行中继续输入：响应不覆盖新内容，dirty 保留且二次保存发送新内容', async () => {
+    let resolvePut!: (r: Response) => void
+    const putBodies: string[] = []
+    const json = (body: unknown, status = 200): Response =>
+      new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        const method = init?.method ?? 'GET'
+        if (url === 'http://127.0.0.1:8740/api/v1/persona' && method === 'GET') {
+          return Promise.resolve(json({ text: '你是猫。', enabled: true }))
+        }
+        if (url === 'http://127.0.0.1:8740/api/v1/persona' && method === 'PUT') {
+          const body = JSON.parse(String(init?.body)) as { text: string; enabled: boolean }
+          putBodies.push(body.text)
+          if (putBodies.length === 1) {
+            return new Promise<Response>((resolve) => {
+              resolvePut = resolve
+            })
+          }
+          return Promise.resolve(json({ text: body.text.trim(), enabled: body.enabled }))
+        }
+        return Promise.resolve(json({}, 404))
+      })
+    )
+
+    render(<CharacterPage />)
+    await waitFor(() => expect(usePersonaStore.getState().loading).toBe(false))
+    const ta = screen.getByPlaceholderText('写下它该有的样子，例如性格、说话习惯、偏好……') as HTMLTextAreaElement
+    fireEvent.change(ta, { target: { value: 'A' } })
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(putBodies).toEqual(['A']))
+    fireEvent.change(ta, { target: { value: 'B' } })
+    resolvePut(json({ text: 'A', enabled: true }))
+    await waitFor(() => expect(usePersonaStore.getState().saving).toBe(false))
+    expect(usePersonaStore.getState().text).toBe('B')
+    expect(usePersonaStore.getState().savedText).toBe('A')
+    expect((screen.getByRole('button', { name: '保存' }) as HTMLButtonElement).disabled).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: '保存' }))
+    await waitFor(() => expect(usePersonaStore.getState().savedText).toBe('B'))
+    expect(putBodies).toEqual(['A', 'B'])
+    expect(usePersonaStore.getState().text).toBe('B')
+  })
+
   it('chips 插入光标处', async () => {
     render(<CharacterPage />)
     await waitFor(() => expect(usePersonaStore.getState().loading).toBe(false))
