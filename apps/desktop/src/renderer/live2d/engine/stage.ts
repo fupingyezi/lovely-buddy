@@ -8,12 +8,16 @@ export function initStage(canvas: HTMLCanvasElement): PIXI.Application {
   if (app) return app
   // lipsyncpatch 库内部取 window.PIXI，必须在任何 Live2DModel 调用前挂上
   window.PIXI = PIXI
+  const resolution = Math.min(window.devicePixelRatio || 1, 2)
+
   app = new PIXI.Application({
     view: canvas,
     autoStart: true,
     resizeTo: window,
     backgroundAlpha: 0,
-    antialias: true
+    antialias: true,
+    resolution,
+    autoDensity: true
   })
   return app
 }
