@@ -29,8 +29,11 @@ export default function App(): ReactElement {
     void loadModels()
   }, [loadModels])
 
-  // 设置窗口导入/删除形象 → 主进程广播 → 刷新形象列表（loadModels 已内置当前项回退）
-  useEffect(() => window.lovelybuddy.onModelsChanged(() => void usePetStore.getState().loadModels()), [])
+  // 设置窗口形象变更（选择/导入/删除）→ 主进程广播（带生效 url）→ 刷新列表并应用
+  useEffect(
+    () => window.lovelybuddy.onModelsChanged((url) => void usePetStore.getState().loadModels(url ?? undefined)),
+    []
+  )
 
   return (
     <>

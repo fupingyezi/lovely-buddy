@@ -64,10 +64,10 @@ declare global {
     onChatCleared: (cb: () => void) => () => void
     /** 拖拽文件/文件夹取绝对路径（Electron 32+ 移除 File.path，用 webUtils） */
     getPathForFile: (file: File) => string
-    /** 设置窗口导入/删除形象后通知主进程（主进程广播给桌宠窗口刷新形象列表） */
-    notifyModelsChanged: () => void
-    /** 订阅「形象列表变更」广播，返回退订函数 */
-    onModelsChanged: (cb: () => void) => () => void
+    /** 设置窗口形象变更（选择/导入/删除）后通知主进程，携带生效的模型 url（主进程广播给桌宠窗口） */
+    notifyModelsChanged: (url: string | null) => void
+    /** 订阅「形象变更」广播（回调收到生效的模型 url），返回退订函数 */
+    onModelsChanged: (cb: (url: string | null) => void) => () => void
     /** 关于页：应用与运行时信息 */
     getAppInfo: () => Promise<AppInfo>
     /** 外部浏览器打开链接（主进程校验 http/https） */

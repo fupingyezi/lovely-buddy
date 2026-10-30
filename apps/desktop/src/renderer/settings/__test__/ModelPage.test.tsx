@@ -114,6 +114,8 @@ describe('ModelPage', () => {
     render(<ModelPage />)
     fireEvent.click(screen.getByText('shizuku-cubism2'))
     expect(usePetStore.getState().modelUrl).toBe(shizuku.url)
+    // 广播携带生效 url，桌宠窗口收到后切换
+    expect(notifyMock).toHaveBeenCalledWith(shizuku.url)
   })
 
   it('删除当前形象：二次确认（提示回退）→ DELETE → 广播', async () => {
@@ -122,7 +124,8 @@ describe('ModelPage', () => {
     fireEvent.click(screen.getByRole('button', { name: '删除形象 haru-cubism4' }))
     expect(window.confirm).toHaveBeenCalledWith('删除当前形象「haru-cubism4」？将回退到默认形象。此操作不可恢复。')
     await waitFor(() => expect(usePetStore.getState().models.map((m) => m.slug)).toEqual(['shizuku']))
-    expect(notifyMock).toHaveBeenCalled()
+    // 广播携带回退 url（删除当前形象后桌宠窗口同步回退）
+    expect(notifyMock).toHaveBeenCalledWith(shizuku.url)
   })
 
   it('删除取消不调 API', () => {
@@ -156,7 +159,8 @@ describe('ModelPage', () => {
     pickMock.mockResolvedValue({ canceled: false, path: '/tmp/hiyori.zip' })
     render(<ModelPage />)
     fireEvent.click(screen.getByRole('button', { name: '导入模型' }))
-    await waitFor(() => expect(notifyMock).toHaveBeenCalled())
+    // 广播携带自动应用的新形象 url
+    await waitFor(() => expect(notifyMock).toHaveBeenCalledWith(haru.url))
     expect(pickMock).toHaveBeenCalledWith('any')
   })
 
@@ -165,7 +169,7 @@ describe('ModelPage', () => {
     render(<ModelPage />)
     const zone = screen.getByText('拖入 .model3.json 所在文件夹或 zip 压缩包，或点击浏览').closest('div') as HTMLElement
     fireEvent.drop(zone, { dataTransfer: { files: [new File(['x'], 'hiyori.zip')] } })
-    await waitFor(() => expect(notifyMock).toHaveBeenCalled())
+    await waitFor(() => expect(notifyMock).toHaveBeenCalledWith(haru.url))
     expect(pathForFileMock).toHaveBeenCalled()
   })
 

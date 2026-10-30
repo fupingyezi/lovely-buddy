@@ -30,7 +30,8 @@ interface PetState {
   importName: string | null
   status: BackendStatus
   version: string | null
-  loadModels: () => Promise<void>
+  /** preferredUrl：设置窗口广播的目标形象 url（选择/导入/删除后的生效项），优先级高于内存与 localStorage */
+  loadModels: (preferredUrl?: string) => Promise<void>
   selectModel: (info: AvatarInfo) => void
   /** 导入形象；成功后自动应用（auto_apply_avatar 默认开，设置项留 M3）。返回是否成功。 */
   importModel: (source: ImportSource) => Promise<boolean>
@@ -56,12 +57,14 @@ export const usePetStore = create<PetState>()((set, get) => ({
   status: 'connecting',
   version: null,
 
-  async loadModels() {
+  async loadModels(preferredUrl) {
     try {
       const rt = await window.lovelybuddy.getRuntime()
       const models = await listAvatars(rt)
       const restored = localStorage.getItem(MODEL_URL_KEY)
-      const next = models.find((m) => m.url === (get().modelUrl ?? restored)) ?? models[0] ?? null
+      const next = models.find((m) => m.url === (preferredUrl ?? get().modelUrl ?? restored)) ?? models[0] ?? null
+      // 生效的 url 写回 localStorage：设置窗口与桌宠窗口（及重启后）选择保持一致
+      if (next) localStorage.setItem(MODEL_URL_KEY, next.url)
       // 扫描到模型即复位占位卡关闭状态（用户下次放模型进来能立刻看到桌宠）
       set({
         models,

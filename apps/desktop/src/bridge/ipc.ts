@@ -40,9 +40,9 @@ export function setupIPC(win: PetWindowManager, settingsWin: ReturnType<typeof c
   ipcMain.on(CHANNELS.notifyChatCleared, () => {
     win.window?.webContents.send(CHANNELS.chatCleared)
   })
-  // 设置窗口导入/删除形象 → 广播给桌宠窗口刷新形象列表（同 chat-cleared 跨窗同步模式）
-  ipcMain.on(CHANNELS.notifyModelsChanged, () => {
-    win.window?.webContents.send(CHANNELS.modelsChanged)
+  // 设置窗口形象变更（选择/导入/删除）→ 广播给桌宠窗口，携带生效的模型 url（同 chat-cleared 跨窗同步模式）
+  ipcMain.on(CHANNELS.notifyModelsChanged, (_e, url: string | null) => {
+    win.window?.webContents.send(CHANNELS.modelsChanged, url)
   })
   // 本地导入：选择 zip 文件或目录（实际导入由 Go 后端执行，这里只取路径）
   // any=zip 文件或目录二选一（macOS 同框可同时选；Windows 该组合退化为目录选择）

@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from '@/App'
 import { usePetStore } from '@/store/petStore'
 
+/** onModelsChanged 捕获的回调（模拟主进程广播） */
+let modelsChangedCb: ((url: string | null) => void) | null = null
+
 // 该库在 import 时就要求 window.Live2D 存在（jsdom 没有），App 测试不涉及真实渲染，整体 mock 掉
 vi.mock('pixi-live2d-display-lipsyncpatch', () => ({ Live2DModel: class {} }))
 
@@ -24,7 +27,10 @@ function mockLovelybuddy(): void {
     pickImportPath: vi.fn().mockResolvedValue({ canceled: true, path: null }),
     openSettings: vi.fn().mockResolvedValue(undefined),
     onChatCleared: vi.fn(() => () => {}),
-    onModelsChanged: vi.fn(() => () => {})
+    onModelsChanged: vi.fn((cb: (url: string | null) => void) => {
+      modelsChangedCb = cb
+      return () => {}
+    })
   })
 }
 
@@ -63,6 +69,14 @@ const haruAvatar = {
   license: 'free',
   source: 'local'
 }
+const shizukuAvatar = {
+  slug: 'shizuku',
+  name: 'shizuku-cubism2',
+  url: 'l2d://model/shizuku/shizuku.model.json',
+  kind: 'moc',
+  entry: 'shizuku/shizuku.model.json',
+  source: 'local'
+}
 
 function renderApp(): void {
   render(
@@ -74,6 +88,7 @@ function renderApp(): void {
 
 describe('App', () => {
   beforeEach(() => {
+    modelsChangedCb = null
     localStorage.clear()
     // zustand store 是模块级单例，测试间必须复位
     usePetStore.setState({
@@ -147,6 +162,20 @@ describe('App', () => {
     expect(document.querySelector('.settings-panel')).toBeNull()
     expect(screen.queryByText('导入形象')).toBeNull()
     expect(screen.queryByText(/AI桌宠在线|后端离线|后端连接中/)).toBeNull()
+  })
+
+  it('设置窗口广播形象变更（带 url）→ 桌宠切换并回写 localStorage', async () => {
+    mockFetchApi([haruAvatar, shizukuAvatar])
+    renderApp()
+    await waitFor(() => {
+      expect(document.querySelector('.pet-canvas')).toBeTruthy()
+    })
+    await waitFor(() => expect(usePetStore.getState().modelUrl).toBe(haruAvatar.url))
+
+    // 模拟设置窗口选择 shizuku → 主进程广播
+    modelsChangedCb?.(shizukuAvatar.url)
+    await waitFor(() => expect(usePetStore.getState().modelUrl).toBe(shizukuAvatar.url))
+    expect(localStorage.getItem('lovelybuddy:model-url')).toBe(shizukuAvatar.url)
   })
 
   it('指针在占位卡上关闭穿透，模型外恢复穿透', async () => {

@@ -33,7 +33,7 @@ function Thumb48({ m }: { m: AvatarInfo }): ReactElement {
  * （使用中/可切换/导入中/失败）+ 页脚。导入=浏览/拖放目录或 zip 压缩包
  * （后端按路径自动识别：目录复制 / zip 解压）；
  * 导入进度无后端通道 → 导入中行用不确定态转圈，无取消。
- * 删除当前形象二次确认（回退默认）；成功后 notifyModelsChanged 广播桌宠窗口刷新。
+ * 删除当前形象二次确认（回退默认）；选择/导入/删除后 notifyModelsChanged 广播生效 url，桌宠窗口刷新并应用。
  */
 export default function ModelPage(): ReactElement {
   const models = usePetStore((s) => s.models)
@@ -54,7 +54,8 @@ export default function ModelPage(): ReactElement {
 
   const importFromPath = async (path: string): Promise<void> => {
     const ok = await importModel({ type: 'path', value: path })
-    if (ok) window.lovelybuddy.notifyModelsChanged()
+    // 导入自动应用：广播 store 里已生效的新 url，桌宠窗口切换到新形象
+    if (ok) window.lovelybuddy.notifyModelsChanged(usePetStore.getState().modelUrl)
   }
 
   const browse = async (): Promise<void> => {
@@ -76,7 +77,8 @@ export default function ModelPage(): ReactElement {
       : `删除形象「${info.name}」？此操作不可恢复。`
     if (!window.confirm(tip)) return
     await deleteModel(info)
-    window.lovelybuddy.notifyModelsChanged()
+    // 广播删除后的回退 url（删的是当前形象时桌宠窗口同步回退）
+    window.lovelybuddy.notifyModelsChanged(usePetStore.getState().modelUrl)
   }
 
   return (
@@ -160,7 +162,10 @@ export default function ModelPage(): ReactElement {
                 active ? 'border-[#d1ede3]' : 'border-[#f0ebe0] cursor-pointer'
               }`}
               onClick={() => {
-                if (!active) selectModel(m)
+                if (!active) {
+                  selectModel(m)
+                  window.lovelybuddy.notifyModelsChanged(m.url)
+                }
               }}
             >
               <Thumb48 m={m} />
