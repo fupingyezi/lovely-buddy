@@ -7,6 +7,7 @@ import SpeechBubble from '@/pet/chat/SpeechBubble'
 import { useChatPanel } from '@/pet/chat/useChatPanel'
 import { usePetMenu } from '@/pet/usePetMenu'
 import { usePetStore } from '@/store/petStore'
+import { useChatStore } from '@/store/chatStore'
 import { useWindowGeometrySync } from '@/live2d/window/windowGeometry'
 import { useBackendHealth } from '@/useBackendHealth'
 import { useChatSync } from '@/useChatSync'
@@ -62,6 +63,7 @@ export default function App(): ReactElement {
           }}
           onSettings={() => {
             closeMenu()
+            useChatStore.getState().dismissBubble() // 设置窗口接管对话，气泡不等 8s 立即收起
             void window.lovelybuddy.openSettings()
           }}
         />

@@ -4,6 +4,7 @@
 // 造成气泡不可见/错位。React 渲染晚于整个事件分发，anchor 读取时位移已完成。
 import { create } from 'zustand'
 import { useEffect } from 'react'
+import { getActiveModel } from '@/live2d/engine/modelBus'
 
 export interface WindowSize {
   w: number
@@ -30,10 +31,16 @@ export function setModelBase(base: WindowSize | null): void {
   useWindowGeometry.setState({ base })
 }
 
-/** App 挂载时注册：resize 事件 → 同步 size（含初始一次校正） */
+/** App 挂载时注册：resize 事件 → 同步 size（含初始一次校正）。
+ *  总线上有模型时让位：本监听器注册在模型的位移监听器之前，若直写 size，
+ *  useSyncExternalStore 的同步重渲染会让气泡先读到"新尺寸 + 未位移旧锚点"
+ *  的错位帧——由模型侧先位移锚点、再统一写入新尺寸。 */
 export function useWindowGeometrySync(): void {
   useEffect(() => {
-    const sync = (): void => setWindowSize(window.innerWidth, window.innerHeight)
+    const sync = (): void => {
+      if (getActiveModel() !== null) return
+      setWindowSize(window.innerWidth, window.innerHeight)
+    }
     sync()
     window.addEventListener('resize', sync)
     return () => window.removeEventListener('resize', sync)

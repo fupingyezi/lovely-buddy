@@ -26,8 +26,10 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
   const lastMotion = useChatStore((s) => s.lastMotion)
   const replySeq = useChatStore((s) => s.replySeq)
   const pet = useActiveModel((s) => s.model)
+  const dismissSeq = useChatStore((s) => s.dismissSeq)
   const { size } = useWindowGeometry()
   const [phase, setPhase] = useState<'in' | 'out' | 'gone'>('gone')
+  const hideTimerRef = useRef<number | null>(null)
   const outTimerRef = useRef<number | null>(null)
   const shownSeqRef = useRef(0)
 
@@ -53,19 +55,40 @@ export default function SpeechBubble({ panelOpen }: Props): ReactElement | null 
     if (!willShow) return
     const id = window.setTimeout(() => {
       setPhase('out')
+      hideTimerRef.current = null
       outTimerRef.current = window.setTimeout(() => {
         shownSeqRef.current = replySeq // 完整展示完毕，历史刷新等不再重放
         setPhase('gone')
       }, FADE_MS)
     }, HIDE_AFTER_MS)
+    hideTimerRef.current = id
     return () => {
-      window.clearTimeout(id)
+      if (hideTimerRef.current !== null) {
+        window.clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
+      }
       if (outTimerRef.current !== null) {
         window.clearTimeout(outTimerRef.current)
         outTimerRef.current = null
       }
     }
   }, [panelOpen, isReply, sending, replySeq])
+
+  // 立即收起（打开设置等场景）：清掉两个淡出计时再把当前回复标记为已展示——
+  // 计时不清会把已 gone 的 phase 拨回 out，气泡在 8s 后以淡出态复活
+  useEffect(() => {
+    if (dismissSeq === 0) return
+    if (hideTimerRef.current !== null) {
+      window.clearTimeout(hideTimerRef.current)
+      hideTimerRef.current = null
+    }
+    if (outTimerRef.current !== null) {
+      window.clearTimeout(outTimerRef.current)
+      outTimerRef.current = null
+    }
+    shownSeqRef.current = useChatStore.getState().replySeq
+    setPhase('gone')
+  }, [dismissSeq])
 
   // motion 事件 → 当前模型播动作（seq 去重，一次事件一个动作）
   const seqRef = useRef(0)

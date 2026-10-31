@@ -25,7 +25,7 @@ describe('SpeechBubble', () => {
     fakeAnchor.y = 120
     setActiveModel(fakePet)
     useWindowGeometry.setState({ size: { w: 300, h: 700 }, base: { w: 300, h: 580 } })
-    useChatStore.setState({ items: [], sending: false, error: null, lastMotion: null, replySeq: 0 })
+    useChatStore.setState({ items: [], sending: false, error: null, lastMotion: null, replySeq: 0, dismissSeq: 0 })
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -73,6 +73,24 @@ describe('SpeechBubble', () => {
     expect(container.querySelector('.speech-bubble')).toBeNull()
     act(() => {
       useChatStore.setState({ items: [{ role: 'assistant', content: '刷新后的历史' }], replySeq: 1 })
+    })
+    expect(container.querySelector('.speech-bubble')).toBeNull()
+  })
+
+  it('dismissBubble：展示中立即卸载，清掉淡出计时不复活，历史刷新不重放', () => {
+    useChatStore.setState({ items: [{ role: 'assistant', content: '你好' }], replySeq: 1 })
+    const { container } = render(<SpeechBubble panelOpen={false} />)
+    expect(container.querySelector('.speech-bubble')).toBeTruthy()
+    act(() => {
+      useChatStore.getState().dismissBubble() // 打开设置等场景：立即收起
+    })
+    expect(container.querySelector('.speech-bubble')).toBeNull()
+    act(() => {
+      vi.advanceTimersByTime(10000) // 原淡出计时若未清，phase 会被拨回 out 复活
+    })
+    expect(container.querySelector('.speech-bubble')).toBeNull()
+    act(() => {
+      useChatStore.setState({ items: [{ role: 'assistant', content: '刷新' }] }) // 历史刷新类重渲染
     })
     expect(container.querySelector('.speech-bubble')).toBeNull()
   })

@@ -2,6 +2,8 @@ import { act, fireEvent, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePetMenu } from '@/pet/usePetMenu'
 import { MENU_REQUIRED_W, menuRequiredHeight } from '@/pet/menuLayout'
+import { setActiveModel } from '@/live2d/engine/modelBus'
+import type { PetModel } from '@/live2d/engine/model'
 import { usePetStore } from '@/store/petStore'
 
 // AvatarInfo 是 env.d.ts 的全局类型（declare global），不从 assetsApi import
@@ -50,6 +52,7 @@ describe('usePetMenu', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllGlobals()
+    setActiveModel(null)
   })
 
   it('openMenu 用菜单需求尺寸请求主进程权威扩展，resize 落地后 menuOpen=true', async () => {
@@ -137,6 +140,37 @@ describe('usePetMenu', () => {
     await act(async () => {
       await Promise.resolve()
     })
+    expect(result.current.menuOpen).toBe(false)
+  })
+
+  it('菜单打开时 Cmd/Ctrl+点击命中模型：外点关闭让位 interact 的切换路径，不抢关', async () => {
+    // 同一 pointerdown 被两个监听器处理：外点关闭先关菜单（离散事件同步重渲染），
+    // interact 随后读到 menuOpen=false 的新闭包又重开菜单 → 窗口连缩带扩横跳。
+    // 命中模型的 Cmd/Ctrl 点击归切换路径独占。
+    setActiveModel({ hitTest: () => true } as unknown as PetModel)
+    const { result } = renderHook(() => usePetMenu())
+    act(() => {
+      result.current.openMenu()
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    fireEvent.pointerDown(document.body, { metaKey: true })
+    expect(result.current.menuOpen).toBe(true)
+    fireEvent.pointerDown(document.body, { ctrlKey: true })
+    expect(result.current.menuOpen).toBe(true)
+  })
+
+  it('Cmd/Ctrl+点击未命中模型：照常外点关闭', async () => {
+    setActiveModel({ hitTest: () => false } as unknown as PetModel)
+    const { result } = renderHook(() => usePetMenu())
+    act(() => {
+      result.current.openMenu()
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    fireEvent.pointerDown(document.body, { metaKey: true })
     expect(result.current.menuOpen).toBe(false)
   })
 

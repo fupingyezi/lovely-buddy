@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MENU_REQUIRED_W, menuRequiredHeight } from '@/pet/menuLayout'
 import { waitForResize } from '@/live2d/window/waitForResize'
+import { getActiveModel } from '@/live2d/engine/modelBus'
 import { usePetStore } from '@/store/petStore'
 
 /**
@@ -11,7 +12,8 @@ import { usePetStore } from '@/store/petStore'
  *   聊天扩展叠加时不再飘到窗口左上）。
  * - closeMenu：缩回窗口、恢复穿透（交给 usePassthrough 状态机接管）。
  * - 菜单打开期间：点菜单外（含模型本体——tap 由 interact 的屏幕坐标判定正常触发）
- *   或 Esc 关闭。
+ *   或 Esc 关闭；唯一例外是命中模型的 Cmd/Ctrl 点击——归 interact 的切换路径独占
+ *   （双处理会让菜单先关后开，窗口横跳）。
  */
 export function usePetMenu(): {
   menuOpen: boolean
@@ -42,6 +44,12 @@ export function usePetMenu(): {
   useEffect(() => {
     if (!menuOpen) return
     const onDown = (e: PointerEvent): void => {
+      // Cmd/Ctrl+点击命中模型 = 菜单切换，归 interact 的切换路径独占：同一 pointerdown
+      // 被双处理时，本监听器先关菜单（离散事件同步重渲染），interact 随后读到
+      // menuOpen=false 的新闭包会把菜单又重开——窗口连缩带扩来回跳。
+      if (e.metaKey || e.ctrlKey) {
+        if (getActiveModel()?.hitTest(e.clientX, e.clientY) === true) return
+      }
       if (e.target instanceof Element && e.target.closest('[data-interactive]')) return
       closeMenu()
     }

@@ -8,7 +8,7 @@ import { type MotionIntent } from '@/live2d/motion/motionMap'
 import { createMotionScheduler, P_NORMAL, type MotionPlayer } from '@/live2d/motion/motionScheduler'
 import { headAnchorOffset, shiftToKeepScreenPosition, type Pos } from '@/live2d/window/windowAnchor'
 import { getActiveModel, setActiveModel } from '@/live2d/engine/modelBus'
-import { setModelBase } from '@/live2d/window/windowGeometry'
+import { setModelBase, setWindowSize } from '@/live2d/window/windowGeometry'
 import { waitForResize } from '@/live2d/window/waitForResize'
 
 export interface PetModel {
@@ -132,6 +132,9 @@ async function createPetModel(
     lastWinW = window.innerWidth
     lastWinH = window.innerHeight
     model.position.set(next.x, next.y)
+    // 尺寸统一由模型侧写入（几何 store 的 resize 监听器已让位）：必须先位移锚点
+    // 再写 size，同步重渲染读到的才是"新尺寸 + 已位移锚点"，否则气泡错位一帧
+    setWindowSize(window.innerWidth, window.innerHeight)
   }
   window.addEventListener('resize', onWinResize)
 

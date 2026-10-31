@@ -21,6 +21,10 @@ interface ChatState {
   /** 会话内流式回复序号（delta/done 递增；历史 refresh/clear 不动）——气泡门控：
    *  启动/断线恢复拉历史不重放旧回复，只有本会话流出的内容才触发气泡 */
   replySeq: number
+  /** 气泡立即收起序号（打开设置等场景）：气泡据此隐藏当前回复且不再重放 */
+  dismissSeq: number
+  /** 立即收起气泡（不等 8s 自动淡出） */
+  dismissBubble(): void
   send(text: string, avatar?: string): Promise<void>
   stop(): void
   refresh(): Promise<void>
@@ -42,6 +46,11 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   error: null,
   lastMotion: null,
   replySeq: 0,
+  dismissSeq: 0,
+
+  dismissBubble() {
+    set((s) => ({ dismissSeq: s.dismissSeq + 1 }))
+  },
 
   async send(text, avatar) {
     const msg = text.trim()
